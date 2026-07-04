@@ -109,6 +109,15 @@ esbuild
 
     let scssSource = combinedCss;
     scssSource = scssSource.replace(/^\uFEFF/gm, ""); // Remove BOM
+    
+    // Extract text-box-trim rules (mostly from @stnd/styles) and wrap them in .stnd-text-trim
+    const trimRuleRegex = /[^}]+?\{[^{}]*text-box-trim[^{}]+\}/g;
+    let trimRuleMatch = scssSource.match(trimRuleRegex);
+    if (trimRuleMatch) {
+        scssSource = scssSource.replace(trimRuleRegex, "");
+        scssSource += `\n\n&.stnd-text-trim {\n  ${trimRuleMatch.join('\n  ')}\n}\n`;
+    }
+
     scssSource = scssSource.replace(/:root/g, "&"); // Scope CSS variables
     scssSource = scssSource.replace(/body[\w:.\-()]*\.stnd-adapter/g, (match) => {
         return "&" + match.replace(/^body/, '').replace(/\.stnd-adapter/, '');

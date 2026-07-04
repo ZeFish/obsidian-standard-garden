@@ -191,9 +191,9 @@ class DesignSystemFeature {
   applyThemeCss(theme, snippetCss) {
     if (!this.stndThemeElement) return;
     let tokenBlock = (theme && THEMES[theme]) || "";
-    // Normalize bundled selectors: [data-theme="..."] → [data-stnd-theme="..."]
+    // Normalize bundled selectors: [data-theme="..."] → body.stnd-adapter[data-stnd-theme="..."]
     if (tokenBlock) {
-      tokenBlock = tokenBlock.replace(/\[data-theme="/g, '[data-stnd-theme="');
+      tokenBlock = tokenBlock.replace(/\[data-theme="/g, 'body.stnd-adapter[data-stnd-theme="');
     }
     const combined = [tokenBlock, snippetCss].filter(Boolean).join("\n\n");
     if (this.stndThemeElement.textContent !== combined) {
@@ -419,7 +419,7 @@ class DesignSystemFeature {
     // Zero-latency cache injection
     const rawCachedCss = this.themeCache[theme];
     if (rawCachedCss) {
-      const cachedCss = rawCachedCss.replace(/body\.stnd-color\b/g, `[data-stnd-theme="${theme}"]`);
+      const cachedCss = rawCachedCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${theme}"]`);
       this.lastAppliedThemeSnippetCss = cachedCss;
       this.applyThemeCss(theme, cachedCss);
     } else {
@@ -448,7 +448,7 @@ class DesignSystemFeature {
       const regex = /```css\b.*?\n([\s\S]*?)```/gi;
       let allCss = [...content.matchAll(regex)].map((m) => m[1]).join("\n");
       // Normalize stale selectors from older vault notes / adapter output
-      allCss = allCss.replace(/body\.stnd-color\b/g, `[data-stnd-theme="${theme}"]`);
+      allCss = allCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${theme}"]`);
 
       if (allCss !== this.lastAppliedThemeSnippetCss) {
         this.lastAppliedThemeSnippetCss = allCss;
@@ -561,7 +561,7 @@ class DesignSystemFeature {
       // Inject the combined theme (curated tokens + cached snippet) into #stnd-theme
       let snippetCss = (snap.theme && this.themeCache[snap.theme]) || "";
       if (snippetCss) {
-        snippetCss = snippetCss.replace(/body\.stnd-color\b/g, `[data-stnd-theme="${snap.theme}"]`);
+        snippetCss = snippetCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${snap.theme}"]`);
       }
       this.applyThemeCss(snap.theme, snippetCss);
       this.lastAppliedThemeSnippetCss = snippetCss;
