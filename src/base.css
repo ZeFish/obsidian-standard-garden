@@ -120,8 +120,9 @@ body:not(.is-mobile).stnd-autohide-statusbar.stnd-statusbar-visible
 body.stnd-hide-vault-name .workspace-sidedock-vault-profile,
 body.stnd-hide-vault-name:not(.is-mobile)
   .workspace-split.mod-left-split
-  .workspace-sidedock-vault-profile {
-  display: none;
+  .workspace-sidedock-vault-profile,
+body.stnd-hide-vault-name .nav-vault-profile {
+  display: none !important;
 }
 
 /* Hide file explorer header */
