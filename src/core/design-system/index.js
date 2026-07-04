@@ -268,6 +268,33 @@ class DesignSystemFeature {
     }, 1000);
   }
 
+  getStructuralClasses() {
+    const classes = [];
+    const designSettings = this.plugin.settings.designSystem || {};
+    const toggles = [
+      { id: "enableBetterHighlights", class: "stnd-better-highlights" },
+      { id: "enableBlurryModals", class: "stnd-blurry-modals" },
+      { id: "enableCallouts", class: "stnd-callouts" },
+      { id: "enableCodeTweaks", class: "stnd-code-tweaks" },
+      { id: "enableSubduedLinks", class: "stnd-subdued-links" },
+      { id: "enableCompactFiletree", class: "stnd-compact-filetree" },
+      { id: "enableCleanFrontmatter", class: "stnd-clean-frontmatter" },
+      { id: "enableCleanUI", class: "stnd-clean-ui" },
+      { id: "enableMinimalImages", class: "stnd-minimal-images" },
+      { id: "enableTextTrim", class: "stnd-text-trim" },
+      { id: "enableBaseTweaks", class: "stnd-base-tweaks" },
+      { id: "enableSidenotes", class: "stnd-sidenotes" },
+      { id: "enableCleanTransclusions", class: "stnd-clean-transclusions" },
+      { id: "enableZoomLargeScreen", class: "stnd-zoom-large-screen" },
+    ];
+    toggles.forEach(t => {
+      if (designSettings[t.id] !== false) {
+        classes.push(t.class);
+      }
+    });
+    return classes;
+  }
+
   async updateBodyClasses() {
     const activeFile = this.app.workspace.getActiveFile();
 
@@ -276,6 +303,7 @@ class DesignSystemFeature {
 
     if (this.plugin.settings.enableDesignSystem) {
       newClasses.add("stnd-adapter");
+      this.getStructuralClasses().forEach(cls => newClasses.add(cls));
     }
 
     if (activeFile) {
@@ -517,6 +545,11 @@ class DesignSystemFeature {
     if (this.plugin.settings.enableDesignSystem) {
       document.body.classList.add("stnd-adapter");
       this.appliedClasses.add("stnd-adapter");
+      
+      this.getStructuralClasses().forEach(cls => {
+        document.body.classList.add(cls);
+        this.appliedClasses.add(cls);
+      });
     }
 
     if (this.plugin.settings.enableDesignSystem) {

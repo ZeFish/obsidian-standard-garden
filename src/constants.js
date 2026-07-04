@@ -78,6 +78,22 @@ const FONT_TOKENS = new Set([
 const DEFAULT_SETTINGS = {
   // Design-system layers (frontmatter tokens → CSS variables)
   enableDesignSystem: false,
+  designSystem: {
+    enableBetterHighlights: true,
+    enableBlurryModals: true,
+    enableCallouts: true,
+    enableCodeTweaks: true,
+    enableSubduedLinks: true,
+    enableCompactFiletree: true,
+    enableCleanFrontmatter: true,
+    enableCleanUI: true,
+    enableMinimalImages: true,
+    enableTextTrim: true,
+    enableBaseTweaks: true,
+    enableSidenotes: true,
+    enableCleanTransclusions: true,
+    enableZoomLargeScreen: true,
+  },
   
   // Artisan Tools (Helpers)
   enableSeedbeds: false,

@@ -71,6 +71,49 @@ class DesignSystemSettingTab extends PluginSettingTab {
         window.open("https://stnd.build/2-system/css-hooks", "_blank");
       }),
     );
+
+    // ─── Structural Enhancements ───────────────────────────────────────────
+    containerEl.createEl("h3", { text: "📐 Structural Enhancements", cls: "stnd-section-heading" });
+    containerEl.createEl("p", {
+      text: "Toggle individual architectural and visual tweaks provided by the Standard framework. These are entirely optional.",
+      cls: "setting-item-description",
+    });
+
+    if (!this.plugin.settings.designSystem) {
+      this.plugin.settings.designSystem = {}; // fallback
+    }
+
+    const structuralToggles = [
+      { id: "enableBetterHighlights", class: "stnd-better-highlights", name: "Better Highlights", desc: "Apply Better Highlights styles" },
+      { id: "enableBlurryModals", class: "stnd-blurry-modals", name: "Blurry Modals", desc: "Apply Blurry Modals styles" },
+      { id: "enableCallouts", class: "stnd-callouts", name: "Standard Callouts", desc: "Apply Standard Callouts styles" },
+      { id: "enableCodeTweaks", class: "stnd-code-tweaks", name: "Code & Source View Tweaks", desc: "Apply Code & Source View Tweaks styles" },
+      { id: "enableSubduedLinks", class: "stnd-subdued-links", name: "Subdued Links", desc: "Apply Subdued Links styles" },
+      { id: "enableCompactFiletree", class: "stnd-compact-filetree", name: "Compact Filetree", desc: "Apply Compact Filetree styles" },
+      { id: "enableCleanFrontmatter", class: "stnd-clean-frontmatter", name: "Clean Frontmatter", desc: "Apply Clean Frontmatter styles" },
+      { id: "enableCleanUI", class: "stnd-clean-ui", name: "Clean UI", desc: "Hide titles and headers for a cleaner look" },
+      { id: "enableMinimalImages", class: "stnd-minimal-images", name: "Minimal Images", desc: "Shrink images in source view so they don't take up space" },
+      { id: "enableTextTrim", class: "stnd-text-trim", name: "Text Trim", desc: "Apply Text Trim styles" },
+      { id: "enableBaseTweaks", class: "stnd-base-tweaks", name: "Base Table Tweaks", desc: "Apply Base Table Tweaks styles" },
+      { id: "enableSidenotes", class: "stnd-sidenotes", name: "Sidenotes", desc: "Render side notes for blockquotes" },
+      { id: "enableCleanTransclusions", class: "stnd-clean-transclusions", name: "Clean Transclusions", desc: "Remove borders and headers from transcluded notes" },
+      { id: "enableZoomLargeScreen", class: "stnd-zoom-large-screen", name: "Zoom on Large Screens", desc: "Increase font size on extremely large screens" },
+    ];
+
+    structuralToggles.forEach(toggleDef => {
+      new Setting(containerEl)
+        .setName(toggleDef.name)
+        .setDesc(toggleDef.desc)
+        .addToggle((toggle) =>
+          toggle
+            .setValue(this.plugin.settings.designSystem[toggleDef.id] !== false)
+            .onChange(async (value) => {
+              this.plugin.settings.designSystem[toggleDef.id] = value;
+              await this.plugin.saveSettings();
+              this.plugin.design.updateBodyClasses();
+            })
+        );
+    });
   }
 }
 
