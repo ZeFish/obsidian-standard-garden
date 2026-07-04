@@ -1,452 +1,462 @@
 @charset "UTF-8";
 /* --- Snippet: Better highlights.md --- */
 body.stnd-adapter.stnd-better-highlights {
-  /* ============================================= */
-  /* Better highlights */
-  /* ============================================= */
+    /* ============================================= */
+    /* Better highlights */
+    /* ============================================= */
 }
 body.stnd-adapter.stnd-better-highlights.theme-light.ptm-highlight-current-line .ptm-current-line-highlight.ptm-current-line-highlight-box {
-  background: var(--background-primary);
-  border: 1px solid var(--background-secondary-alt);
-  border-left: 0;
-  border-right: 0;
+    background: var(--background-primary);
+    border: 1px solid var(--background-secondary-alt);
+    border-left: 0;
+    border-right: 0;
 }
 body.stnd-adapter.stnd-better-highlights.theme-dark.ptm-highlight-current-line .ptm-current-line-highlight.ptm-current-line-highlight-box {
-  background: var(--background-secondary);
-  mix-blend-mode: overlay;
-  border: 1px solid var(--text-normal);
-  border-left: 0;
-  border-right: 0;
-  opacity: 0.5;
+    background: var(--background-secondary);
+    mix-blend-mode: overlay;
+    border: 1px solid var(--text-normal);
+    border-left: 0;
+    border-right: 0;
+    opacity: 0.5;
 }
 
 /* --- Snippet: Blurry Modal.md --- */
 body.stnd-adapter.stnd-blurry-modals .modal-bg {
-  background-color: color-mix(in srgb, black 25%, transparent);
-  backdrop-filter: blur(2px);
+    background-color: color-mix(in srgb, black 25%, transparent);
+    backdrop-filter: blur(2px);
 }
-body.stnd-adapter.stnd-blurry-modals.is-mobile, body.stnd-adapter.stnd-blurry-modals {
-  --background-modifier-cover: transparent;
-  --settings-background: var(--background-primary);
+body.stnd-adapter.stnd-blurry-modals.is-mobile,
+body.stnd-adapter.stnd-blurry-modals {
+    --background-modifier-cover: transparent;
+    --settings-background: var(--background-primary);
 }
 body.stnd-adapter.stnd-blurry-modals.is-mobile .menu {
-  --menu-background: var(--background-primary);
-  --interactive-normal: var(--background-secondary);
+    --menu-background: var(--background-primary);
+    --interactive-normal: var(--background-secondary);
 }
 
 /* --- Snippet: Callout.md --- */
-body.stnd-adapter.stnd-callouts {
-  /*──────────Blockquotes──────────*/
+body.stnd-adapter.stnd-callouts .callout[data-callout="msg"] {
+    --callout-color: var(--color-accent);
+    --callout-icon: lucide-message-circle;
 }
-body.stnd-adapter.stnd-callouts .callout[data-callout=msg] {
-  --callout-color: var(--color-accent);
-  --callout-icon: lucide-message-circle;
+body.stnd-adapter.stnd-callouts .callout[data-callout="comment"] {
+    --callout-color: var(--color-green);
+    --callout-icon: lucide-tree-pine;
 }
-body.stnd-adapter.stnd-callouts .callout[data-callout=comment] {
-  --callout-color: var(--color-green);
-  --callout-icon: lucide-tree-pine;
-}
-body.stnd-adapter.stnd-callouts .callout[data-callout=transcript] {
-  --callout-color: var(--color-blue);
-  --callout-icon: lucide-mic-vocal;
-  margin: calc(var(--marge) * 0.5) 0 !important;
+body.stnd-adapter.stnd-callouts .callout[data-callout="transcript"] {
+    --callout-color: var(--color-blue);
+    --callout-icon: lucide-mic-vocal;
+    margin: calc(var(--marge) * 0.5) 0 !important;
 }
 body.stnd-adapter.stnd-callouts .callout,
 body.stnd-adapter.stnd-callouts .markdown-preview-view pre,
 body.stnd-adapter.stnd-callouts .markdown-preview-view blockquote {
-  background: var(--background-secondary);
-  background-color: color-mix(in oklab, var(--color-base-100) 2.5%, transparent);
-  padding: 1rlh 1rlh;
-  border-radius: var(--radius-m);
-  border: 1px solid var(--background-modifier-border);
-  font-size: var(--font-small);
-  line-height: var(--line-height-tight);
+    background: var(--background-secondary);
+
+    --callout-title-color: color-mix(in srgb, var(--callout-color) 50%, var(--text-normal));
+
+    background-color: color-mix(in oklab, var(--color-base-100) 2.5%, transparent);
+    padding: 1rlh 1rlh;
+    border-radius: var(--radius-m);
+    border: 1px solid var(--background-modifier-border);
+    font-size: var(--font-small);
+    line-height: var(--line-height-tight);
 }
 body.stnd-adapter.stnd-callouts .markdown-preview-view blockquote,
 body.stnd-adapter.stnd-callouts .markdown-source-view .HyperMD-quote {
-  font-style: italic;
+    font-style: italic;
 }
+
 body.stnd-adapter.stnd-callouts .callout {
-  mix-blend-mode: normal;
-  transition: var(--duration-superfast) var(--motion-smooth);
-  padding: 0.25rlh;
-  margin-block: 1rlh;
-  /* border-color: rgba(var(--callout-color), var(--callout-border-opacity)); */
-  border-color: color-mix(in oklab, var(--callout-color) 10%, transparent);
-  background-color: color-mix(in oklab, var(--callout-color) 10%, transparent);
+    mix-blend-mode: normal;
+    transition: var(--duration-superfast) var(--motion-smooth);
+    padding: 0.25rlh;
+    margin-block: 1rlh;
+    /* border-color: rgba(var(--callout-color), var(--callout-border-opacity)); */
+    border: 0;
+    background-color: color-mix(in oklab, var(--callout-color) 10%, transparent);
+    box-shadow: var(--shadow-raised), var(--shadow-ring);
 }
-body.stnd-adapter.stnd-callouts .callout-icon {
-  margin: -0.12rlh 0rlh 0rlh 0rlh;
+body.stnd-adapter.stnd-callouts .callout .callout-title {
+    margin: 0.25rlh 0 0.5rlh 0.75rlh;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
 }
-body.stnd-adapter.stnd-callouts .callout-title {
-  margin: 0.5rlh 0 0.5rlh 0.75rlh;
-  padding: 0.25rlh 0 0.25rlh 0;
-  color: var(--callout-color);
-  display: flex;
-  align-items: center;
+body.stnd-adapter.stnd-callouts .callout-icon .svg-icon {
+    color: var(--callout-title-color);
 }
 body.stnd-adapter.stnd-callouts .callout-content {
-  padding: 1rlh 1rlh;
-  border-radius: var(--radius-m);
-  background-color: color-mix(in oklab, var(--callout-color) 2.5%, var(--background-primary));
-  box-shadow: inset 0px 0px 0px 1px color-mix(in oklab, var(--callout-color) 20%, transparent);
-  /* border-radius: calc(var(--radius) * 2); */
-  font-size: var(--font-small);
-  margin-left: 0;
+    padding: 0.5rlh;
+    border-radius: var(--radius-m);
+    background-color: color-mix(in oklab, var(--callout-color) 2.5%, var(--background-secondary));
+    box-shadow: var(--shadow-inset), var(--shadow-ring);
+    /* border-radius: calc(var(--radius) * 2); */
+    font-size: var(--font-small);
+    margin-left: 0;
 }
-body.stnd-adapter.stnd-callouts .markdown-rendered [class^=el-] .callout-content ol,
-body.stnd-adapter.stnd-callouts .markdown-rendered [class^=el-] .callout-content ul {
-  padding: 0rlh 0rlh 0rlh 1.5rlh;
-  margin: 0.5rlh 0rlh;
+body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout-content ol,
+body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout-content ul {
+    padding: 0rlh 0rlh 0rlh 1.5rlh;
+    margin: 0.5rlh 0rlh;
 }
-body.stnd-adapter.stnd-callouts .markdown-rendered [class^=el-] .callout .callout-content *:first-child {
-  margin-top: 0;
+body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout .callout-content *:first-child {
+    margin-top: 0;
 }
-body.stnd-adapter.stnd-callouts .markdown-rendered [class^=el-] .callout .callout-content *:last-child {
-  margin-bottom: 0;
+body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout .callout-content *:last-child {
+    margin-bottom: 0;
 }
 body.stnd-adapter.stnd-callouts .callout-content:has(.callout) {
-  padding: 0;
+    padding: 0;
 }
 body.stnd-adapter.stnd-callouts .callout-content .callout {
-  margin: 0.5rlh !important;
-  max-width: unset !important;
+    margin: 0.5rlh !important;
+    max-width: unset !important;
 }
 body.stnd-adapter.stnd-callouts .callout-content pre {
-  margin: 0.5rlh -0.5rlh !important;
-  padding: 0.5rlh;
+    margin: 0.5rlh -0.5rlh !important;
+    padding: 0.5rlh;
 }
-body.stnd-adapter.stnd-callouts .markdown-reading-view .callout[data-callout=caption] {
-  padding: 0;
-  background: none;
-  background-color: transparent;
-  border: none;
-  margin: -1.5rlh 15% 0rlh 15% !important;
-  box-shadow: none;
+body.stnd-adapter.stnd-callouts .markdown-reading-view .callout[data-callout="caption"] {
+    padding: 0;
+    background: none;
+    background-color: transparent;
+    border: none;
+    margin: -1.5rlh 15% 0rlh 15% !important;
+    box-shadow: none;
 }
-body.stnd-adapter.stnd-callouts .callout[data-callout=caption] .callout-title {
-  display: none;
+body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-title {
+    display: none;
 }
-body.stnd-adapter.stnd-callouts .callout[data-callout=caption] .callout-content {
-  padding: 0.5rlh 1rlh;
-  background: none;
-  border: none;
-  color: red;
-  box-shadow: none;
-  line-height: 1;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--font-small) !important;
+body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-content {
+    padding: 0.5rlh 1rlh;
+    background: none;
+    border: none;
+    color: red;
+    box-shadow: none;
+    line-height: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-small) !important;
 }
-body.stnd-adapter.stnd-callouts .callout[data-callout=caption] .callout-content p:first-child {
-  margin-top: 0;
+body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-content p:first-child {
+    margin-top: 0;
 }
 
 /* --- Snippet: Code.md --- */
 body.stnd-adapter.stnd-code-tweaks .stnd-sourece .markdown-source-view .cm-editor .cm-line {
-  white-space: pre !important;
-  overflow-x: auto;
+    white-space: pre !important;
+    overflow-x: auto;
 }
-body.stnd-adapter.stnd-code-tweaks .stnd-source .view-header, body.stnd-adapter.stnd-code-tweaks .stnd-source .workspace-tab-header.is-active {
-  background-color: var(--background-primary) !important;
+body.stnd-adapter.stnd-code-tweaks .stnd-source .view-header,
+body.stnd-adapter.stnd-code-tweaks .stnd-source .workspace-tab-header.is-active {
+    background-color: var(--background-primary) !important;
 }
 body.stnd-adapter.stnd-code-tweaks .stnd-editing:not(.stnd-source) .cm-gutters {
-  display: none !important;
+    display: none !important;
 }
 body.stnd-adapter.stnd-code-tweaks .stnd-source .markdown-source-view .cm-editor {
-  --file-line-width: 100%;
-  background-color: var(--background-primary) !important;
-  max-width: 100% !important;
+    --file-line-width: 100%;
+    background-color: var(--background-primary) !important;
+    max-width: 100% !important;
 }
-body.stnd-adapter.stnd-code-tweaks .stnd-source .markdown-source-view .cm-line, body.stnd-adapter.stnd-code-tweaks .stnd-source .markdown-source-view .cm-hmd-frontmatter {
-  background-color: transparent !important;
-  max-width: 100% !important;
+body.stnd-adapter.stnd-code-tweaks .stnd-source .markdown-source-view .cm-line,
+body.stnd-adapter.stnd-code-tweaks .stnd-source .markdown-source-view .cm-hmd-frontmatter {
+    background-color: transparent !important;
+    max-width: 100% !important;
 }
 body.stnd-adapter.stnd-code-tweaks .markdown-preview-view pre,
-body.stnd-adapter.stnd-code-tweaks pre code[class*=language-] {
-  line-height: var(--line-height-normal);
-  font-size: var(--font-smaller);
+body.stnd-adapter.stnd-code-tweaks pre code[class*="language-"] {
+    line-height: var(--line-height-normal);
+    font-size: var(--font-smaller);
 }
 body.stnd-adapter.stnd-code-tweaks {
-  /* code elements */
+    /* code elements */
 }
 body.stnd-adapter.stnd-code-tweaks .folder-note-underline .has-folder-note .nav-folder-title-content {
-  text-decoration-line: underline;
-  text-decoration-color: var(--text-faint);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+    text-decoration-line: underline;
+    text-decoration-color: var(--text-faint);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
 }
 body.stnd-adapter.stnd-code-tweaks {
-  /*.markdown-source-view, .markdown-reading-view {
+    /*.markdown-source-view, .markdown-reading-view {
   	letter-spacing: var(--font-letter-spacing);
     }*/
 }
 body.stnd-adapter.stnd-code-tweaks .cm-gutterElement {
-  font-family: var(--font-monospace);
-  font-feature-settings: "dlig", "salt", "case", "kern", "tnum" !important;
+    font-family: var(--font-monospace);
+    font-feature-settings: "dlig", "salt", "case", "kern", "tnum" !important;
 }
 body.stnd-adapter.stnd-code-tweaks .markdown-preview-view:not(.code-copy-button-on) button.copy-code-button {
-  display: none;
+    display: none;
 }
 
 /* --- Snippet: External Link no icon.md --- */
 body.stnd-adapter.stnd-subdued-links .external-link {
-  background: none;
-  padding-right: 0;
+    background: none;
+    padding-right: 0;
 }
 
 /* --- Snippet: Filetree - compact.md --- */
 body.stnd-adapter.stnd-compact-filetree .nav-file-title,
 body.stnd-adapter.stnd-compact-filetree .nav-folder-title,
 body.stnd-adapter.stnd-compact-filetree .idontknowwhyineedtoputthishere  {
-  line-height: 1em;
-  margin: 0 0 0.1rlh 0;
-  overflow: visible;
+    line-height: 1em;
+    margin: 0 0 0.1rlh 0;
+    overflow: visible;
 }
 body.stnd-adapter.stnd-compact-filetree .tree-item-inner {
-  overflow: visible;
+    overflow: visible;
 }
 body.stnd-adapter.stnd-compact-filetree {
-  /* code elements */
+    /* code elements */
 }
 body.stnd-adapter.stnd-compact-filetree .folder-note-underline .has-folder-note .nav-folder-title-content {
-  text-decoration-line: underline;
-  text-decoration-color: var(--text-faint);
+    text-decoration-line: underline;
+    text-decoration-color: var(--text-faint);
 }
 
 /* --- Snippet: Frontmatter.md --- */
 body.stnd-adapter.stnd-clean-frontmatter {
-  /*──────────FrontMatter Elements──────────*/
+    /*──────────FrontMatter Elements──────────*/
 }
 body.stnd-adapter.stnd-clean-frontmatter .markdown-source-view .cm-line:has(.cm-hmd-frontmatter),
 body.stnd-adapter.stnd-clean-frontmatter .cm-hmd-frontmatter {
-  background: var(--background-primary);
-  font-size: var(--font-smaller);
-  line-height: var(--line-height-tight);
-  color: var(--text-muted);
+    background: var(--background-primary);
+    font-size: var(--font-smaller);
+    line-height: var(--line-height-tight);
+    color: var(--text-muted);
 }
 
 /* --- Snippet: Generator Suggestion.md --- */
 body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item :is(h5, small) {
-  margin: 0;
+    margin: 0;
 }
 body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item :not(h5) {
-  color: var(--text-faint);
+    color: var(--text-faint);
 }
 body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item .path,
 body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item :is(small):empty {
-  display: none;
+    display: none;
 }
 
 /* --- Snippet: Hide Title.md --- */
 body.stnd-adapter.stnd-clean-ui .view-header-title-container {
-  opacity: 0 !important;
-  pointer-events: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 body.stnd-adapter.stnd-clean-ui .inline-title {
-  display: none !important;
+    display: none !important;
+}
+
+body.stnd-adapter.stnd-clean-ui .view-header {
+    position: relative;
+    margin-bottom: calc(var(--header-height) * -1);
+    --file-header-background: transparent;
+    --file-header-background-focused: transparent;
 }
 
 /* --- Snippet: Img Minimize.md --- */
 body.stnd-adapter.stnd-minimal-images {
-  /* ============================================= */
-  /* Minimize Images in source view */
-  /* ============================================= */
+    /* ============================================= */
+    /* Minimize Images in source view */
+    /* ============================================= */
 }
-body.stnd-adapter.stnd-minimal-images .stnd-editing .markdown-source-view img:not(.cm-widgetBuffer) {
-  height: 4rlh !important;
+body.stnd-adapter.stnd-minimal-images.stnd-editing .markdown-source-view img:not(.cm-widgetBuffer) {
+    height: 4rlh !important;
 }
-body.stnd-adapter.stnd-minimal-images .stnd-editing .markdown-source-view img:not(.cm-widgetBuffer):active {
-  height: inherit;
+body.stnd-adapter.stnd-minimal-images.stnd-editing .markdown-source-view img:not(.cm-widgetBuffer):active {
+    height: inherit;
 }
 
 /* --- Snippet: Link decoration off.md --- */
 body.stnd-adapter.stnd-subdued-links {
-  /* ============================================= */
-  /* Remove link underline decoration */
-  /* ============================================= */
+    /* ============================================= */
+    /* Remove link underline decoration */
+    /* ============================================= */
 }
 body.stnd-adapter.stnd-subdued-links {
-  --link-decoration: none;
-  --link-external-decoration: none;
+    --link-decoration: none;
+    --link-external-decoration: none;
 }
 body.stnd-adapter.stnd-subdued-links .markdown-reading-view a {
-  text-decoration: none !important;
+    text-decoration: none !important;
 }
 body.stnd-adapter.stnd-subdued-links .markdown-reading-view a:hover {
-  text-decoration: none !important;
+    text-decoration: none !important;
 }
 
 /* --- Snippet: Mobile no header.md --- */
 body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .mod-root {
-  padding-top: 0 !important;
+    padding-top: 0 !important;
 }
 body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .view-header {
-  display: block;
-  height: 0px;
+    display: block;
+    height: 0px;
 }
 body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .cm-sizer::before,
 body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .markdown-preview-view::before {
-  content: "";
-  display: block;
-  height: var(--safe-area-inset-top);
+    content: "";
+    display: block;
+    height: var(--safe-area-inset-top);
 }
 body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .mobile-navbar {
-  display: none;
+    display: none;
 }
 
 /* --- Snippet: Trim.md --- */
 
 /* --- Snippet: base.md --- */
 body.stnd-adapter.stnd-base-tweaks .bases-embed {
-  --bases-embed-border-width: 10px !important;
-  --bases-table-font-size: var(--font-size);
+    --bases-embed-border-width: 10px !important;
+    --bases-table-font-size: var(--font-size);
 }
 body.stnd-adapter.stnd-base-tweaks .bases-tbody,
 body.stnd-adapter.stnd-base-tweaks .bases-rendered-value {
-  --bases-table-text-size: calc(
-      var(--font-text-size) * pow(var(--font-ratio), -0.5)
-  );
-  --bases-table-text-size: var(--nav-item-size);
-  --input-padding: 0.5rlh 0.5rlh !important;
-  box-shadow: none;
-  --table-border-color: var(--border-color);
-  --bases-table-header-background: var(--background-secondary);
+    --bases-table-text-size: calc(var(--font-text-size) * pow(var(--font-ratio), -0.5));
+    --bases-table-text-size: var(--nav-item-size);
+    --input-padding: 0.5rlh 0.5rlh !important;
+    box-shadow: none;
+    --table-border-color: var(--border-color);
+    --bases-table-header-background: var(--background-secondary);
 }
 body.stnd-adapter.stnd-base-tweaks .bases-header,
 body.stnd-adapter.stnd-base-tweaks .bases-thead,
 body.stnd-adapter.stnd-base-tweaks .bases-tr,
 body.stnd-adapter.stnd-base-tweaks .bases-td {
-  box-shadow: none;
-  border: 0;
-  --bases-header-border-width: 0;
+    box-shadow: none;
+    border: 0;
+    --bases-header-border-width: 0;
 }
 body.stnd-adapter.stnd-base-tweaks .bases-tr:not(:last-child) {
-  border-bottom: 1px solid var(--divider-color);
+    border-bottom: 1px solid var(--divider-color);
 }
 body.stnd-adapter.stnd-base-tweaks .bases-embed .bases-view {
-  --bases-embed-border-width: 0px;
-  --bases-embed-border-color: var(--border-color);
-  --bases-embed-border-radius: var(--radius);
+    --bases-embed-border-width: 0px;
+    --bases-embed-border-color: var(--border-color);
+    --bases-embed-border-radius: var(--radius);
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header,
 body.stnd-adapter.stnd-base-tweaks .bases-header {
-  opacity: 0;
+    opacity: 0;
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header:hover,
 body.stnd-adapter.stnd-base-tweaks .bases-header:hover,
 body.stnd-adapter.stnd-base-tweaks .bases-thead:hover {
-  opacity: 1;
+    opacity: 1;
 }
 body.stnd-adapter.stnd-base-tweaks .bases-thead {
-  opacity: 0;
+    opacity: 0;
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-thead {
-  display: none;
+    display: none;
 }
 
 /* --- Snippet: highlights.md --- */
 body.stnd-adapter.stnd-better-highlights {
-  /* ============================================= */
-  /* Better highlights */
-  /* ============================================= */
+    /* ============================================= */
+    /* Better highlights */
+    /* ============================================= */
 }
 body.stnd-adapter.stnd-better-highlights.theme-light.ptm-highlight-current-line .ptm-current-line-highlight.ptm-current-line-highlight-box {
-  background: var(--background-primary);
-  border: 1px solid var(--background-secondary-alt);
-  border-left: 0;
-  border-right: 0;
+    background: var(--background-primary);
+    border: 1px solid var(--background-secondary-alt);
+    border-left: 0;
+    border-right: 0;
 }
 body.stnd-adapter.stnd-better-highlights.theme-dark.ptm-highlight-current-line .ptm-current-line-highlight.ptm-current-line-highlight-box {
-  background: var(--background-secondary);
-  mix-blend-mode: overlay;
-  border: 1px solid var(--text-normal);
-  border-left: 0;
-  border-right: 0;
-  opacity: 0.5;
+    background: var(--background-secondary);
+    mix-blend-mode: overlay;
+    border: 1px solid var(--text-normal);
+    border-left: 0;
+    border-right: 0;
+    opacity: 0.5;
 }
 
 /* --- Snippet: sidenote.md --- */
 body.stnd-adapter.stnd-sidenotes {
-  /*
+    /*
 
   	Sidenotes
 
   */
 }
-body.stnd-adapter.stnd-sidenotes .markdown-preview-view .el-div .callout[data-callout~=aside] {
-  position: absolute;
-  min-width: 10rlh;
-  max-width: 20rlh;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  opacity: 0.6;
-  text-align: left;
-  margin: unset;
-  margin-left: calc(var(--file-line-width) + 2rlh);
+body.stnd-adapter.stnd-sidenotes .markdown-preview-view .el-div .callout[data-callout~="aside"] {
+    position: absolute;
+    min-width: 10rlh;
+    max-width: 20rlh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0.6;
+    text-align: left;
+    margin: unset;
+    margin-left: calc(var(--file-line-width) + 2rlh);
 }
-body.stnd-adapter.stnd-sidenotes .callout[data-callout~=aside] p {
-  margin: 0;
+body.stnd-adapter.stnd-sidenotes .callout[data-callout~="aside"] p {
+    margin: 0;
 }
-body.stnd-adapter.stnd-sidenotes .callout[data-callout~=aside] .callout-title {
-  display: none;
+body.stnd-adapter.stnd-sidenotes .callout[data-callout~="aside"] .callout-title {
+    display: none;
 }
-body.stnd-adapter.stnd-sidenotes .callout[data-callout~=aside] .callout-content {
-  padding: 0;
-  font-size: 0.75rem;
-  box-shadow: none;
-  background: transparent;
-  padding-right: 2rlh;
+body.stnd-adapter.stnd-sidenotes .callout[data-callout~="aside"] .callout-content {
+    padding: 0;
+    font-size: 0.75rem;
+    box-shadow: none;
+    background: transparent;
+    padding-right: 2rlh;
 }
-body.stnd-adapter.stnd-sidenotes .callout[data-callout~=aside] .callout-content p {
-  line-height: 1.3em;
+body.stnd-adapter.stnd-sidenotes .callout[data-callout~="aside"] .callout-content p {
+    line-height: 1.3em;
 }
-body.stnd-adapter.stnd-sidenotes .callout[data-callout~=aside] .callout-title .callout-icon {
-  display: none;
+body.stnd-adapter.stnd-sidenotes .callout[data-callout~="aside"] .callout-title .callout-icon {
+    display: none;
 }
 
 /* --- Snippet: transclusion.md --- */
 body.stnd-adapter.stnd-clean-transclusions .markdown-embed .inline-title {
-  display: none !important;
+    display: none !important;
 }
 body.stnd-adapter.stnd-clean-transclusions {
-  --embed-padding: 0;
-  --embed-max-height: unset;
+    --embed-padding: 0;
+    --embed-max-height: unset;
 }
 body.stnd-adapter.stnd-clean-transclusions .markdown-preview-view .el-embed-page p {
-  margin-left: 0;
-  margin-right: 0;
+    margin-left: 0;
+    margin-right: 0;
 }
 body.stnd-adapter.stnd-clean-transclusions .theme-dark .markdown-preview-view .markdown-embed,
 body.stnd-adapter.stnd-clean-transclusions .theme-light .markdown-preview-view .markdown-embed {
-  background: none;
-  border: 0;
-  margin: 0;
-  padding: 0;
+    background: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
 }
 body.stnd-adapter.stnd-clean-transclusions .markdown-preview-view .markdown-embed-content {
-  padding: 0 !important;
+    padding: 0 !important;
 }
 body.stnd-adapter.stnd-clean-transclusions .markdown-preview-view .markdown-embed-link {
-  display: none;
+    display: none;
 }
 body.stnd-adapter.stnd-clean-transclusions .markdown-preview-view .embed-title {
-  display: none;
+    display: none;
 }
 
 /* --- Snippet: zoom large screen.md --- */
 body.stnd-adapter.stnd-zoom-large-screen {
-  /* @link https://utopia.fyi/type/calculator?c=1500,16,1.125,2500,32,1.414,0,0,&s=0.75|0.5|0.25,1.5|2|3|4|6,s-l&g=s,l,xl,12 */
+    /* @link https://utopia.fyi/type/calculator?c=1500,16,1.125,2500,32,1.414,0,0,&s=0.75|0.5|0.25,1.5|2|3|4|6,s-l&g=s,l,xl,12 */
 }
 @media only screen and (min-width: 1500) {
-  body.stnd-adapter.stnd-zoom-large-screen {
-    --file-line-width: max(40em, 35vw) !important;
-    --font-text-size: clamp(1rem, -0.5rem + 1.6vw, 1.3rem) !important;
-    --line-width: max(40em, 35vw) !important;
-    --max-width: 35vw !important;
-    --line-height-normal: clamp(1.5rem, 1rem + 0.8vi, 1.3rem) !important;
-  }
+    body.stnd-adapter.stnd-zoom-large-screen {
+        --file-line-width: max(40em, 35vw) !important;
+        --font-text-size: clamp(1rem, -0.5rem + 1.6vw, 1.3rem) !important;
+        --line-width: max(40em, 35vw) !important;
+        --max-width: 35vw !important;
+        --line-height-normal: clamp(1.5rem, 1rem + 0.8vi, 1.3rem) !important;
+    }
 }
 
 /*# sourceMappingURL=snippets.compiled.css.map */
