@@ -116,7 +116,7 @@ esbuild
     if (trimRuleMatch) {
         scssSource = scssSource.replace(trimRuleRegex, "");
         const cleanedTrimRules = trimRuleMatch.map(rule => rule.replace(/\b(?:td|th),/g, ''));
-        scssSource += `\n\n&.stnd-text-trim {\n  ${cleanedTrimRules.join('\n  ')}\n}\n`;
+        scssSource += `\n\n&.stnd-text-trim :is(.markdown-source-view, .markdown-preview-view, .markdown-rendered) {\n  ${cleanedTrimRules.join('\n  ')}\n}\n`;
     }
 
     scssSource = scssSource.replace(/:root/g, "&"); // Scope CSS variables
