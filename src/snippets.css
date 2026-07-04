@@ -239,18 +239,9 @@ body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item :is(small
 }
 
 /* --- Snippet: Hide Title.md --- */
-body.stnd-adapter.stnd-clean-ui:not(.mod-settings) .view-header {
-  background: transparent !important;
-}
-body.stnd-adapter.stnd-clean-ui .stnd-source .view-header, body.stnd-adapter.stnd-clean-ui:not(.mod-settings) .workspace-tab-header-container, body.stnd-adapter.stnd-clean-ui:not(.mod-settings) .mod-root {
-  --titlebar-background-focused:transparent !important;
-  background: transparent !important;
-}
-body.stnd-adapter.stnd-clean-ui:not(.mod-settings) .view-header-title-container {
-  opacity: 1;
-}
-body.stnd-adapter.stnd-clean-ui:not(.mod-settings) .view-header-title-container:hover {
-  opacity: 1;
+body.stnd-adapter.stnd-clean-ui .view-header-title-container,
+body.stnd-adapter.stnd-clean-ui .inline-title {
+  display: none !important;
 }
 
 /* --- Snippet: Img Minimize.md --- */
@@ -302,10 +293,6 @@ body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .mobile-navbar {
 }
 
 /* --- Snippet: Trim.md --- */
-body.stnd-adapter.stnd-text-trim p {
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
-}
 
 /* --- Snippet: base.md --- */
 body.stnd-adapter.stnd-base-tweaks .bases-embed {

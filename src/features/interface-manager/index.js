@@ -379,11 +379,15 @@ class InterfaceManagerFeature {
     this.plugin.registerEvent(
       this.app.workspace.on("layout-change", this._singleTabHandler),
     );
+    this.plugin.registerEvent(
+      this.app.workspace.on("active-leaf-change", this._singleTabHandler),
+    );
   }
 
   teardownAutoHideSingleTab() {
     if (this._singleTabHandler) {
       this.app.workspace.off("layout-change", this._singleTabHandler);
+      this.app.workspace.off("active-leaf-change", this._singleTabHandler);
       this._singleTabHandler = null;
     }
     document.body.classList.remove("stnd-single-tab");
