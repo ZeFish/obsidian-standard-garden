@@ -245,7 +245,6 @@ class MyceliumFeature {
         enableGraftingCommand: true,
         enableCompostFooter: true,
       };
-    };
     }
     this.settings = plugin.settings.mycelium;
   }
