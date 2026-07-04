@@ -89,7 +89,7 @@ body.stnd-adapter.stnd-callouts .callout-icon .svg-icon {
     color: var(--callout-title-color);
 }
 body.stnd-adapter.stnd-callouts .callout-content {
-    padding: 0.5rlh;
+    padding: 0.75rlh;
     border-radius: var(--radius-m);
     background-color: color-mix(in oklab, var(--callout-color) 2.5%, var(--background-secondary));
     box-shadow: var(--shadow-inset), var(--shadow-ring);

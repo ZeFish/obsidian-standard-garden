@@ -123,6 +123,7 @@ esbuild
     scssSource = scssSource.replace(/body[\w:.\-()]*\.stnd-adapter/g, (match) => {
         return "&" + match.replace(/^body/, '').replace(/\.stnd-adapter/, '');
     });
+    scssSource = scssSource.replace(/(?<![-_a-zA-Z0-9])body\b/g, "&");
     scssSource = scssSource.replace(/(?:^|\s|,)\.stnd-adapter([\w:.\-()]*)/g, (match, p1) => {
         const prefix = match.match(/^[ \s,]+/);
         const prefStr = prefix ? prefix[0] : "";

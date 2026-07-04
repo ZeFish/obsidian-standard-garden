@@ -7,44 +7,44 @@
 /* ============================================= */
 
 body.stnd-adapter {
-  --body-max-width: none;
+    --body-max-width: none;
 
-  /* Typography bridge */
-  --font-header: var(--font-text);
-  --font-density: 1.7;
-  --font-ratio: 1.33;
-  --font-line-width: 40rem;
-  --font-weight: 400;
-  --font-feature: "";
-  --font-variation: "";
-  --font-size: var(--font-text-size);
-  --bold-weight: var(--font-weight-bold, 600);
-  --font-header-weight: var(--font-weight-header, 400);
-  --font-header-letter-spacing: -0.025em;
-  --font-header-line-height: 1.3em;
-  --font-header-feature: "";
-  --font-header-variation: "";
-  --font-monospace-feature: "";
-  --font-monospace-variation: "";
-  --font-interface-feature: "";
-  --font-interface-variation: "";
+    /* Typography bridge */
+    --font-header: var(--font-text);
+    --font-density: 1.7;
+    --font-ratio: 1.33;
+    --font-line-width: 40rem;
+    --font-weight: 400;
+    --font-feature: "";
+    --font-variation: "";
+    --font-size: var(--font-text-size);
+    --bold-weight: var(--font-weight-bold, 600);
+    --font-header-weight: var(--font-weight-header, 400);
+    --font-header-letter-spacing: -0.025em;
+    --font-header-line-height: 1.3em;
+    --font-header-feature: "";
+    --font-header-variation: "";
+    --font-monospace-feature: "";
+    --font-monospace-variation: "";
+    --font-interface-feature: "";
+    --font-interface-variation: "";
 }
 
 body.stnd-adapter:not(:has(.modal.mod-settings)) {
-  padding: 0 !important;
+    padding: 0 !important;
 }
 
 /* Force native buttons in Obsidian to drop the web framework's shadow and borders */
 body.stnd-adapter button:not(.btn) {
-  box-shadow: none !important;
-  border-color: transparent !important;
-  background-color: transparent;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    background-color: transparent;
 }
 
-/* 
- * Standard CSS sets max-width on typography elements globally, which breaks Obsidian's own 
+/*
+ * Standard CSS sets max-width on typography elements globally, which breaks Obsidian's own
  * centering mechanism (.is-readable-line-width) and causes text to stick to the left.
- * We disable it globally for Obsidian so it can manage its own container width. 
+ * We disable it globally for Obsidian so it can manage its own container width.
  */
 body.stnd-adapter p,
 body.stnd-adapter h1,
@@ -56,7 +56,7 @@ body.stnd-adapter h6,
 body.stnd-adapter li,
 body.stnd-adapter div.callout,
 body.stnd-adapter summary {
-  max-width: unset;
+    max-width: unset;
 }
 
 /* ─── Sidebar transition ──────────────────────────────────────────────────── */
@@ -64,107 +64,101 @@ body.stnd-adapter summary {
 body:not(.is-mobile).stnd-adapter .workspace-split.mod-left-split,
 body:not(.is-mobile).stnd-adapter .workspace-split.mod-right-split,
 body:not(.is-mobile).stnd-adapter .workspace-ribbon.mod-left {
-  transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
-  transition: 0;
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: 0;
 }
 
 body.stnd-adapter .inline-title {
-  margin-block-start: var(--img-grid-gap);
+    margin-block-start: var(--img-grid-gap);
 }
 
-body.mod-macos:not(.is-mobile)
-  .workspace:not(.is-left-sidedock-open)
-  .view-header {
-  padding-left: calc(var(--size-4-2) + var(--frame-left-space));
+body.mod-macos:not(.is-mobile) .workspace:not(.is-left-sidedock-open) .view-header {
+    padding-left: calc(var(--size-4-2) + var(--frame-left-space));
 }
 
 /* Pre-collapse animation — narrows to 0 before Obsidian hides the element */
 body:not(.is-mobile).stnd-collapsing-left .workspace-split.mod-left-split,
 body:not(.is-mobile).stnd-collapsing-left .workspace-ribbon.mod-left {
-  width: 0 !important;
-  overflow: hidden !important;
-  min-width: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
 }
 body:not(.is-mobile).stnd-collapsing-right .workspace-split.mod-right-split {
-  width: 0 !important;
-  overflow: hidden !important;
-  min-width: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
 }
 
 /* Auto-hide ribbon — width collapses with the same transition */
 body:not(.is-mobile).stnd-ribbon-hidden .workspace-ribbon.mod-left {
-  width: 0 !important;
-  overflow: hidden;
+    width: 0 !important;
+    overflow: hidden;
 }
 
 /* Auto-hide status bar — slide out, reveal on bottom hover */
 body:not(.is-mobile).stnd-autohide-statusbar .status-bar {
-  transform: translateY(100%);
-  transition: transform 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateY(100%);
+    transition: transform 1.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-body:not(.is-mobile).stnd-autohide-statusbar.stnd-statusbar-visible
-  .status-bar {
-  transform: translateY(0);
+body:not(.is-mobile).stnd-autohide-statusbar.stnd-statusbar-visible .status-bar {
+    transform: translateY(0);
 }
 .stnd-statusbar-zone {
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 8px;
-  z-index: 10;
-  pointer-events: all;
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 8px;
+    z-index: 10;
+    pointer-events: all;
 }
 
 /* Hide vault name */
 body.stnd-hide-vault-name .workspace-sidedock-vault-profile,
-body.stnd-hide-vault-name:not(.is-mobile)
-  .workspace-split.mod-left-split
-  .workspace-sidedock-vault-profile,
-body.stnd-hide-vault-name .nav-vault-profile {
-  display: none !important;
+body.stnd-hide-vault-name .nav-vault-profile,
+body.stnd-hide-vault-name .workspace-drawer-vault-profile,
+body.stnd-hide-vault-name:not(.is-mobile) .workspace-split.mod-left-split .workspace-sidedock-vault-profile {
+    display: none !important;
 }
 
 /* Hide file explorer header */
-body.stnd-hide-file-nav-header
-  .workspace-leaf-content[data-type="file-explorer"]
-  .nav-header {
-  display: none;
+body.stnd-hide-file-nav-header .workspace-leaf-content[data-type="file-explorer"] .nav-header {
+    display: none;
 }
 
 /* Auto-hide tab bar when only one tab is open */
 body.stnd-single-tab .mod-root .workspace-tabs .workspace-tab-header-container {
-  display: none;
+    display: none;
 }
 
 /* Edge hover zones — always-hittable strips at the workspace edges */
 .stnd-sidebar-zone {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 80vh;
-  width: 4rem;
-  z-index: 10;
-  pointer-events: all;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 80vh;
+    width: 4rem;
+    z-index: 10;
+    pointer-events: all;
 }
 .stnd-sidebar-zone-left {
-  left: 0;
+    left: 0;
 }
 .stnd-sidebar-zone-right {
-  right: 0;
+    right: 0;
 }
 
 /* ─── Resize handle ──────────────────────────────────────────────────────── */
 
 body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle {
-  width: 8px !important;
-  border-radius: 4px;
-  background: transparent;
-  transition: background 0.2s;
+    width: 8px !important;
+    border-radius: 4px;
+    background: transparent;
+    transition: background 0.2s;
 }
 body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle:hover,
 body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle:active {
-  background: color-mix(in srgb, var(--text-normal) 12%, transparent);
+    background: color-mix(in srgb, var(--text-normal) 12%, transparent);
 }
 
 /* ─── Published note aura ─────────────────────────────────────────────────── */
@@ -208,132 +202,132 @@ body.stnd-note-published.stnd-note-private
 /* ─── Settings Navigation & Tab Grouping ─────────────────────────────────── */
 
 .stnd-settings-groups-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .stnd-settings-group {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--background-primary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--background-primary-alt);
 }
 
 .stnd-settings-group-title {
-  font-size: var(--font-smallest, 0.75rem);
-  font-weight: var(--font-semibold, 600);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-  margin-top: 0;
+    font-size: var(--font-smallest, 0.75rem);
+    font-weight: var(--font-semibold, 600);
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    margin-top: 0;
 }
 
 .stnd-settings-nav {
-  display: flex;
-  justify-content: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .stnd-settings-nav-btn {
-  padding: 4px 12px;
-  font-size: var(--font-ui-small, 0.9rem);
-  border-radius: 4px;
-  background: var(--button-background, var(--background-secondary));
-  color: var(--text-normal);
-  border: 1px solid var(--background-modifier-border);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+    padding: 4px 12px;
+    font-size: var(--font-ui-small, 0.9rem);
+    border-radius: 4px;
+    background: var(--button-background, var(--background-secondary));
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
 }
 
 .stnd-settings-nav-btn:hover {
-  background: var(--background-modifier-hover);
+    background: var(--background-modifier-hover);
 }
 
 .stnd-settings-nav-btn.active {
-  background: var(--interactive-accent) !important;
-  color: var(--text-on-accent) !important;
-  border-color: var(--interactive-accent) !important;
+    background: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+    border-color: var(--interactive-accent) !important;
 }
 
 /* ─── Garden Connected Account Card Stats ────────────────────────────────── */
 
 .stnd-account-stats-container {
-  margin-top: 12px;
-  display: flex;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--background-secondary-alt);
-  border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--background-secondary-alt);
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
 }
 
 .stnd-account-stats-loading {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  width: 100%;
-  text-align: center;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    width: 100%;
+    text-align: center;
 }
 
 .stnd-account-stat-col {
-  flex: 1;
-  text-align: center;
+    flex: 1;
+    text-align: center;
 }
 
 .stnd-account-stat-col.wide {
-  flex: 1.5;
+    flex: 1.5;
 }
 
 .stnd-account-stat-value {
-  font-weight: 600;
-  font-size: var(--font-ui-large, 1.25rem);
-  color: var(--text-normal);
+    font-weight: 600;
+    font-size: var(--font-ui-large, 1.25rem);
+    color: var(--text-normal);
 }
 
 .stnd-account-stat-value.medium {
-  font-size: var(--font-ui-medium, 1.1rem);
-  line-height: 1.5;
+    font-size: var(--font-ui-medium, 1.1rem);
+    line-height: 1.5;
 }
 
 .stnd-account-stat-label {
-  font-size: var(--font-smallest, 0.75rem);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 500;
-  margin-top: 2px;
+    font-size: var(--font-smallest, 0.75rem);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-top: 2px;
 }
 
 .stnd-settings-content {
-  margin-top: 12px;
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 16px;
+    margin-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 16px;
 }
 
 .stnd-settings-content h2 {
-  margin-top: 24px;
-  margin-bottom: 16px;
+    margin-top: 24px;
+    margin-bottom: 16px;
 }
 
 .stnd-settings-content > h2:first-of-type,
 .stnd-settings-content > div:first-of-type > h2:first-of-type {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 /* Standalone settings tab descriptions alignment */
 .stnd-settings-content .setting-item-description:not(.setting-item .setting-item-description) {
-  padding-left: 16px;
-  margin-top: 8px;
-  margin-bottom: 12px;
+    padding-left: 16px;
+    margin-top: 8px;
+    margin-bottom: 12px;
 }
-
-
 
 /* Reset CodeMirror widget buffers which are <img> tags */
 .cm-widgetBuffer {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
 }

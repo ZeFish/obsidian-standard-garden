@@ -1,6 +1,6 @@
 "use strict";
 
-const { PluginSettingTab, Setting } = require("obsidian");
+const { PluginSettingTab, Setting, Notice } = require("obsidian");
 const { descWithLinks } = require("../../constants.js");
 
 
@@ -443,11 +443,12 @@ class InterfaceManagerFeature {
       style.id = "atelier-truncate-filenames";
       style.textContent = `
         body.stnd-truncate-filenames .tree-item-self {
-          white-space: nowrap;
+          white-space: nowrap !important;
         }
         body.stnd-truncate-filenames .tree-item-inner {
-          text-overflow: ellipsis;
-          overflow: hidden;
+          text-overflow: ellipsis !important;
+          overflow: hidden !important;
+          white-space: nowrap !important;
         }
       `;
       document.head.appendChild(style);
@@ -480,6 +481,7 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    new Notice("Settings: " + JSON.stringify(this.settings));
     containerEl.createEl("h2", { text: "General" });
 
     const desc = containerEl.createEl("p", {
@@ -499,16 +501,25 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
       ))
       .addToggle((t) =>
         t.setValue(this.settings.zen).onChange(async (v) => {
-          this.settings.zen = v;
-          await this.save();
-          const feature = this.getFeature();
-          feature.applySettings();
-          if (v) {
-            feature.setupAutoHideSingleTab();
-            feature.setupAutoHideStatusBar();
-          } else {
-            feature.teardownAutoHideSingleTab();
-            feature.teardownAutoHideStatusBar();
+          try {
+            this.settings.zen = v;
+            await this.save();
+            const feature = this.getFeature();
+            if (!feature) {
+              new Notice("Error: InterfaceManagerFeature not found");
+              return;
+            }
+            feature.applySettings();
+            if (v) {
+              feature.setupAutoHideSingleTab();
+              feature.setupAutoHideStatusBar();
+            } else {
+              feature.teardownAutoHideSingleTab();
+              feature.teardownAutoHideStatusBar();
+            }
+          } catch (err) {
+            new Notice("Zen toggle error: " + err.message);
+            console.error(err);
           }
         }),
       );
@@ -521,9 +532,19 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
       ))
       .addToggle((t) =>
         t.setValue(this.settings.truncateFilenames).onChange(async (v) => {
-          this.settings.truncateFilenames = v;
-          await this.save();
-          this.getFeature().applyTruncateFilenames();
+          try {
+            this.settings.truncateFilenames = v;
+            await this.save();
+            const feature = this.getFeature();
+            if (!feature) {
+              new Notice("Error: InterfaceManagerFeature not found");
+              return;
+            }
+            feature.applyTruncateFilenames();
+          } catch (err) {
+            new Notice("Truncate toggle error: " + err.message);
+            console.error(err);
+          }
         }),
       );
 
@@ -535,9 +556,19 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
       ))
       .addToggle((t) =>
         t.setValue(this.settings.defaultReadingMode).onChange(async (v) => {
-          this.settings.defaultReadingMode = v;
-          await this.save();
-          this.getFeature().enforceReadingMode();
+          try {
+            this.settings.defaultReadingMode = v;
+            await this.save();
+            const feature = this.getFeature();
+            if (!feature) {
+              new Notice("Error: InterfaceManagerFeature not found");
+              return;
+            }
+            feature.enforceReadingMode();
+          } catch (err) {
+            new Notice("Reading mode toggle error: " + err.message);
+            console.error(err);
+          }
         }),
       );
 
@@ -551,8 +582,13 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
         t
           .setValue(this.settings.autoFocusLastLineOnMobile)
           .onChange(async (v) => {
-            this.settings.autoFocusLastLineOnMobile = v;
-            await this.save();
+            try {
+              this.settings.autoFocusLastLineOnMobile = v;
+              await this.save();
+            } catch (err) {
+              new Notice("Focus toggle error: " + err.message);
+              console.error(err);
+            }
           }),
       );
 
@@ -564,10 +600,20 @@ class InterfaceManagerSettingTab extends PluginSettingTab {
       ))
       .addToggle((t) =>
         t.setValue(this.settings.autoHideSidebars).onChange(async (v) => {
-          this.settings.autoHideSidebars = v;
-          await this.save();
-          if (v) this.getFeature().setupAutoHideSidebars();
-          else this.getFeature().teardownAutoHideSidebars();
+          try {
+            this.settings.autoHideSidebars = v;
+            await this.save();
+            const feature = this.getFeature();
+            if (!feature) {
+              new Notice("Error: InterfaceManagerFeature not found");
+              return;
+            }
+            if (v) feature.setupAutoHideSidebars();
+            else feature.teardownAutoHideSidebars();
+          } catch (err) {
+            new Notice("Auto-hide sidebars toggle error: " + err.message);
+            console.error(err);
+          }
         }),
       );
   }
