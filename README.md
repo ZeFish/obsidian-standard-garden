@@ -1,6 +1,15 @@
-# Obsidian Garden
+# Standard Garden
 
-Garden is a powerful design token bridge and CSS adapter for Obsidian, bringing curated typographic rhythm, cohesive color palettes, and advanced syntax highlighting to your vault. It also optionally allows you to publish your notes seamlessly to the web.
+Standard Garden bridges your Obsidian vault with a beautifully crafted design system, bringing timeless typography and cohesive, organic atmospheres to your writing environment.
+
+It provides a suite of silent tools designed to help your thoughts take root without distracting you:
+- **The Gatehouse**: Publish your polished notes directly to the web.
+- **Woodcuts (Design System)**: Instantly change the aesthetic and mood of individual notes.
+- **The Mycelium Engine**: Uncover hidden connections and unlinked mentions naturally as you write.
+- **Seedbeds**: Automate the organization and metadata of your notes.
+- **Smart Snippets**: Manage CSS snippets effortlessly to customize the grain of your vault.
+
+Craft a sanctuary for your mind, away from the noise of the modern web.
 
 ## Architecture — the Adapter model
 
@@ -26,13 +35,7 @@ Themes are fully bundled from the `@stnd/themes` npm package at build time. The 
 frontmatter key selects a theme at runtime. See the [monorepo README](https://github.com/ZeFish/utopie)
 for the theme pipeline and the full architecture spec.
 
-## Features
 
-- **Design System Adapter**: Injects the Standard framework directly into your Obsidian workspace.
-- **Curated Themes**: Switch instantly between carefully designed, highly legible themes directly from your note's frontmatter.
-- **Advanced Syntax Highlighting**: Enhances code blocks with a post-processor, injecting PrismJS languages seamlessly.
-- **Smart Snippets**: Manage CSS snippets effortlessly without restarting the app.
-- **Optional Web Publishing**: Sync and publish your notes to `standard.garden` with a single click.
 
 ## 🔒 Privacy & Data Usage
 
