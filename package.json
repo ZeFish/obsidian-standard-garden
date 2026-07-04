@@ -12,6 +12,7 @@
     "prismjs": "^1.30.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "sass": "^1.101.0"
   }
 }

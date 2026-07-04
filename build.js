@@ -105,9 +105,31 @@ esbuild
       }
     }
 
-    const minifiedCss = (
-      await esbuild.transform(combinedCss, { loader: "css", minify: true })
-    ).code;
+    const sass = require("sass");
+
+    let scssSource = combinedCss;
+    scssSource = scssSource.replace(/^\uFEFF/gm, ""); // Remove BOM
+    scssSource = scssSource.replace(/:root/g, "&"); // Scope CSS variables
+    scssSource = scssSource.replace(/body[\w:.\-()]*\.stnd-adapter/g, (match) => {
+        return "&" + match.replace(/^body/, '').replace(/\.stnd-adapter/, '');
+    });
+    scssSource = scssSource.replace(/(?:^|\s|,)\.stnd-adapter([\w:.\-()]*)/g, (match, p1) => {
+        const prefix = match.match(/^[ \s,]+/);
+        const prefStr = prefix ? prefix[0] : "";
+        return prefStr + "&" + p1;
+    });
+
+    const wrappedScss = `body.stnd-adapter {\n${scssSource}\n}`;
+
+    let minifiedCss;
+    try {
+      const compiled = sass.compileString(wrappedScss, { style: "compressed" });
+      minifiedCss = compiled.css;
+    } catch (e) {
+      console.error("SASS compilation failed:", e);
+      process.exit(1);
+    }
+
     fs.writeFileSync(path.join(distDir, "styles.css"), minifiedCss);
     console.log(
       `Built dist/styles.css (${(minifiedCss.length / 1024) | 0}KB minified, themes lazy-loaded)`,
