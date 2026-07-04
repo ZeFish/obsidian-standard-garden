@@ -366,7 +366,8 @@ class InterfaceManagerFeature {
   }
 
   setupAutoHideSingleTab() {
-    const update = () => {
+    this.teardownAutoHideSingleTab();
+    this._singleTabHandler = () => {
       setTimeout(() => {
         const tabs = document.querySelectorAll(
           ".mod-root .workspace-tabs .workspace-tab-header-container .workspace-tab-header",
@@ -374,14 +375,9 @@ class InterfaceManagerFeature {
         document.body.classList.toggle("stnd-single-tab", tabs.length <= 1);
       }, 0);
     };
-    update();
-    this._singleTabHandler = update;
-    this.plugin.registerEvent(
-      this.app.workspace.on("layout-change", this._singleTabHandler),
-    );
-    this.plugin.registerEvent(
-      this.app.workspace.on("active-leaf-change", this._singleTabHandler),
-    );
+    this._singleTabHandler();
+    this.app.workspace.on("layout-change", this._singleTabHandler);
+    this.app.workspace.on("active-leaf-change", this._singleTabHandler);
   }
 
   teardownAutoHideSingleTab() {
