@@ -1,6 +1,6 @@
 {
   "id": "standard-garden",
-  "name": "Standard::Garden",
+  "name": "Standard Garden",
   "version": "0.1.4",
   "minAppVersion": "1.6.0",
   "description": "The obsidian plugin for managing and publishing your notes on standard.garden",
