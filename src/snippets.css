@@ -239,7 +239,10 @@ body.stnd-adapter.stnd-clean-ui .suggestion-container .suggestion-item :is(small
 }
 
 /* --- Snippet: Hide Title.md --- */
-body.stnd-adapter.stnd-clean-ui .view-header-title-container,
+body.stnd-adapter.stnd-clean-ui .view-header-title-container {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 body.stnd-adapter.stnd-clean-ui .inline-title {
   display: none !important;
 }
