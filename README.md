@@ -15,8 +15,10 @@ Standard Garden bridges your local Obsidian vault with our curated design system
 - **The Gatehouse**: Publish your polished notes directly to the web with a single click. Your thoughts remain entirely local until you decide they are ready to bloom.
 - **Woodcuts (Design System)**: Instantly change the aesthetic and mood of individual notes. Cultivate different atmospheres depending on what you are writing.
 - **The Mycelium Engine**: A quiet companion that uncovers hidden connections and unlinked mentions naturally as you write, encouraging you to weave your ideas together.
+- **Ask Garden (RAG / Discussion)**: Ask questions directly against your note garden. The system embeds your query, retrieves semantically similar notes from your vault via Cloudflare Vectorize, and generates an AI response (Llama 3.1 8B on Cloudflare Workers AI) grounded only in your own knowledge.
 - **Seedbeds**: Automate the organization of your vault. When a seedling (note) is planted in a specific folder, its metadata is automatically structured.
 - **Smart Snippets**: Manage CSS snippets effortlessly to customize the grain of your vault without restarting.
+- **E-ink / Boox Support**: Optimize Obsidian for E-ink screens (like Onyx Boox) with custom high-contrast CSS (animations/transitions disabled) and physical button navigation mapping.
 
 ## 🔒 Privacy & Data Usage
 
@@ -63,14 +65,33 @@ publish: true
 ---
 ```
 
+## 🔮 Future AI Directions / Development Ideas
+
+Here are additional AI integration ideas made possible by the Cloudflare Workers AI + Vectorize stack:
+
+1. **Editor Writing Copilot**: Shortcuts or commands to generate summaries, brainstorm content, or autocomplete text in the active note.
+2. **Automatic Metadata Generation**: Auto-suggested tags and intelligent frontmatter structuring based on text analysis.
+3. **Live Link Suggestions (Mycelium Autopilot)**: A panel showing potential semantic links to other notes in your garden in real time while writing.
+
 ## 🏗️ Development
 
-Garden relies on the `@stnd/styles` and `@stnd/themes` packages. To build the plugin locally:
+Garden relies on the `@stnd/styles` and `@stnd/themes` packages.
+
+Important: Always build the plugin before testing or deploying. Use pnpm (preferred) to ensure workspace-linked packages are resolved correctly.
+
+To build and deploy the plugin locally:
 
 ```bash
-pnpm install
-pnpm run build
+pnpm install       # install workspace deps
+pnpm build         # bundle and deploy to your local Obsidian vault
 ```
+
+The build script bundles JS/CSS into `dist/` and (when possible) deploys the plugin into the configured vault path (see `build.js`).
+
+### Performance note
+
+Theme/frontmatter refresh is intentionally scoped to the active note (and the currently selected theme note) to avoid visual stutter while typing.
+Text Trim is scoped to reading/preview surfaces and does not apply to `markdown-source-view`.
 
 ## License
 

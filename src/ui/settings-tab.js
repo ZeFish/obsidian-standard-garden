@@ -14,6 +14,7 @@ const { MyceliumSettingTab } = require("../features/mycelium/index.js");
 const { ScrollMapSettingTab } = require("../features/scroll-map/index.js");
 const { SnippetManagerSettingTab } = require("../features/snippet-manager/index.js");
 const { MediaManagerSettingTab } = require("../features/vault-audit/index.js");
+const { EinkSettingTab } = require("../features/eink/index.js");
 
 class ArtisanSettingTab {
   constructor(app, plugin, parentTab) {
@@ -40,7 +41,8 @@ class ArtisanSettingTab {
       { id: "enableMycelium", name: "Mycelium", desc: "Tends the roots of your garden (unlinked mentions discovery)." },
       { id: "enableBase64Fold", name: "Base64 Fold", desc: "Hide complex image roots to keep your raw text clean." },
       { id: "enableSyntaxPreview", name: "Syntax Preview", desc: "Live preview of formatting while you type." },
-      { id: "enableDailyNav", name: "Daily Nav", desc: "Walk the daily trails with chronological navigation." }
+      { id: "enableDailyNav", name: "Daily Nav", desc: "Walk the daily trails with chronological navigation." },
+      { id: "enableEink", name: "E-ink / Boox Support", desc: "Enable physical button interception and visual themes optimized for E-ink screens." }
     ];
 
     for (const tool of tools) {
@@ -112,6 +114,9 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
     }
     if (this.plugin.settings.enableScrollMap) {
       tabs.push({ id: "Scroll Map", tab: new ScrollMapSettingTab(this.app, this.plugin) });
+    }
+    if (this.plugin.settings.enableEink) {
+      tabs.push({ id: "Eink", tab: new EinkSettingTab(this.app, this.plugin) });
     }
 
 
@@ -205,12 +210,14 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
     if (cachedData) {
       this._renderStatsValues(statsContainer, cachedData, localCount);
 
-      fetch(`${this.plugin.settings.apiUrl}/me`, {
+      obsidian_1.requestUrl({
+        url: `${this.plugin.settings.apiUrl}/me`,
         headers: { "x-api-key": this.plugin.settings.apiKey },
+        throw: false,
       })
-        .then((res) => res.ok && res.json())
-        .then((data) => {
-          if (data) {
+        .then((res) => {
+          if (res.status >= 200 && res.status < 300) {
+            const data = res.json;
             this.plugin.statsCache = data;
             this._updateStatsValues(statsContainer, data, localCount);
           }
@@ -222,12 +229,14 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
         text: "Loading stats from garden...",
       });
 
-      fetch(`${this.plugin.settings.apiUrl}/me`, {
+      obsidian_1.requestUrl({
+        url: `${this.plugin.settings.apiUrl}/me`,
         headers: { "x-api-key": this.plugin.settings.apiKey },
+        throw: false,
       })
         .then((res) => {
-          if (!res.ok) throw new Error();
-          return res.json();
+          if (res.status < 200 || res.status >= 300) throw new Error();
+          return res.json;
         })
         .then((data) => {
           this.plugin.statsCache = data;

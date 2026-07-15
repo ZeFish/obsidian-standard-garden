@@ -259,34 +259,37 @@ class SyntaxPreviewFeature {
         });
       });
     } else {
-      // card view (feed)
-      const grid = container.createDiv({ cls: "feed-grid" });
-      grid.style.cssText = "display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0;";
+      // flat feed view
+      const grid = container.createDiv({ cls: "feed-articles" });
+      grid.style.cssText = "display: flex; flex-direction: column; gap: 1.5rem; margin: 1.5rem 0;";
 
       matches.forEach((m) => {
-        const card = grid.createDiv({ cls: "note-card" });
-        card.style.cssText = "border: 1px solid var(--background-modifier-border); padding: 1rem; border-radius: var(--radius-m); cursor: pointer; background: var(--background-primary); transition: transform 0.1s ease;";
-        card.addEventListener("mouseenter", () => card.style.transform = "translateY(-2px)");
-        card.addEventListener("mouseleave", () => card.style.transform = "none");
-        card.addEventListener("click", () => this.app.workspace.getLeaf().openFile(m.file));
+        const article = grid.createDiv({ cls: "feed-article" });
+        article.style.cssText = "padding: 0.5rem 0; cursor: pointer;";
+        article.addEventListener("click", () => this.app.workspace.getLeaf().openFile(m.file));
 
-        const title = card.createEl("h4", { text: m.title });
-        title.style.margin = "0 0 0.5rem 0";
-        title.style.color = "var(--text-accent)";
+        const title = article.createEl("h4", { 
+          text: m.title,
+          cls: "feed-title"
+        });
+        title.style.cssText = "margin: 0 0 0.25rem 0; font-size: 1.15em; font-weight: 600; color: var(--text-accent);";
 
-        const meta = card.createDiv({ cls: "note-card-meta" });
-        meta.style.cssText = "font-size: var(--font-ui-smaller); opacity: 0.6; margin-bottom: 0.5rem;";
+        const meta = article.createDiv({ cls: "feed-meta" });
+        meta.style.cssText = "font-size: var(--font-ui-smaller); opacity: 0.6; margin-bottom: 0.25rem;";
         
         const dateStr = new Date(m.mtime).toLocaleDateString("en-US", {
           day: "numeric",
           month: "short",
           year: "numeric"
         });
-        meta.setText(`Modified on ${dateStr} · ${m.visibility}`);
+        meta.setText(dateStr);
 
         if (m.excerpt) {
-          const excerpt = card.createEl("p", { text: m.excerpt });
-          excerpt.style.cssText = "margin: 0; font-size: var(--font-ui-small); opacity: 0.8;";
+          const excerpt = article.createEl("p", { 
+            text: m.excerpt,
+            cls: "feed-excerpt"
+          });
+          excerpt.style.cssText = "margin: 0.5rem 0 0 0; font-size: var(--font-ui-small); opacity: 0.8; line-height: 1.4;";
         }
       });
     }

@@ -79,7 +79,7 @@ class PublishStatusFeature {
       pub === "unlisted" ||
       pub === "private";
     if (!wantsPublish) return "unpublished";
-    if (!fm.garden_url && !fm.url_public) return "pending";
+    if (!fm["garden-url"] && !fm.url_public) return "pending";
 
     // Si on a un statut en cache indiquant une désynchronisation, on l'affiche en priorité
     if (path && this.noteStatuses) {
@@ -112,7 +112,7 @@ class PublishStatusFeature {
       pub === "public" ||
       pub === "unlisted" ||
       pub === "private";
-    const hasGardenUrl = fm.garden_url != null || fm.url_public != null;
+    const hasGardenUrl = fm["garden-url"] != null || fm.url_public != null;
 
     if (!wantsPublish || !hasGardenUrl) {
       this.noteStatuses.delete(file.path);

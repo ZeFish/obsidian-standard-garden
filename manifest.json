@@ -1,7 +1,7 @@
 {
   "id": "standard-garden",
   "name": "Standard Garden",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "minAppVersion": "1.6.0",
   "description": "An artisan's toolkit for your mind. Sculpt your writing environment, tend to your thoughts, and publish to standard.garden.",
   "author": "Francis",

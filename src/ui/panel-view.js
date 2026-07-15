@@ -196,7 +196,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     const publishValue = fm[publishKey]; // true | false | undefined
     // garden_url is the confirmation stamp; url_public/published = legacy notes
     const isConfirmedOnline =
-      !!fm.garden_url ||
+      !!fm["garden-url"] ||
       !!fm.url_public ||
       fm.published === true ||
       fm.published === "true";

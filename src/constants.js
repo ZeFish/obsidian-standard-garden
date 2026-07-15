@@ -78,21 +78,22 @@ const FONT_TOKENS = new Set([
 const DEFAULT_SETTINGS = {
   // Design-system layers (frontmatter tokens → CSS variables)
   enableDesignSystem: false,
+  defaultTheme: "",
   designSystem: {
-    enableBetterHighlights: true,
-    enableBlurryModals: true,
-    enableCallouts: true,
-    enableCodeTweaks: true,
-    enableSubduedLinks: true,
-    enableCompactFiletree: true,
-    enableCleanFrontmatter: true,
-    enableCleanUI: true,
-    enableMinimalImages: true,
-    enableTextTrim: true,
-    enableBaseTweaks: true,
-    enableSidenotes: true,
-    enableCleanTransclusions: true,
-    enableZoomLargeScreen: true,
+    enableBetterHighlights: false,
+    enableBlurryModals: false,
+    enableCallouts: false,
+    enableCodeTweaks: false,
+    enableSubduedLinks: false,
+    enableCompactFiletree: false,
+    enableCleanFrontmatter: false,
+    enableCleanUI: false,
+    enableMinimalImages: false,
+    enableTextTrim: false,
+    enableBaseTweaks: false,
+    enableSidenotes: false,
+    enableCleanTransclusions: false,
+    enableZoomLargeScreen: false,
   },
   
   // Artisan Tools (Helpers)
@@ -103,6 +104,7 @@ const DEFAULT_SETTINGS = {
   enableBase64Fold: false,
   enableSyntaxPreview: false,
   enableDailyNav: false,
+  enableEink: false,
 
   seedbeds: {
     rules: [
@@ -144,6 +146,19 @@ const DEFAULT_SETTINGS = {
   },
   dailyNav: {
     navigationMode: "chronological"
+  },
+  eink: {
+    mode: "auto", // auto, always, never
+    interceptVolume: true,
+    interceptPageKeys: true,
+    interceptArrows: false,
+    scrollDistance: 85,
+    disableSmoothScroll: true,
+    volUpAction: "scroll-up",
+    volDownAction: "scroll-down",
+    fontWeight: "normal",
+    fontFamily: "Fraunces",
+    bookModeEnabled: true,
   }
 };
 

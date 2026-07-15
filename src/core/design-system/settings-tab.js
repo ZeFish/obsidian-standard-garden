@@ -43,6 +43,24 @@ class DesignSystemSettingTab extends PluginSettingTab {
         }),
     );
 
+    const THEMES = require("../../themes.generated.js");
+    new Setting(containerEl)
+      .setName("Default Theme")
+      .setDesc("Select the theme to apply by default to all notes when no theme is specified in their frontmatter. ")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("", "None");
+        Object.keys(THEMES).forEach((themeName) => {
+          dropdown.addOption(themeName, themeName);
+        });
+        dropdown
+          .setValue(this.plugin.settings.defaultTheme || "")
+          .onChange(async (value) => {
+            this.plugin.settings.defaultTheme = value;
+            await this.plugin.saveSettings();
+            this.plugin.design.updateBodyClasses();
+          });
+      });
+
     const cacheSetting = new Setting(containerEl)
       .setName("Clear theme cache")
       .setDesc("Purges the internal cache and forces the plugin to re-scan and hot-reload all theme stylesheets defined in your markdown files. Useful if you edited your custom theme notes but modifications aren't displaying yet. ")
@@ -106,7 +124,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
         .setDesc(toggleDef.desc)
         .addToggle((toggle) =>
           toggle
-            .setValue(this.plugin.settings.designSystem[toggleDef.id] !== false)
+            .setValue(this.plugin.settings.designSystem[toggleDef.id] === true)
             .onChange(async (value) => {
               this.plugin.settings.designSystem[toggleDef.id] = value;
               await this.plugin.saveSettings();

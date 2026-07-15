@@ -35,6 +35,7 @@
     --tag-padding-y: 0;
     --tag-padding-x: 0;
     --code-size: inherit;
+    --code-white-space: pre;
     --metadata-input-font-size: calc(var(--font-size) * pow(var(--font-ratio), 0));
     --inline-title-weight: var(--font-header-weight);
     --h1-weight: var(--font-header-weight);
@@ -180,6 +181,7 @@
 .stnd-adapter .markdown-reading-view pre {
     font-feature-settings: var(--font-monospace-feature);
     font-variation-settings: var(--font-monospace-variation);
+    white-space: pre;
 }
 .stnd-adapter .markdown-reading-view ol > li,
 .stnd-adapter .markdown-reading-view ul > li,
@@ -525,6 +527,7 @@ body.stnd-adapter.theme-dark pre {
     background-color: var(--background-secondary);
     border: 1px solid var(--border-color);
     box-shadow: inset 0 0 0.75rlh color-mix(in oklch, black 5%, transparent);
+
 }
 body.stnd-adapter.theme-light .markdown-rendered mark,
 body.stnd-adapter.theme-light .cm-s-obsidian span.cm-highlight,
@@ -846,15 +849,8 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 }
 
 /* hr spacing — must match/beat the general "[el-] + [el-]" rule's specificity */
-.stnd-adapter .markdown-reading-view [class^="el-"] + .el-hr,
-.stnd-adapter .markdown-preview-view [class^="el-"] + .el-hr,
-.stnd-adapter [class^="el-"] + .el-hr {
-    margin-block-start: 4rlh;
-}
-
-.stnd-adapter .markdown-reading-view .el-hr + [class^="el-"],
-.stnd-adapter .markdown-preview-view .el-hr + [class^="el-"],
-.stnd-adapter .el-hr + [class^="el-"] {
+.stnd-adapter .markdown-reading-view [class^="el-"] ~ .el-hr:not(:has(.cm-hmd-frontmatter)),
+.stnd-adapter .markdown-reading-view .el-hr + [class^="el-"]:not(:has(.cm-hmd-frontmatter)){
     margin-block-start: 4rlh;
 }
 
@@ -864,6 +860,19 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 
 .stnd-adapter .markdown-preview-view [class^="el-"] * {
     margin-block: 0;
+}
+
+.stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol) {
+    margin-block-start: var(--p-spacing);
+    margin-block-end: var(--p-spacing);
+}
+
+.stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol):first-child {
+    margin-block-start: 0;
+}
+
+.stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol):last-child {
+    margin-block-end: 0;
 }
 
 .stnd-adapter .markdown-preview-view [class^="el-"] p + p {
@@ -884,32 +893,33 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     padding-bottom: calc(var(--line-height-normal) * 0.25em);
 }
 
-.markdown-reading-view blockquote,
-.markdown-reading-view pre,
-.markdown-reading-view figure,
-.markdown-reading-view .callout,
-.markdown-reading-view img {
+.stnd-adapter .markdown-reading-view blockquote,
+.stnd-adapter .markdown-reading-view pre,
+.stnd-adapter .markdown-reading-view figure,
+.stnd-adapter .markdown-reading-view .callout,
+.stnd-adapter .markdown-reading-view img {
     box-shadow: var(--shadow-raised), var(--shadow-ring);
 }
 
-.markdown-reading-view blockquote,
-.markdown-reading-view pre,
-.markdown-reading-view figure,
-.markdown-reading-view .callout,
-.markdown-reading-view p:has(img) {
+.stnd-adapter .markdown-reading-view blockquote,
+.stnd-adapter .markdown-reading-view pre,
+.stnd-adapter .markdown-reading-view figure,
+.stnd-adapter .markdown-reading-view .callout,
+.stnd-adapter .markdown-reading-view p:has(img) {
     margin-inline: 1rlh;
 }
 
-.full-width .markdown-reading-view p:has(img) {
+.stnd-adapter.full-width .markdown-reading-view p:has(img),
+.stnd-adapter .full-width .markdown-reading-view p:has(img) {
     margin-inline: 1rlh;
 }
 
 @media (max-width: 600px) {
-    .markdown-reading-view blockquote,
-    .markdown-reading-view pre,
-    .markdown-reading-view figure,
-    .markdown-reading-view .callout,
-    .markdown-reading-view p:has(img) {
+    .stnd-adapter .markdown-reading-view blockquote,
+    .stnd-adapter .markdown-reading-view pre,
+    .stnd-adapter .markdown-reading-view figure,
+    .stnd-adapter .markdown-reading-view .callout,
+    .stnd-adapter .markdown-reading-view p:has(img) {
         margin-inline: 0 !important;
     }
 }

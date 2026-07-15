@@ -341,7 +341,7 @@ body.stnd-adapter.stnd-base-tweaks .bases-embed .bases-view {
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header,
 body.stnd-adapter.stnd-base-tweaks .bases-header {
-    opacity: 0;
+    opacity: 0.05;
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header:hover,
 body.stnd-adapter.stnd-base-tweaks .bases-header:hover,
@@ -349,7 +349,7 @@ body.stnd-adapter.stnd-base-tweaks .bases-thead:hover {
     opacity: 1;
 }
 body.stnd-adapter.stnd-base-tweaks .bases-thead {
-    opacity: 0;
+    opacity: 0.33;
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-thead {
     display: none;

@@ -102,11 +102,12 @@ class StandardPlugin extends obsidian_1.Plugin {
       SyntaxPreviewFeature,
     } = require("./src/features/syntax-preview/index.js");
     const { DailyNavFeature } = require("./src/features/daily-nav/index.js");
+    const { EinkFeature } = require("./src/features/eink/index.js");
 
     this.garden = new GardenFeature(this.app, this);
     this.features.push(this.garden);
 
-    // Account linking: the /connect-obsidian web page hands the API key back via
+    // Account linking: the /connect/obsidian web page hands the API key back via
     // obsidian://standard-connect?key=…&username=…&state=… (see Garden.startConnect).
     this.registerObsidianProtocolHandler("standard-connect", (params) => {
       this.garden.handleConnectCallback(params);
@@ -135,6 +136,9 @@ class StandardPlugin extends obsidian_1.Plugin {
     }
     if (this.settings.enableDailyNav) {
       functionalInstances.push(new DailyNavFeature(this.app, this));
+    }
+    if (this.settings.enableEink) {
+      functionalInstances.push(new EinkFeature(this.app, this));
     }
 
     this.features.push(...functionalInstances);
@@ -188,6 +192,11 @@ class StandardPlugin extends obsidian_1.Plugin {
       id: "sync-all-published",
       name: "Tend the garden (Sync all notes)",
       callback: () => this.garden.syncAllPublished(),
+    });
+    this.addCommand({
+      id: "ask-garden-ai",
+      name: "Ask Garden (Questionner le jardin)",
+      callback: () => this.garden.askGardenAI(),
     });
 
 

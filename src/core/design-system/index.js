@@ -55,9 +55,35 @@ class DesignSystemFeature {
     this.themeCache = {};
   }
 
+  getCurrentThemeInfo() {
+    const activeFile = this.app.workspace.getActiveFile();
+    const frontmatter = activeFile
+      ? this.app.metadataCache.getFileCache(activeFile)?.frontmatter ?? null
+      : null;
+    let theme =
+      frontmatter && frontmatter.theme != null
+        ? String(frontmatter.theme).trim()
+        : "";
+    if (!theme && this.plugin.settings.defaultTheme) {
+      theme = this.plugin.settings.defaultTheme;
+    }
+    const themeNote =
+      theme ? this.app.metadataCache.getFirstLinkpathDest(theme, "") : null;
+    return { activeFile, themeNote };
+  }
+
+  shouldRefreshForChangedFile(file) {
+    if (!file) return true;
+    const { activeFile, themeNote } = this.getCurrentThemeInfo();
+    if (activeFile && file.path === activeFile.path) return true;
+    if (themeNote && file.path === themeNote.path) return true;
+    return false;
+  }
+
   async load() {
     await this.loadThemeCacheFromFile();
     this.ensureThemeElement();
+    this.ensureFontsElement();
 
     // ─── Syntax highlighting post-processor ──────────────────────────────────
     this.plugin.registerMarkdownPostProcessor(async (el) => {
@@ -99,6 +125,7 @@ class DesignSystemFeature {
     );
     this.plugin.registerEvent(
       this.app.metadataCache.on("changed", (file) => {
+        if (!this.shouldRefreshForChangedFile(file)) return;
         clearTimeout(this.frontmatterUpdateTimeout);
         this.frontmatterUpdateTimeout = setTimeout(() => {
           this.updateBodyClasses();
@@ -107,6 +134,7 @@ class DesignSystemFeature {
     );
     this.plugin.registerEvent(
       this.app.metadataCache.on("resolve", (file) => {
+        if (!this.shouldRefreshForChangedFile(file)) return;
         if (!this.hasAppliedStartupSnapshot)
           this.applyStartupSnapshotSynchronously();
         clearTimeout(this.frontmatterUpdateTimeout);
@@ -120,26 +148,6 @@ class DesignSystemFeature {
         this.updateModeClasses();
       }),
     );
-    this.plugin.registerEvent(
-      this.app.workspace.on("editor-change", (editor, info) => {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (activeFile && info.file === activeFile) {
-          clearTimeout(this.frontmatterUpdateTimeout);
-          this.frontmatterUpdateTimeout = setTimeout(() => {
-            this.updateBodyClasses();
-          }, 50);
-        }
-      }),
-    );
-    this.plugin.registerEvent(
-      this.app.vault.on("modify", (file) => {
-        clearTimeout(this.frontmatterUpdateTimeout);
-        this.frontmatterUpdateTimeout = setTimeout(() => {
-          this.updateBodyClasses();
-        }, 50);
-      }),
-    );
-
     this.updateModeClasses();
 
     if (this.app?.workspace?.onLayoutReady) {
@@ -184,6 +192,33 @@ class DesignSystemFeature {
       document.head.appendChild(el);
     }
     this.stndThemeElement = el;
+  }
+
+  ensureFontsElement() {
+    let el = document.getElementById("stnd-fonts");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "stnd-fonts";
+      document.head.appendChild(el);
+    }
+
+    try {
+      const FONTS = require("../../fonts.generated.js");
+      const fontDir = `${this.plugin.manifest.dir}/fonts`;
+      const adapter = this.app.vault.adapter;
+      const resolvedCss = FONTS.replace(
+        /STND_FONT_URL:([\w.-]+)/g,
+        (match, fileName) => {
+          return adapter.getResourcePath(`${fontDir}/${fileName}`);
+        },
+      );
+
+      if (el.textContent !== resolvedCss) {
+        el.textContent = resolvedCss;
+      }
+    } catch (e) {
+      console.warn("[Standard] Failed to load generated fonts:", e);
+    }
   }
 
   // Build the combined CSS: curated token block first, then theme note CSS.
@@ -249,6 +284,8 @@ class DesignSystemFeature {
     this.clearSnippetViewClasses();
     this.clearFrontmatterProperties();
     this.clearThemeSnippet();
+    const fontsEl = document.getElementById("stnd-fonts");
+    if (fontsEl) fontsEl.remove();
   }
 
   saveStartupSnapshot(classes, frontmatter) {
@@ -288,7 +325,7 @@ class DesignSystemFeature {
       { id: "enableZoomLargeScreen", class: "stnd-zoom-large-screen" },
     ];
     toggles.forEach(t => {
-      if (designSettings[t.id] !== false) {
+      if (designSettings[t.id] === true) {
         classes.push(t.class);
       }
     });
@@ -399,10 +436,14 @@ class DesignSystemFeature {
 
   // theme: frontmatter → data-stnd-theme on body + combined CSS injection.
   async applyTheme(frontmatter) {
-    const theme =
+    let theme =
       frontmatter && frontmatter.theme != null
         ? String(frontmatter.theme).trim()
         : "";
+
+    if (!theme && this.plugin.settings.defaultTheme) {
+      theme = this.plugin.settings.defaultTheme;
+    }
 
     if (theme) {
       document.body.setAttribute("data-stnd-theme", theme);
@@ -553,17 +594,19 @@ class DesignSystemFeature {
     }
 
     if (this.plugin.settings.enableDesignSystem) {
-      if (snap.theme) {
-        document.body.setAttribute("data-stnd-theme", snap.theme);
+      const theme = snap.theme || this.plugin.settings.defaultTheme || "";
+      if (theme) {
+        document.body.setAttribute("data-stnd-theme", theme);
       }
       this.createStyleElements();
+      this.ensureFontsElement();
 
       // Inject the combined theme (curated tokens + cached snippet) into #stnd-theme
-      let snippetCss = (snap.theme && this.themeCache[snap.theme]) || "";
+      let snippetCss = (theme && this.themeCache[theme]) || "";
       if (snippetCss) {
-        snippetCss = snippetCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${snap.theme}"]`);
+        snippetCss = snippetCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${theme}"]`);
       }
-      this.applyThemeCss(snap.theme, snippetCss);
+      this.applyThemeCss(theme, snippetCss);
       this.lastAppliedThemeSnippetCss = snippetCss;
 
       if (snap.customCss && this.stndFrontmatterElement) {

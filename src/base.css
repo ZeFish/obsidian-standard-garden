@@ -72,7 +72,7 @@ body.stnd-adapter .inline-title {
     margin-block-start: var(--img-grid-gap);
 }
 
-body.mod-macos:not(.is-mobile) .workspace:not(.is-left-sidedock-open) .view-header {
+body.stnd-adapter.mod-macos:not(.is-mobile) .workspace:not(.is-left-sidedock-open) .view-header {
     padding-left: calc(var(--size-4-2) + var(--frame-left-space));
 }
 
@@ -326,7 +326,7 @@ body.stnd-note-published.stnd-note-private
 }
 
 /* Reset CodeMirror widget buffers which are <img> tags */
-.cm-widgetBuffer {
+.stnd-adapter .cm-widgetBuffer {
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;

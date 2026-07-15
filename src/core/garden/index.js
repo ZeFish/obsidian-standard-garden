@@ -3,6 +3,7 @@
 const obsidian_1 = require("obsidian");
 const { KNOWN_TOKENS, isImageFile, getMimeType } = require("../../constants");
 const { StndConfirmModal } = require("../../ui/confirm-modal");
+const { StndAskModal } = require("../../ui/ask-modal");
 
 // ─── Sync Progress Modal ──────────────────────────────────────────────────────
 // Live feedback for "Sync all published": a progress bar, the current note,
@@ -144,12 +145,18 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
   while (true) {
     attempt++;
     try {
-      const res = await fetch(url, options);
+      const res = await obsidian_1.requestUrl({
+        url,
+        method: options.method || "GET",
+        headers: options.headers || {},
+        body: options.body,
+        throw: false,
+      });
       if (res.status === 429) {
         if (attempt >= maxAttempts) {
           return res;
         }
-        const retryHeader = res.headers.get("Retry-After");
+        const retryHeader = res.headers["retry-after"] || res.headers["Retry-After"];
         let waitMs = 0;
         if (retryHeader) {
           const seconds = parseInt(retryHeader, 10);
@@ -249,11 +256,13 @@ class GardenFeature {
       return;
     }
     try {
-      const response = await fetch(`${this.plugin.settings.apiUrl}/me`, {
+      const response = await obsidian_1.requestUrl({
+        url: `${this.plugin.settings.apiUrl}/me`,
         headers: { "x-api-key": this.plugin.settings.apiKey },
+        throw: false,
       });
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.json;
         this.plugin.settings.apiUsername = data.username || "";
         await this.plugin.saveSettings();
         this.plugin.updateRibbonIconsVisibility();
@@ -271,9 +280,11 @@ class GardenFeature {
   }
 
   // ── Account linking (no copy-paste key) ──────────────────────────────────────
-  // Opens the garden's /connect-obsidian page in the browser with a one-time
-  // `state` nonce. After the user signs in, that page deep-links back via
-  // obsidian://standard-connect (handled in main.js → handleConnectCallback).
+  // Opens the garden's /connect/obsidian page — the same generic connect
+  // pipeline every app (Reveal included) authorizes through — with a
+  // one-time `state` nonce. After the user authorizes, that page deep-links
+  // back via obsidian://standard-connect (handled in main.js →
+  // handleConnectCallback).
   startConnect() {
     const base = (this.plugin.settings.apiUrl || "https://standard.garden/api")
       .replace(/\/api\/?$/, "");
@@ -282,7 +293,7 @@ class GardenFeature {
         ? crypto.randomUUID()
         : String(Math.random()).slice(2);
     this._connectState = state;
-    const url = `${base}/connect-obsidian?state=${encodeURIComponent(state)}`;
+    const url = `${base}/connect/obsidian?state=${encodeURIComponent(state)}`;
     this._openExternal(url);
     new obsidian_1.Notice("Standard : connexion ouverte dans le navigateur…");
   }
@@ -376,7 +387,7 @@ class GardenFeature {
         localFilesBySlug.set(slug, file);
 
         const isPublishedLocal = fm[publishKey] === true;
-        const hasGardenUrl = fm.garden_url != null;
+        const hasGardenUrl = fm["garden-url"] != null;
         const remoteNote = remoteBySlug.get(slug);
 
         if (isPublishedLocal) {
@@ -459,7 +470,7 @@ class GardenFeature {
           if (task.type === "local_published") {
             const { file, remoteNote } = task;
             const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-            const hasGardenUrl = fm.garden_url != null;
+            const hasGardenUrl = fm["garden-url"] != null;
 
             if (!remoteNote) {
               // Deleted remotely!
@@ -480,7 +491,7 @@ class GardenFeature {
                   // In 2-way mode, delete locally (mark publish: false)
                   await this.app.fileManager.processFrontMatter(file, (fm) => {
                     fm[publishKey] = false;
-                    delete fm.garden_url;
+                    delete fm["garden-url"];
                   });
                   unpublished++;
                   modal.recordResult("unpublished", file.basename);
@@ -562,7 +573,7 @@ class GardenFeature {
               await this.app.vault.modify(file, remoteNote.content);
               await this.app.fileManager.processFrontMatter(file, (fm) => {
                 fm[publishKey] = true;
-                fm.garden_url = this.getLiveUrl(file);
+                fm["garden-url"] = this.getLiveUrl(file);
               });
               pulled++;
               modal.recordResult("pulled", file.basename);
@@ -597,7 +608,7 @@ class GardenFeature {
             const file = await this.app.vault.create(finalPath, remoteNote.content);
             await this.app.fileManager.processFrontMatter(file, (fm) => {
               fm[publishKey] = true;
-              fm.garden_url = this.getLiveUrl(file);
+              fm["garden-url"] = this.getLiveUrl(file);
             });
 
             created++;
@@ -690,7 +701,7 @@ class GardenFeature {
         const file = await this.app.vault.create(finalPath, remoteNote.content);
         await this.app.fileManager.processFrontMatter(file, (fm) => {
           fm[publishKey] = true;
-          fm.garden_url = this.getLiveUrl(file);
+          fm["garden-url"] = this.getLiveUrl(file);
         });
         created++;
       }
@@ -841,8 +852,8 @@ class GardenFeature {
           headers: { "x-api-key": this.plugin.settings.apiKey },
         });
 
-        if (checkRes.ok) {
-          const checkData = await checkRes.json();
+        if (checkRes.status >= 200 && checkRes.status < 300) {
+          const checkData = checkRes.json;
           if (checkData.exists && checkData.url) {
             const cdnUrl = new URL(checkData.url, this.plugin.settings.apiUrl).href;
             uploaded.set(vaultFile.path, cdnUrl);
@@ -851,20 +862,38 @@ class GardenFeature {
         }
 
         // Sinon, procéder à l'envoi
-        const blob = new Blob([binary], { type: getMimeType(vaultFile.name) });
-        const form = new FormData();
-        form.append("file", blob, vaultFile.name);
+        const boundary = "----ObsidianBoundary" + Math.random().toString(36).substring(2);
+        const pre = [
+          `--${boundary}`,
+          `Content-Disposition: form-data; name="file"; filename="${vaultFile.name}"`,
+          `Content-Type: ${getMimeType(vaultFile.name)}`,
+          "",
+          ""
+        ].join("\r\n");
+        const post = `\r\n--${boundary}--`;
+
+        const fileBytes = new Uint8Array(binary);
+        const preBytes = new TextEncoder().encode(pre);
+        const postBytes = new TextEncoder().encode(post);
+
+        const bodyBytes = new Uint8Array(preBytes.length + fileBytes.byteLength + postBytes.length);
+        bodyBytes.set(preBytes, 0);
+        bodyBytes.set(fileBytes, preBytes.length);
+        bodyBytes.set(postBytes, preBytes.length + fileBytes.byteLength);
 
         const res = await fetchWithRetry(
           `${this.plugin.settings.apiUrl}/publish/attachment`,
           {
             method: "POST",
-            headers: { "x-api-key": this.plugin.settings.apiKey },
-            body: form,
+            headers: {
+              "x-api-key": this.plugin.settings.apiKey,
+              "Content-Type": `multipart/form-data; boundary=${boundary}`,
+            },
+            body: bodyBytes.buffer,
           },
         );
 
-        if (!res.ok) {
+        if (res.status < 200 || res.status >= 300) {
           console.warn(
             `Standard: Failed to upload ${vaultFile.name}`,
             res.status,
@@ -872,7 +901,7 @@ class GardenFeature {
           return null;
         }
 
-        const data = await res.json();
+        const data = res.json;
         const cdnUrl = new URL(data.url, this.plugin.settings.apiUrl).href;
         uploaded.set(vaultFile.path, cdnUrl);
         return cdnUrl;
@@ -948,11 +977,11 @@ class GardenFeature {
           }),
         },
       );
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         console.error(
           `Standard: Publish failed for ${file.basename}:`,
           response.status,
-          await response.text(),
+          response.text,
         );
         return false;
       }
@@ -963,7 +992,7 @@ class GardenFeature {
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         delete fm.published; // Nettoyer les anciennes clés obsolètes
         delete fm.url_public;
-        fm.garden_url = liveUrl;
+        fm["garden-url"] = liveUrl;
       });
 
       return true;
@@ -995,7 +1024,7 @@ class GardenFeature {
           },
         },
       );
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         console.error(
           `Standard: Unpublish failed for ${file.basename}:`,
           response.status,
@@ -1011,7 +1040,7 @@ class GardenFeature {
         fm[publishKey] = false;
         delete fm.published;
         delete fm.url_public;
-        delete fm.garden_url;
+        delete fm["garden-url"];
       });
 
       return true;
@@ -1033,21 +1062,23 @@ class GardenFeature {
       Object.entries(currentFm).filter(([k]) => KNOWN_TOKENS.has(k)),
     );
 
-    const response = await fetch(`${this.plugin.settings.apiUrl}/ai/theme`, {
+    const response = await obsidian_1.requestUrl({
+      url: `${this.plugin.settings.apiUrl}/ai/theme`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
       },
       body: JSON.stringify({ instruction, noteContent, currentTokens }),
+      throw: false,
     });
 
-    if (!response.ok) {
-      const text = await response.text();
+    if (response.status < 200 || response.status >= 300) {
+      const text = response.text;
       throw new Error(`Standard API ${response.status}: ${text}`);
     }
 
-    const data = await response.json();
+    const data = response.json;
     if (!data.tokens) throw new Error("No tokens returned from AI service");
     return data.tokens;
   }
@@ -1122,22 +1153,24 @@ class GardenFeature {
       const slug = resolved === "" ? "~root" : resolved;
 
       // 2. Récupérer le statut de la note distante
-      const response = await fetch(`${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`, {
+      const response = await obsidian_1.requestUrl({
+        url: `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
         method: "GET",
         headers: {
           "x-api-key": this.plugin.settings.apiKey,
         },
+        throw: false,
       });
 
       if (response.status === 404) {
         return { status: "unpublished" };
       }
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error(`HTTP error ${response.status}`);
       }
 
-      const remoteData = await response.json();
+      const remoteData = response.json;
       const remoteContent = remoteData.content || "";
       const remoteHash = remoteData.hash;
       const remoteMtime = remoteData.updated_at ? new Date(remoteData.updated_at).getTime() : 0;
@@ -1217,6 +1250,13 @@ class GardenFeature {
         () => resolve(null),
       ).open();
     });
+  }
+
+  async askGardenAI() {
+    if (!this.checkApiKeyAndShowModal()) {
+      return;
+    }
+    new StndAskModal(this.app, this.plugin).open();
   }
 }
 
