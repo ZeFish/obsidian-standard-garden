@@ -59,6 +59,8 @@ body.stnd-adapter summary {
     max-width: unset;
 }
 
+body.stnd-adapter hr {color:red;}
+
 /* ─── Sidebar transition ──────────────────────────────────────────────────── */
 
 body:not(.is-mobile).stnd-adapter .workspace-split.mod-left-split,
