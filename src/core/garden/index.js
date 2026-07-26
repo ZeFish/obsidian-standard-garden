@@ -154,7 +154,11 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
       });
       if (res.status === 429) {
         if (attempt >= maxAttempts) {
-          return res;
+          return {
+            ...res,
+            ok: false,
+            json: async () => (typeof res.json === "object" && res.json !== null ? res.json : JSON.parse(res.text || "{}")),
+          };
         }
         const retryHeader = res.headers["retry-after"] || res.headers["Retry-After"];
         let waitMs = 0;
@@ -171,7 +175,11 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
       }
-      return res;
+      return {
+        ...res,
+        ok: res.status >= 200 && res.status < 300,
+        json: async () => (typeof res.json === "object" && res.json !== null ? res.json : JSON.parse(res.text || "{}")),
+      };
     } catch (err) {
       if (attempt >= maxAttempts) {
         throw err;
@@ -574,6 +582,13 @@ class GardenFeature {
               await this.app.fileManager.processFrontMatter(file, (fm) => {
                 fm[publishKey] = true;
                 fm["garden-url"] = this.getLiveUrl(file);
+                if (remoteNote.nano_id) {
+                  fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
+                }
+                if (!fm.created) {
+                  fm.created = remoteNote.created_at || new Date(file.stat?.ctime || Date.now()).toISOString();
+                }
+                fm.modified = remoteNote.updated_at || new Date().toISOString();
               });
               pulled++;
               modal.recordResult("pulled", file.basename);
@@ -609,6 +624,14 @@ class GardenFeature {
             await this.app.fileManager.processFrontMatter(file, (fm) => {
               fm[publishKey] = true;
               fm["garden-url"] = this.getLiveUrl(file);
+              fm.permalink = remoteNote.slug;
+              if (remoteNote.nano_id) {
+                fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
+              }
+              if (!fm.created) {
+                fm.created = remoteNote.created_at || new Date().toISOString();
+              }
+              fm.modified = remoteNote.updated_at || new Date().toISOString();
             });
 
             created++;
@@ -702,6 +725,14 @@ class GardenFeature {
         await this.app.fileManager.processFrontMatter(file, (fm) => {
           fm[publishKey] = true;
           fm["garden-url"] = this.getLiveUrl(file);
+          fm.permalink = remoteNote.slug;
+          if (remoteNote.nano_id) {
+            fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
+          }
+          if (!fm.created) {
+            fm.created = remoteNote.created_at || new Date().toISOString();
+          }
+          fm.modified = remoteNote.updated_at || new Date().toISOString();
         });
         created++;
       }
@@ -986,13 +1017,20 @@ class GardenFeature {
         return false;
       }
 
-      // Mettre à jour le frontmatter avec la propriété garden_url finale
+      const data = await response.json().catch(() => null);
       const liveUrl = this.getLiveUrl(file);
 
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         delete fm.published; // Nettoyer les anciennes clés obsolètes
         delete fm.url_public;
         fm["garden-url"] = liveUrl;
+        if (data && data.nano_id) {
+          fm["garden-short"] = `https://stnd.gd/${data.nano_id}`;
+        }
+        if (!fm.created) {
+          fm.created = new Date(file.stat?.ctime || Date.now()).toISOString();
+        }
+        fm.modified = new Date().toISOString();
       });
 
       return true;
