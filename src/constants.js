@@ -198,8 +198,36 @@ function descWithLinks(text, links = []) {
 }
 
 
+// `publish:` accepte deux formes. `true` veut dire « publie-la ». Une date veut
+// dire « publie-la, et c'est cette date qui la situe dans le jardin » — elle
+// pilote l'affichage et l'ordre côté serveur, qui distingue les deux parce que
+// SQLite stocke le booléen en entier et la date en texte.
+//
+// Seuls `false`, l'absence, et une valeur illisible valent « ne publie pas ».
+// Une date qui n'a pas encore eu lieu publie quand même : masquer une note à
+// cause d'une coquille de date serait une dépublication silencieuse.
+function isPublishIntent(value) {
+  if (value === true) return true;
+  if (value === false || value == null || value === "") return false;
+  if (value instanceof Date) return !isNaN(value.getTime());
+  if (typeof value === "string") return !isNaN(new Date(value).getTime());
+  return false;
+}
+
 function isImageFile(name) {
   return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(name);
+}
+
+function isPdfFile(name) {
+  return /\.pdf$/i.test(name);
+}
+
+// Une note peut embarquer autre chose que des images. On exclut le markdown :
+// `![[Une autre note]]` est une transclusion, pas une pièce jointe, et la
+// téléverser produirait un lien de téléchargement au lieu du contenu attendu.
+function isAttachmentFile(name) {
+  if (!name || !/\.[a-z0-9]+$/i.test(name)) return false;
+  return !/\.(md|markdown|canvas)$/i.test(name);
 }
 
 function getMimeType(name) {
@@ -212,6 +240,26 @@ function getMimeType(name) {
     webp: "image/webp",
     svg: "image/svg+xml",
     avif: "image/avif",
+    pdf: "application/pdf",
+    zip: "application/zip",
+    gz: "application/gzip",
+    tar: "application/x-tar",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    m4a: "audio/mp4",
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+    txt: "text/plain",
+    csv: "text/csv",
+    json: "application/json",
+    epub: "application/epub+zip",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   };
   return map[ext] || "application/octet-stream";
 }
@@ -220,7 +268,10 @@ module.exports = {
   KNOWN_TOKENS,
   FONT_TOKENS,
   DEFAULT_SETTINGS,
+  isPublishIntent,
   isImageFile,
+  isPdfFile,
+  isAttachmentFile,
   getMimeType,
   descWithLinks,
 };

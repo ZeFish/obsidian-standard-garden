@@ -1,9 +1,32 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
-const { KNOWN_TOKENS, isImageFile, getMimeType } = require("../../constants");
+const {
+  KNOWN_TOKENS,
+  isPublishIntent,
+  isImageFile,
+  isPdfFile,
+  isAttachmentFile,
+  getMimeType,
+} = require("../../constants");
 const { StndConfirmModal } = require("../../ui/confirm-modal");
 const { StndAskModal } = require("../../ui/ask-modal");
+
+
+// Slugifie un nom de fichier pour l'URL publique.
+// Les accents sont translittérés AVANT le filtrage : sans cette étape,
+// `[^a-z0-9]` traitait chaque caractère accentué comme un séparateur et
+// « Épistémologie sociale » devenait « pist-mologie-sociale ».
+function slugify(name) {
+  return String(name)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[æ]/gi, "ae")
+    .replace(/[œ]/gi, "oe")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 // ─── Sync Progress Modal ──────────────────────────────────────────────────────
 // Live feedback for "Sync all published": a progress bar, the current note,
@@ -384,17 +407,14 @@ class GardenFeature {
       for (const file of files) {
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         const fmSlug = fm.permalink ?? fm.slug;
-        const basenameSlug = file.basename
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "");
+        const basenameSlug = slugify(file.basename);
         const resolved =
           fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
         const slug = resolved === "" ? "~root" : resolved;
 
         localFilesBySlug.set(slug, file);
 
-        const isPublishedLocal = fm[publishKey] === true;
+        const isPublishedLocal = isPublishIntent(fm[publishKey]);
         const hasGardenUrl = fm["garden-url"] != null;
         const remoteNote = remoteBySlug.get(slug);
 
@@ -407,16 +427,18 @@ class GardenFeature {
             name: file.basename,
           });
         } else if (remoteNote) {
-          // Brouillon localement, mais existe en ligne -> Réconciliation
-          if (this.plugin.settings.syncDirection === "2way") {
-            syncTasks.push({
-              type: "local_draft_remote_exists",
-              file,
-              remoteNote,
-              slug,
-              name: file.basename,
-            });
-          }
+          // Brouillon localement, mais existe en ligne.
+          // Ce cas vaut dans les deux directions : en 1way le local fait foi, donc
+          // `publish: false` doit dépublier. Seule la résolution diffère — voir le
+          // traitement de `local_draft_remote_exists`, où seul le 2way autorise la
+          // version distante à l'emporter.
+          syncTasks.push({
+            type: "local_draft_remote_exists",
+            file,
+            remoteNote,
+            slug,
+            name: file.basename,
+          });
         } else if (hasGardenUrl) {
           // Brouillon local, n'existe pas en ligne, mais possède encore une garden_url.
           // Signifie qu'il a été supprimé en ligne. On nettoie le fichier local.
@@ -469,7 +491,10 @@ class GardenFeature {
 
         // Throttle 1s between notes in bulk sync
         if (i > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Chaque note coûte deux requêtes au quota partagé `publish:` (un GET
+          // de statut puis un PUT), plafonné à 60/min. Une seconde d'attente en
+          // demandait donc 120 et saturait le quota vers la trentième note.
+          await new Promise((resolve) => setTimeout(resolve, 2100));
         }
 
         if (modal.cancelled) break;
@@ -500,6 +525,10 @@ class GardenFeature {
                   await this.app.fileManager.processFrontMatter(file, (fm) => {
                     fm[publishKey] = false;
                     delete fm["garden-url"];
+                    // `garden-short` est écrit en même temps que `garden-url`
+                    // et doit partir avec lui : un lien court laissé derrière
+                    // pointe vers une page qui répond 404.
+                    delete fm["garden-short"];
                   });
                   unpublished++;
                   modal.recordResult("unpublished", file.basename);
@@ -576,11 +605,20 @@ class GardenFeature {
             const localMtime = file.stat?.mtime || 0;
             const remoteMtime = new Date(remoteNote.updated_at).getTime() || 0;
 
-            if (remoteMtime > localMtime + 5000) {
+            // En 1way le local fait autorité : un brouillon local dépublie, point.
+            // Seul le 2way permet à une édition distante plus récente de l'emporter.
+            const remoteMayWin =
+              this.plugin.settings.syncDirection === "2way" &&
+              remoteMtime > localMtime + 5000;
+
+            if (remoteMayWin) {
               // Remote edit wins: Pull remote change and mark publish: true
               await this.app.vault.modify(file, remoteNote.content);
               await this.app.fileManager.processFrontMatter(file, (fm) => {
-                fm[publishKey] = true;
+                // Ne pas écraser une date : `publish: 2026-08-07` est une intention
+                // de publication valide *et* la clé de tri du jardin. La remplacer
+                // par `true` à chaque publication détruirait l\'ordre voulu.
+                if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
                 fm["garden-url"] = this.getLiveUrl(file);
                 if (remoteNote.nano_id) {
                   fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
@@ -622,7 +660,10 @@ class GardenFeature {
 
             const file = await this.app.vault.create(finalPath, remoteNote.content);
             await this.app.fileManager.processFrontMatter(file, (fm) => {
-              fm[publishKey] = true;
+              // Ne pas écraser une date : `publish: 2026-08-07` est une intention
+              // de publication valide *et* la clé de tri du jardin. La remplacer
+              // par `true` à chaque publication détruirait l\'ordre voulu.
+              if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
               fm["garden-url"] = this.getLiveUrl(file);
               fm.permalink = remoteNote.slug;
               if (remoteNote.nano_id) {
@@ -685,10 +726,7 @@ class GardenFeature {
       for (const file of files) {
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         const fmSlug = fm.permalink ?? fm.slug;
-        const basenameSlug = file.basename
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "");
+        const basenameSlug = slugify(file.basename);
         const resolved =
           fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
         const slug = resolved === "" ? "~root" : resolved;
@@ -723,7 +761,10 @@ class GardenFeature {
 
         const file = await this.app.vault.create(finalPath, remoteNote.content);
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          fm[publishKey] = true;
+          // Ne pas écraser une date : `publish: 2026-08-07` est une intention
+          // de publication valide *et* la clé de tri du jardin. La remplacer
+          // par `true` à chaque publication détruirait l\'ordre voulu.
+          if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
           fm["garden-url"] = this.getLiveUrl(file);
           fm.permalink = remoteNote.slug;
           if (remoteNote.nano_id) {
@@ -813,10 +854,7 @@ class GardenFeature {
   getLiveUrl(file) {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
     const fmSlug = fm.permalink ?? fm.slug;
-    const basenameSlug = file.basename
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+    const basenameSlug = slugify(file.basename);
     const resolved =
       fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
 
@@ -884,8 +922,12 @@ class GardenFeature {
         });
 
         if (checkRes.status >= 200 && checkRes.status < 300) {
-          const checkData = checkRes.json;
-          if (checkData.exists && checkData.url) {
+          // `fetchWithRetry` expose `json` comme une fonction, pas comme la
+          // propriété de requestUrl. Sans les parenthèses on récupérait la
+          // fonction elle-même : `exists` valait toujours undefined et la
+          // déduplication ne s'est jamais déclenchée.
+          const checkData = await checkRes.json();
+          if (checkData?.exists && checkData.url) {
             const cdnUrl = new URL(checkData.url, this.plugin.settings.apiUrl).href;
             uploaded.set(vaultFile.path, cdnUrl);
             return cdnUrl;
@@ -932,7 +974,18 @@ class GardenFeature {
           return null;
         }
 
-        const data = res.json;
+        const data = await res.json();
+        // Un 2xx sans `url` n'est pas un succès : `new URL(undefined, base)`
+        // résout silencieusement vers `<base>/undefined` et publie une image
+        // morte sans que rien ne le signale. On le traite comme un échec, ce
+        // qui laisse le lien d'origine intact plutôt que de le corrompre.
+        if (!data?.url) {
+          console.warn(
+            `Standard: ${vaultFile.name} accepté par le serveur sans URL en retour`,
+            data,
+          );
+          return null;
+        }
         const cdnUrl = new URL(data.url, this.plugin.settings.apiUrl).href;
         uploaded.set(vaultFile.path, cdnUrl);
         return cdnUrl;
@@ -944,11 +997,12 @@ class GardenFeature {
 
     let result = content;
 
+    // Embeds `![[…]]` — images, PDF, et toute autre pièce jointe.
     const wikilinkRe = /!\[\[([^\]]+)\]\]/g;
     for (const match of [...result.matchAll(wikilinkRe)]) {
       const inner = match[1];
       const linktext = inner.split("|")[0].trim();
-      if (!isImageFile(linktext)) continue;
+      if (!isAttachmentFile(linktext)) continue;
 
       const vaultFile = this.app.metadataCache.getFirstLinkpathDest(
         linktext,
@@ -959,10 +1013,46 @@ class GardenFeature {
       const cdnUrl = await uploadVaultFile(vaultFile);
       if (!cdnUrl) continue;
 
-      const alt = inner.includes("|")
+      const label = inner.includes("|")
         ? inner.split("|")[1]
         : vaultFile.basename;
-      result = result.replace(match[0], `![${alt}](${cdnUrl})`);
+
+      if (isImageFile(linktext)) {
+        result = result.replace(match[0], `![${label}](${cdnUrl})`);
+      } else if (isPdfFile(linktext)) {
+        // Le rendu transforme ce lien en visionneuse ; on garde une syntaxe
+        // markdown valide pour que la note reste lisible telle quelle.
+        result = result.replace(
+          match[0],
+          `[${label}](${cdnUrl} "pdf-embed")`,
+        );
+      } else {
+        // `?download=` porte le nom d'origine : la clé R2 étant un hachage,
+        // sans lui le lecteur récupère un fichier nommé « a3f9… ».
+        const dl = `${cdnUrl}?download=${encodeURIComponent(vaultFile.name)}`;
+        result = result.replace(match[0], `[${label}](${dl})`);
+      }
+    }
+
+    // Liens `[[…]]` non-embed vers une pièce jointe → lien de téléchargement.
+    const linkRe = /(^|[^!])\[\[([^\]]+)\]\]/g;
+    for (const match of [...result.matchAll(linkRe)]) {
+      const inner = match[2];
+      const linktext = inner.split("|")[0].trim();
+      if (!isAttachmentFile(linktext) || isImageFile(linktext)) continue;
+
+      const vaultFile = this.app.metadataCache.getFirstLinkpathDest(
+        linktext,
+        sourceFile.path,
+      );
+      if (!vaultFile) continue;
+
+      const cdnUrl = await uploadVaultFile(vaultFile);
+      if (!cdnUrl) continue;
+
+      const label = inner.includes("|") ? inner.split("|")[1] : vaultFile.name;
+      const dl = `${cdnUrl}?download=${encodeURIComponent(vaultFile.name)}`;
+      result = result.replace(match[0], `${match[1]}[${label}](${dl})`);
     }
 
     const mdImageRe = /!\[([^\]]*)\]\(([^)]+)\)/g;
@@ -989,10 +1079,11 @@ class GardenFeature {
   async publishNote(file, isBulk = false, preCalculatedContent = null) {
     try {
       const content = preCalculatedContent !== null ? preCalculatedContent : await this.uploadContentImages(await this.app.vault.read(file), file, isBulk);
-      const slug = file.basename
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+      // slugify() translittère les accents avant de filtrer. Trois copies de
+      // l'ancien calcul subsistaient ici : publication, statut et
+      // dépublication pouvaient donc viser trois adresses différentes pour la
+      // même note accentuée.
+      const slug = slugify(file.basename);
       const response = await fetchWithRetry(
         `${this.plugin.settings.apiUrl}/publish/${slug}`,
         {
@@ -1045,10 +1136,7 @@ class GardenFeature {
       // Résoudre le slug de la même façon que la publication : permalink > slug > basename
       const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const fmSlug = fm.permalink ?? fm.slug;
-      const basenameSlug = file.basename
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const basenameSlug = slugify(file.basename);
       const resolved =
         fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
       // La note racine résout en "" — non envoyable en segment d'URL, mappé à "~root"
@@ -1079,6 +1167,9 @@ class GardenFeature {
         delete fm.published;
         delete fm.url_public;
         delete fm["garden-url"];
+        // Le lien court est écrit aux mêmes endroits que `garden-url` ; le
+        // laisser derrière produit une adresse stnd.gd qui répond 404.
+        delete fm["garden-short"];
       });
 
       return true;
@@ -1137,7 +1228,10 @@ class GardenFeature {
     const doPublish = async () => {
       // Marquer publish: true pour que la clé de synchronisation soit correcte
       await this.app.fileManager.processFrontMatter(file, (fm) => {
-        fm[publishKey] = true;
+        // Ne pas écraser une date : `publish: 2026-08-07` est une intention
+        // de publication valide *et* la clé de tri du jardin. La remplacer
+        // par `true` à chaque publication détruirait l\'ordre voulu.
+        if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
       });
       const ok = await this.publishNote(file);
       return ok;
@@ -1182,23 +1276,22 @@ class GardenFeature {
       // 1. Résoudre le slug de la note locale
       const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const fmSlug = fm.permalink ?? fm.slug;
-      const basenameSlug = file.basename
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const basenameSlug = slugify(file.basename);
       const resolved =
         fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
       const slug = resolved === "" ? "~root" : resolved;
 
-      // 2. Récupérer le statut de la note distante
-      const response = await obsidian_1.requestUrl({
-        url: `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
-        method: "GET",
-        headers: {
-          "x-api-key": this.plugin.settings.apiKey,
+      // 2. Récupérer le statut de la note distante.
+      // Via fetchWithRetry : GET, PUT et DELETE partagent le même quota côté
+      // serveur (60/min). Une synchro complète en consomme deux par note, donc
+      // les 429 sont attendus — il faut patienter, pas déclarer un échec.
+      const response = await fetchWithRetry(
+        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": this.plugin.settings.apiKey },
         },
-        throw: false,
-      });
+      );
 
       if (response.status === 404) {
         return { status: "unpublished" };
@@ -1208,7 +1301,7 @@ class GardenFeature {
         throw new Error(`HTTP error ${response.status}`);
       }
 
-      const remoteData = response.json;
+      const remoteData = await response.json();
       const remoteContent = remoteData.content || "";
       const remoteHash = remoteData.hash;
       const remoteMtime = remoteData.updated_at ? new Date(remoteData.updated_at).getTime() : 0;
