@@ -59,7 +59,12 @@ body.stnd-adapter summary {
     max-width: unset;
 }
 
-body.stnd-adapter hr {color:red;}
+body.stnd-adapter hr.workspace-leaf-resize-handle {
+ border-color:var(--divider-color)  !important;
+}
+body.stnd-adapter hr.workspace-leaf-resize-handle::after {
+    display:none !important;
+}
 
 /* ─── Sidebar transition ──────────────────────────────────────────────────── */
 

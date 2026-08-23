@@ -348,22 +348,24 @@ body.is-mobile.stnd-adapter.theme-dark {
     --swatch-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-foreground) 1%, transparent);
     --workspace-background-translucent: color-mix(in oklch, var(--color-foreground) 40%, transparent);
     --text-highlight-bg: var(--text-selection);
-    --callout-default: var(--color-base-50);
+    --callout-default: var(--color-surface);
     --callout-content-padding: 0;
     --callout-content-background: transparent;
     --callout-bug: var(--color-red);
     --callout-error: var(--color-red);
     --callout-example: var(--color-purple);
     --callout-fail: var(--color-red);
-    --callout-important: var(--color-cyan);
+    --callout-important: var(--color-orange);
     --callout-info: var(--color-blue);
-    --callout-question: var(--color-orange);
+    --callout-note: var(--color-blue);
+    --callout-question: var(--color-yellow);
     --callout-success: var(--color-green);
     --callout-summary: var(--color-cyan);
-    --callout-tip: var(--color-cyan);
+    --callout-tip: var(--color-green);
     --callout-todo: var(--color-blue);
-    --callout-warning: var(--color-orange);
-    --callout-quote: var(--color-cyan);
+    --callout-warning: var(--color-red);
+    --callout-quote: var(--color-foreground);
+    --callout-cite: var(--color-foreground);
 
     --mobile-sidebar-background: transparent;
 
@@ -923,3 +925,50 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
         margin-inline: 0 !important;
     }
 }
+
+/* ============================================= */
+/* Standard Callouts in Obsidian                 */
+/* ============================================= */
+.stnd-adapter .callout {
+    --color-callout: var(--callout-color, var(--color-surface));
+    border-radius: var(--radius-m) !important;
+    border: 0 !important;
+    padding: 0.25rlh !important;
+    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-primary)) !important;
+    box-shadow: var(--shadow-raised), var(--shadow-ring) !important;
+    margin-block: 1rlh;
+}
+
+.stnd-adapter .callout .callout-title {
+    color: color-mix(in oklch, var(--color-callout) 50%, var(--text-normal)) !important;
+    font-weight: var(--font-bold, bold) !important;
+    margin: 0.25rlh 0 0.5rlh 0.75rlh !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+}
+
+.stnd-adapter .callout .callout-icon {
+    display: none !important;
+}
+
+.stnd-adapter .callout .callout-content {
+    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-secondary)) !important;
+    box-shadow: var(--shadow-inset), var(--shadow-ring) !important;
+    border-radius: var(--radius-m) !important;
+    padding: 0.75rlh !important;
+    font-size: var(--font-small) !important;
+    color: var(--text-normal) !important;
+    margin-left: 0 !important;
+}
+
+.stnd-adapter .markdown-embed {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.stnd-adapter .markdown-embed-link {
+    display: none !important;
+}
+

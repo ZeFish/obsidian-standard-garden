@@ -187,12 +187,15 @@ esbuild
     let combinedCss = "";
     
     // Inject standard CSS first
-    const standardCssPath = path.join(__dirname, "node_modules", "@stnd", "styles", "dist", "obsidian.css");
+    let standardCssPath = path.resolve(__dirname, "../../packages/styles/dist/obsidian.css");
+    if (!fs.existsSync(standardCssPath)) {
+      standardCssPath = path.join(__dirname, "node_modules", "@stnd", "styles", "dist", "obsidian.css");
+    }
     if (fs.existsSync(standardCssPath)) {
         combinedCss += "/* --- @stnd/styles (Obsidian Core) --- */\n";
         combinedCss += fs.readFileSync(standardCssPath, "utf8") + "\n\n";
     } else {
-        console.warn("Warning: @stnd/styles/dist/obsidian.css not found. Did you run pnpm install?");
+        console.warn("Warning: @stnd/styles/dist/obsidian.css not found. Did you run pnpm install or build @stnd/styles?");
     }
 
     for (const file of filesToCombine) {

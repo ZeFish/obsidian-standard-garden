@@ -28,6 +28,98 @@ function slugify(name) {
     .replace(/^-|-$/g, "");
 }
 
+// ─── Local Note Index ─────────────────────────────────────────────────────────
+// Multi-tier index to robustly reconcile local vault notes with remote garden notes.
+// Prevents duplicate note creation across renames, title changes, and subfolders.
+class LocalNoteIndex {
+  constructor(app, files) {
+    this.app = app;
+    this.files = files;
+    this.byNanoId = new Map();
+    this.bySlug = new Map();
+    this.byTitleSlug = new Map();
+    this.byBasenameSlug = new Map();
+    this.byGardenUrl = new Map();
+
+    for (const file of files) {
+      const fm = app.metadataCache.getFileCache(file)?.frontmatter || {};
+
+      // 1. nano_id from garden-short: e.g. "https://stnd.gd/abc123" -> "abc123"
+      if (fm["garden-short"]) {
+        const match = String(fm["garden-short"]).match(/stnd\.gd\/([a-zA-Z0-9_-]+)/);
+        if (match) {
+          this.byNanoId.set(match[1], file);
+        }
+      }
+
+      // 2. Explicit permalink or slug
+      const fmSlug = fm.permalink ?? fm.slug;
+      if (fmSlug != null) {
+        const cleanFmSlug = String(fmSlug).replace(/^\/+|\/+$/g, "");
+        const s = cleanFmSlug === "" ? "~root" : cleanFmSlug;
+        this.bySlug.set(s, file);
+      }
+
+      // 3. Title slug
+      if (fm.title) {
+        const titleSlug = slugify(fm.title);
+        if (titleSlug) {
+          this.byTitleSlug.set(titleSlug, file);
+        }
+      }
+
+      // 4. Basename slug
+      const baseSlug = slugify(file.basename);
+      if (baseSlug) {
+        this.byBasenameSlug.set(baseSlug, file);
+      }
+
+      // 5. garden-url
+      if (fm["garden-url"]) {
+        const cleanUrl = String(fm["garden-url"]).toLowerCase().trim().replace(/\/$/, "");
+        this.byGardenUrl.set(cleanUrl, file);
+      }
+    }
+  }
+
+  // Multi-tier search to find the matching local file for a remote note
+  findMatchForRemote(remoteNote) {
+    if (!remoteNote) return null;
+
+    // Tier 1: Match by nano_id (immutable unique ID)
+    if (remoteNote.nano_id && this.byNanoId.has(remoteNote.nano_id)) {
+      return this.byNanoId.get(remoteNote.nano_id);
+    }
+
+    // Tier 2: Match by explicit permalink / slug
+    if (remoteNote.slug && this.bySlug.has(remoteNote.slug)) {
+      return this.bySlug.get(remoteNote.slug);
+    }
+
+    // Tier 3: Match by title slug
+    if (remoteNote.slug && this.byTitleSlug.has(remoteNote.slug)) {
+      return this.byTitleSlug.get(remoteNote.slug);
+    }
+
+    // Tier 4: Match by file basename slug
+    if (remoteNote.slug && this.byBasenameSlug.has(remoteNote.slug)) {
+      return this.byBasenameSlug.get(remoteNote.slug);
+    }
+
+    // Tier 5: Match remote title against local permalinks / titles / basenames
+    if (remoteNote.title) {
+      const remoteTitleSlug = slugify(remoteNote.title);
+      if (remoteTitleSlug) {
+        if (this.bySlug.has(remoteTitleSlug)) return this.bySlug.get(remoteTitleSlug);
+        if (this.byTitleSlug.has(remoteTitleSlug)) return this.byTitleSlug.get(remoteTitleSlug);
+        if (this.byBasenameSlug.has(remoteTitleSlug)) return this.byBasenameSlug.get(remoteTitleSlug);
+      }
+    }
+
+    return null;
+  }
+}
+
 // ─── Sync Progress Modal ──────────────────────────────────────────────────────
 // Live feedback for "Sync all published": a progress bar, the current note,
 // running ok/fail counts, a rolling error list, and a Cancel button. The sync
@@ -400,10 +492,43 @@ class GardenFeature {
       }
 
       const remoteBySlug = new Map(remoteNotes.map((n) => [n.slug, n]));
+      const remoteByNanoId = new Map(remoteNotes.filter((n) => n.nano_id).map((n) => [n.nano_id, n]));
+      const remoteByTitleSlug = new Map();
+      for (const n of remoteNotes) {
+        if (n.title) {
+          const s = slugify(n.title);
+          if (s && !remoteByTitleSlug.has(s)) remoteByTitleSlug.set(s, n);
+        }
+      }
+
+      const localIndex = new LocalNoteIndex(this.app, files);
+
+      const findRemoteForLocal = (file, fm) => {
+        if (fm["garden-short"]) {
+          const match = String(fm["garden-short"]).match(/stnd\.gd\/([a-zA-Z0-9_-]+)/);
+          if (match && remoteByNanoId.has(match[1])) return remoteByNanoId.get(match[1]);
+        }
+        const fmSlug = fm.permalink ?? fm.slug;
+        if (fmSlug != null) {
+          const cleanFmSlug = String(fmSlug).replace(/^\/+|\/+$/g, "");
+          const s = cleanFmSlug === "" ? "~root" : cleanFmSlug;
+          if (remoteBySlug.has(s)) return remoteBySlug.get(s);
+          if (remoteByTitleSlug.has(s)) return remoteByTitleSlug.get(s);
+        }
+        const baseSlug = slugify(file.basename);
+        if (remoteBySlug.has(baseSlug)) return remoteBySlug.get(baseSlug);
+        if (remoteByTitleSlug.has(baseSlug)) return remoteByTitleSlug.get(baseSlug);
+        if (fm.title) {
+          const titleSlug = slugify(fm.title);
+          if (remoteBySlug.has(titleSlug)) return remoteBySlug.get(titleSlug);
+          if (remoteByTitleSlug.has(titleSlug)) return remoteByTitleSlug.get(titleSlug);
+        }
+        return null;
+      };
+
+      const matchedRemoteNotes = new Set();
       const syncTasks = [];
 
-      // Gather local files and map by slug
-      const localFilesBySlug = new Map();
       for (const file of files) {
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         const fmSlug = fm.permalink ?? fm.slug;
@@ -412,11 +537,10 @@ class GardenFeature {
           fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
         const slug = resolved === "" ? "~root" : resolved;
 
-        localFilesBySlug.set(slug, file);
-
         const isPublishedLocal = isPublishIntent(fm[publishKey]);
         const hasGardenUrl = fm["garden-url"] != null;
-        const remoteNote = remoteBySlug.get(slug);
+        const remoteNote = findRemoteForLocal(file, fm);
+        if (remoteNote) matchedRemoteNotes.add(remoteNote);
 
         if (isPublishedLocal) {
           syncTasks.push({
@@ -457,7 +581,7 @@ class GardenFeature {
       // Gather remote-only notes (created online)
       if (this.plugin.settings.syncDirection === "2way") {
         for (const remoteNote of remoteNotes) {
-          if (!localFilesBySlug.has(remoteNote.slug)) {
+          if (!matchedRemoteNotes.has(remoteNote) && !localIndex.findMatchForRemote(remoteNote)) {
             syncTasks.push({
               type: "remote_only",
               file: null,
@@ -722,26 +846,46 @@ class GardenFeature {
         return;
       }
 
-      const localFilesBySlug = new Map();
-      for (const file of files) {
-        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        const fmSlug = fm.permalink ?? fm.slug;
-        const basenameSlug = slugify(file.basename);
-        const resolved =
-          fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
-        const slug = resolved === "" ? "~root" : resolved;
-        localFilesBySlug.set(slug, file);
-      }
+      const localIndex = new LocalNoteIndex(this.app, files);
 
       const remoteOnly = [];
+      const remoteMatchedLocal = [];
       for (const remoteNote of remoteNotes) {
-        if (!localFilesBySlug.has(remoteNote.slug)) {
+        const localMatch = localIndex.findMatchForRemote(remoteNote);
+        if (localMatch) {
+          remoteMatchedLocal.push({ remoteNote, file: localMatch });
+        } else {
           remoteOnly.push(remoteNote);
         }
       }
 
+      // Pour les notes distantes qui correspondent déjà à une note du coffre (dans un sous-dossier ou renommée),
+      // on synchronise simplement les métadonnées (garden-url, garden-short, permalink) sans créer de doublon.
+      for (const { remoteNote, file } of remoteMatchedLocal) {
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
+          if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+          if (!fm["garden-url"]) fm["garden-url"] = this.getLiveUrl(file);
+          if (!fm.permalink && remoteNote.slug && remoteNote.slug !== slugify(file.basename)) {
+            fm.permalink = remoteNote.slug;
+          }
+          if (remoteNote.nano_id && !fm["garden-short"]) {
+            fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
+          }
+          if (!fm.created && remoteNote.created_at) {
+            fm.created = remoteNote.created_at;
+          }
+          if (!fm.modified && remoteNote.updated_at) {
+            fm.modified = remoteNote.updated_at;
+          }
+        });
+      }
+
       if (remoteOnly.length === 0) {
-        new obsidian_1.Notice("Garden: No new online notes to download.");
+        new obsidian_1.Notice(
+          remoteMatchedLocal.length > 0
+            ? `Garden : Toutes les ${remoteMatchedLocal.length} notes sont déjà dans le coffre (métadonnées synchronisées).`
+            : "Garden : Aucune nouvelle note en ligne à télécharger."
+        );
         return;
       }
 
@@ -798,7 +942,7 @@ class GardenFeature {
     if (result === true) {
       new obsidian_1.Notice(`Standard: "${activeFile.basename}" published.`);
       if (this.plugin.settings.openAfterPublish) {
-        this.viewLiveVersion();
+        this.viewLiveVersion(activeFile);
       }
     } else if (result === false) {
       new obsidian_1.Notice(
@@ -887,12 +1031,170 @@ class GardenFeature {
         state: { url: url },
       });
     } else {
-      window.open(url, "_blank");
+      this._openExternal(url);
     }
+  }
+
+  /**
+   * Strip YAML frontmatter from markdown content.
+   */
+  stripFrontmatter(content) {
+    if (!content) return "";
+    return content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+  }
+
+  /**
+   * Extract a section or block from markdown content.
+   */
+  extractMarkdownSubpath(content, subpath) {
+    if (!content || !subpath) return content;
+    const cleanSubpath = subpath.trim();
+    if (!cleanSubpath) return content;
+
+    // 1. Block reference: ^blockid
+    if (cleanSubpath.startsWith("^")) {
+      const blockId = cleanSubpath.slice(1);
+      const lines = content.split("\n");
+      const blockLines = [];
+      let found = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(`^${blockId}`)) {
+          found = true;
+          let start = i;
+          while (start > 0 && lines[start - 1].trim() !== "" && !lines[start - 1].startsWith("#")) {
+            start--;
+          }
+          let end = i;
+          while (end < lines.length - 1 && lines[end + 1].trim() !== "" && !lines[end + 1].startsWith("#")) {
+            end++;
+          }
+          for (let k = start; k <= end; k++) {
+            blockLines.push(lines[k].replace(new RegExp(`\\s*\\^${blockId}\\s*$`), ""));
+          }
+          break;
+        }
+      }
+      return found ? blockLines.join("\n").trim() : content;
+    }
+
+    // 2. Heading reference: #Heading
+    const headingTarget = cleanSubpath.replace(/^#+/, "").trim().toLowerCase();
+    const lines = content.split("\n");
+    let capturing = false;
+    let targetLevel = 0;
+    const capturedLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2].replace(/[#*`_\[\]]/g, "").trim().toLowerCase();
+
+        if (capturing) {
+          if (level <= targetLevel) {
+            break;
+          }
+          capturedLines.push(line);
+        } else if (headingText === headingTarget || headingText.startsWith(headingTarget)) {
+          capturing = true;
+          targetLevel = level;
+          capturedLines.push(line);
+        }
+      } else if (capturing) {
+        capturedLines.push(line);
+      }
+    }
+
+    if (capturing && capturedLines.length > 0) {
+      return capturedLines.join("\n").trim();
+    }
+
+    return content;
+  }
+
+  /**
+   * Recursively resolve Obsidian note transclusions / embeds (![[Note]] / ![[Note#Heading]])
+   */
+  async resolveNoteTransclusions(content, sourceFile, depth = 0, visited = new Set()) {
+    if (!content || depth > 5) return content;
+
+    const sourcePath = sourceFile ? sourceFile.path : "";
+    const currentVisited = new Set(visited);
+    if (sourcePath) currentVisited.add(sourcePath);
+
+    const embedRegex = /!\[\[([^\]]+)\]\]/g;
+    const matches = [...content.matchAll(embedRegex)];
+    if (matches.length === 0) return content;
+
+    let result = content;
+
+    for (const match of matches) {
+      const fullMatch = match[0];
+      const rawInner = match[1];
+
+      const [targetWithSubpath] = rawInner.split("|");
+      const trimmedTarget = targetWithSubpath.trim();
+
+      if (isAttachmentFile(trimmedTarget) || isImageFile(trimmedTarget) || isPdfFile(trimmedTarget)) {
+        continue;
+      }
+
+      const hashIndex = trimmedTarget.indexOf("#");
+      let noteName = hashIndex !== -1 ? trimmedTarget.slice(0, hashIndex).trim() : trimmedTarget;
+      const subpath = hashIndex !== -1 ? trimmedTarget.slice(hashIndex + 1).trim() : null;
+
+      let targetFile = null;
+      if (noteName) {
+        targetFile = this.app.metadataCache.getFirstLinkpathDest(noteName, sourcePath);
+      } else if (sourceFile) {
+        targetFile = sourceFile;
+      }
+
+      if (!targetFile || targetFile.extension !== "md") {
+        continue;
+      }
+
+      if (currentVisited.has(targetFile.path) && depth > 0 && !subpath) {
+        console.warn(`Standard: Circular transclusion detected for ${targetFile.path}`);
+        result = result.replace(fullMatch, "");
+        continue;
+      }
+
+      try {
+        const fileContent = await this.app.vault.read(targetFile);
+        let noteBody = this.stripFrontmatter(fileContent);
+
+        if (subpath) {
+          noteBody = this.extractMarkdownSubpath(noteBody, subpath);
+        }
+
+        const nextVisited = new Set(currentVisited);
+        nextVisited.add(targetFile.path);
+        const resolvedBody = await this.resolveNoteTransclusions(
+          noteBody,
+          targetFile,
+          depth + 1,
+          nextVisited
+        );
+
+        result = result.replace(fullMatch, resolvedBody.trim());
+      } catch (err) {
+        console.warn(`Standard: Error resolving transclusion ${fullMatch}:`, err);
+      }
+    }
+
+    return result;
   }
 
   async uploadContentImages(content, sourceFile, isBulk = false) {
     if (!this.plugin.settings.apiKey) return content;
+
+    // Résoudre d'abord les transclusions de notes (![[Note]] / ![[Note#Section]])
+    // pour que le contenu embarqué soit inclus et que ses images soient aussi téléversées.
+    const expandedContent = await this.resolveNoteTransclusions(content, sourceFile);
 
     const uploaded = new Map();
 
@@ -995,7 +1297,7 @@ class GardenFeature {
       }
     };
 
-    let result = content;
+    let result = expandedContent;
 
     // Embeds `![[…]]` — images, PDF, et toute autre pièce jointe.
     const wikilinkRe = /!\[\[([^\]]+)\]\]/g;

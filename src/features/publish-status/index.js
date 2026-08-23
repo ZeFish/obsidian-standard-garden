@@ -314,6 +314,9 @@ class PublishStatusFeature {
             ? `Standard : "${file.basename}" publié.`
             : `Standard : Échec de la publication de "${file.basename}".`,
         );
+        if (ok && garden.plugin.settings.openAfterPublish) {
+          garden.viewLiveVersion(file);
+        }
       }
       this.refreshAll();
     };

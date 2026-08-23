@@ -247,6 +247,9 @@ class StandardGardenView extends obsidian_1.ItemView {
         const ok = await this.plugin.garden.publishWithCheck(file);
         if (ok === true) {
           new obsidian_1.Notice(`"${file.basename}" planted.`);
+          if (this.plugin.settings.openAfterPublish) {
+            this.plugin.garden.viewLiveVersion(file);
+          }
           this.render();
         } else if (ok === false) {
           new obsidian_1.Notice(`Failed to plant "${file.basename}".`);
@@ -265,7 +268,7 @@ class StandardGardenView extends obsidian_1.ItemView {
           text: "Open",
           cls: "stnd-panel-btn stnd-panel-btn-secondary",
         });
-        viewBtn.addEventListener("click", () => window.open(liveUrl, "_blank"));
+        viewBtn.addEventListener("click", () => this.plugin.garden.viewLiveVersion(file));
 
         const copyBtn = actions.createEl("button", {
           text: "Copy",
