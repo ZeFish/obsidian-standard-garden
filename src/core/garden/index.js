@@ -1079,11 +1079,18 @@ class GardenFeature {
   async publishNote(file, isBulk = false, preCalculatedContent = null) {
     try {
       const content = preCalculatedContent !== null ? preCalculatedContent : await this.uploadContentImages(await this.app.vault.read(file), file, isBulk);
-      // slugify() translittère les accents avant de filtrer. Trois copies de
-      // l'ancien calcul subsistaient ici : publication, statut et
-      // dépublication pouvaient donc viser trois adresses différentes pour la
-      // même note accentuée.
-      const slug = slugify(file.basename);
+      // Résoudre le slug de la même façon que unpublishNote()/checkNoteStatus() :
+      // permalink > slug > basename. Sans cette priorité, publishNote() dérivait
+      // toujours du nom de fichier — renommer une note publiée créait une
+      // nouvelle adresse distante à chaque republish, laissant l'ancienne
+      // orpheline en ligne. downloadNewOnlineNotes() la re-téléchargeait ensuite
+      // comme "nouvelle" note, d'où les doublons locaux en "(1)", "(2)"...
+      const fmBefore = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+      const fmSlugBefore = fmBefore.permalink ?? fmBefore.slug;
+      const basenameSlug = slugify(file.basename);
+      const resolvedSlug =
+        fmSlugBefore != null ? String(fmSlugBefore).replace(/^\/+|\/+$/g, "") : basenameSlug;
+      const slug = resolvedSlug === "" ? "~root" : resolvedSlug;
       const response = await fetchWithRetry(
         `${this.plugin.settings.apiUrl}/publish/${slug}`,
         {
@@ -1115,6 +1122,9 @@ class GardenFeature {
         delete fm.published; // Nettoyer les anciennes clés obsolètes
         delete fm.url_public;
         fm["garden-url"] = liveUrl;
+        // Verrouiller le slug utilisé pour ce publish : un futur renommage du
+        // fichier ne doit plus faire dériver l'adresse distante (voir plus haut).
+        if (resolvedSlug !== "") fm.permalink = resolvedSlug;
         if (data && data.nano_id) {
           fm["garden-short"] = `https://stnd.gd/${data.nano_id}`;
         }
