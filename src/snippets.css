@@ -50,8 +50,7 @@ body.stnd-adapter.stnd-callouts .callout[data-callout="transcript"] {
     margin: calc(var(--marge) * 0.5) 0 !important;
 }
 body.stnd-adapter.stnd-callouts .callout,
-body.stnd-adapter.stnd-callouts .markdown-preview-view pre,
-body.stnd-adapter.stnd-callouts .markdown-preview-view blockquote {
+body.stnd-adapter.stnd-callouts .markdown-preview-view pre {
     background: var(--background-secondary);
 
     --callout-title-color: color-mix(in srgb, var(--callout-color) 50%, var(--text-normal));
@@ -112,19 +111,19 @@ body.stnd-adapter.stnd-callouts .callout-content:has(.callout) {
     padding: 0;
 }
 body.stnd-adapter.stnd-callouts .callout-content .callout {
-    margin: 0.5rlh !important;
-    max-width: unset !important;
+    margin: 0.5rlh;
+    max-width: unset;
 }
 body.stnd-adapter.stnd-callouts .callout-content pre {
-    margin: 0.5rlh -0.5rlh !important;
+    margin: 0.5rlh -0.5rlh;
     padding: 0.5rlh;
 }
-body.stnd-adapter.stnd-callouts .markdown-reading-view .callout[data-callout="caption"] {
+body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] {
     padding: 0;
     background: none;
     background-color: transparent;
     border: none;
-    margin: -1.5rlh 15% 0rlh 15% !important;
+    margin: -1.5rlh 15% 0rlh 15%;
     box-shadow: none;
 }
 body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-title {
@@ -134,12 +133,18 @@ body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-conten
     padding: 0.5rlh 1rlh;
     background: none;
     border: none;
-    color: red;
     box-shadow: none;
     line-height: 1;
     text-align: center;
+    text-align-last: center;
     color: var(--text-muted);
-    font-size: var(--font-small) !important;
+    font-size: var(--font-small);
+}
+body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-content p {
+    text-align: center;
+    text-align-last: center;
+    color: var(--text-muted);
+    font-size: var(--font-smallest);
 }
 body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-content p:first-child {
     margin-top: 0;

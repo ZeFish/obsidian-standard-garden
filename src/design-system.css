@@ -895,7 +895,6 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     padding-bottom: calc(var(--line-height-normal) * 0.25em);
 }
 
-.stnd-adapter .markdown-reading-view blockquote,
 .stnd-adapter .markdown-reading-view pre,
 .stnd-adapter .markdown-reading-view figure,
 .stnd-adapter .markdown-reading-view .callout,
@@ -927,39 +926,65 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 }
 
 /* ============================================= */
+/* Standard Blockquotes in Obsidian              */
+/* ============================================= */
+.stnd-adapter .markdown-reading-view blockquote,
+.stnd-adapter .markdown-rendered blockquote,
+.stnd-adapter .markdown-preview-view blockquote {
+    font-style: italic;
+    color: var(--text-muted);
+    padding: var(--space, 1rlh);
+    border-left: var(--stroke-width-lg, 2px) solid var(--color-border, var(--border-color));
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.stnd-adapter .markdown-reading-view blockquote cite,
+.stnd-adapter .markdown-rendered blockquote cite,
+.stnd-adapter .markdown-preview-view blockquote cite {
+    display: block;
+    margin-top: var(--space, 1rlh);
+    font-size: var(--scale-d2, 0.85em);
+}
+
+/* ============================================= */
 /* Standard Callouts in Obsidian                 */
 /* ============================================= */
 .stnd-adapter .callout {
     --color-callout: var(--callout-color, var(--color-surface));
-    border-radius: var(--radius-m) !important;
-    border: 0 !important;
-    padding: 0.25rlh !important;
-    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-primary)) !important;
-    box-shadow: var(--shadow-raised), var(--shadow-ring) !important;
+    border-radius: var(--radius-m);
+    border: 0;
+    padding: 0.25rlh;
+    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-primary));
+    box-shadow: var(--shadow-raised), var(--shadow-ring);
     margin-block: 1rlh;
 }
 
 .stnd-adapter .callout .callout-title {
-    color: color-mix(in oklch, var(--color-callout) 50%, var(--text-normal)) !important;
-    font-weight: var(--font-bold, bold) !important;
-    margin: 0.25rlh 0 0.5rlh 0.75rlh !important;
-    padding: 0 !important;
+    color: color-mix(in oklch, var(--color-callout) 50%, var(--text-normal));
+    font-weight: var(--font-bold, bold);
+    margin: 0.25rlh 0 0.5rlh 0.75rlh;
+    padding: 0;
     display: flex;
     align-items: center;
 }
 
 .stnd-adapter .callout .callout-icon {
-    display: none !important;
+    display: none;
 }
 
 .stnd-adapter .callout .callout-content {
-    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-secondary)) !important;
-    box-shadow: var(--shadow-inset), var(--shadow-ring) !important;
-    border-radius: var(--radius-m) !important;
-    padding: 0.75rlh !important;
-    font-size: var(--font-small) !important;
-    color: var(--text-normal) !important;
-    margin-left: 0 !important;
+    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-secondary));
+    box-shadow: var(--shadow-inset), var(--shadow-ring);
+    border-radius: var(--radius-m);
+    padding: 0.75rlh;
+    font-size: var(--font-small);
+    color: var(--text-normal);
+    margin-left: 0;
 }
 
 .stnd-adapter .markdown-embed {
@@ -972,3 +997,40 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     display: none !important;
 }
 
+/* ─── Print / PDF export ────────────────────────────────────────────── */
+/* obsidian.scss (the entry compiled to packages/styles/dist/obsidian.css
+   and prepended above) only ships tokens + colors — it deliberately skips
+   every layout/typography partial, including the print reset that the web
+   bundle gets from standard-31-print.scss, so Obsidian's "Export to PDF"
+   was rendering with the on-screen line-height (the silver/golden ratio,
+   ~1.4+) instead of a print-appropriate one. --line-height-normal is
+   Obsidian's own variable name for this; --font-density/--optical-ratio
+   are the token chain it falls back to elsewhere in this file. Override
+   all three so whichever one a given rule reads, print comes out tight. */
+@media print {
+    .stnd-adapter {
+        --line-height-normal: 1.35 !important;
+        --font-density: 1.35 !important;
+        --optical-ratio: 1.35 !important;
+    }
+
+    /* The visible gap in a printed CV isn't leading, it's this: on screen the
+       design system deliberately airs out list items (0.5rlh between each
+       <li>, via the rules a few hundred lines up) so a reading view breathes.
+       On paper that reads as broken spacing instead of rhythm. These are
+       Obsidian-preview-specific selectors (.markdown-preview-view [class^="el-"]
+       ol > li + li, etc.) — more specific than anything standard-31-print.scss
+       ships for the web, so importing that partial wouldn't have overridden
+       them anyway. Reset the same selectors directly, for print only. */
+    .stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol) {
+        margin-block-start: 0.25em !important;
+        margin-block-end: 0.25em !important;
+    }
+    .stnd-adapter .markdown-preview-view [class^="el-"] ol > li + li,
+    .stnd-adapter .markdown-preview-view [class^="el-"] ul > li + li {
+        margin-block-start: 0 !important;
+    }
+    .stnd-adapter .markdown-preview-view [class^="el-"] p + p {
+        margin-block-start: 0.5em !important;
+    }
+}

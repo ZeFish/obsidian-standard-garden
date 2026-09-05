@@ -348,8 +348,7 @@ body.stnd-eink-active .tooltip {
 }
 
 body.stnd-eink-active .callout,
-body.stnd-eink-active .markdown-preview-view pre,
-body.stnd-eink-active .markdown-preview-view blockquote {
+body.stnd-eink-active .markdown-preview-view pre {
     background: var(--color-base-00);
 }
 
