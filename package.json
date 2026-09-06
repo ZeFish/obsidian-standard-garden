@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "node build.js && (command -v obsidian >/dev/null && obsidian vault=Atelier plugin:reload id=standard-garden || true)",
-    "dev": "pnpm run build && (command -v obsidian >/dev/null && obsidian dev:console || true)",
+    "dev": "pnpm --filter @stnd/themes run build:themes && pnpm run build && (command -v obsidian >/dev/null && obsidian dev:console || true)",
     "screenshot": "obsidian dev:screenshot"
   },
   "dependencies": {
