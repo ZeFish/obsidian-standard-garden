@@ -217,7 +217,9 @@ body.stnd-eink-active.theme-light {
     --background-modifier-message: var(--color-base-00) !important;
     --background-modifier-form-field: var(--color-base-00) !important;
 
+    --color-interactive-background: var(--color-base-10) !important;
     --color-interactive-backgound: var(--color-base-10) !important;
+    --color-interactive-hover-background: var(--color-base-10) !important;
     --color-interactive-hover-backgound: var(--color-base-10) !important;
 
     --accent-h: 0 !important;

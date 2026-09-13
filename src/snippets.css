@@ -5,6 +5,11 @@ body.stnd-adapter.stnd-better-highlights {
     /* Better highlights */
     /* ============================================= */
 }
+body.stnd-adapter .cm-editor .cm-lineNumbers .cm-gutterElement {
+    padding:0 var(--space-d2) 0 0;
+        --line-number-color: var(--color-muted);
+        opacity: 0.4;
+}
 body.stnd-adapter.stnd-better-highlights.theme-light.ptm-highlight-current-line .ptm-current-line-highlight.ptm-current-line-highlight-box {
     background: var(--background-primary);
     border: 1px solid var(--background-secondary-alt);
@@ -80,7 +85,7 @@ body.stnd-adapter.stnd-callouts .callout {
 body.stnd-adapter.stnd-callouts .callout .callout-title {
     margin: 0.25rlh 0 0.5rlh 0.75rlh;
     padding: 0;
-
+    font-size: var(--font-ui-medium);
     display: flex;
     align-items: center;
 }
@@ -93,8 +98,10 @@ body.stnd-adapter.stnd-callouts .callout-content {
     background-color: color-mix(in oklab, var(--callout-color) 2.5%, var(--background-secondary));
     box-shadow: var(--shadow-inset), var(--shadow-ring);
     /* border-radius: calc(var(--radius) * 2); */
-    font-size: var(--font-small);
+    font-size: var(--font-ui-medium);
     margin-left: 0;
+    p {margin-block:0;}
+    p + p {margin-block-start:var(--space);}
 }
 body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout-content ol,
 body.stnd-adapter.stnd-callouts .markdown-rendered [class^="el-"] .callout-content ul {
@@ -138,7 +145,7 @@ body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-conten
     text-align: center;
     text-align-last: center;
     color: var(--text-muted);
-    font-size: var(--font-small);
+    font-size: var(--font-ui-medium);
 }
 body.stnd-adapter.stnd-callouts .callout[data-callout="caption"] .callout-content p {
     text-align: center;
@@ -315,6 +322,59 @@ body.stnd-adapter.stnd-clean-ui .is-mobile.chisel-reading .mobile-navbar {
 /* --- Snippet: Trim.md --- */
 
 /* --- Snippet: base.md --- */
+body.stnd-adapter.stnd-base-tweaks {
+    --bases-cards-background: var(--color-surface);
+    --bases-cards-border-width: var(--stroke-width);
+    --bases-cards-container-background: transparent;
+    --bases-cards-corner-shape: var(--corner-shape);
+    --bases-cards-cover-background: var(--background-primary-alt);
+    --bases-cards-font-size: var(--font-ui-medium);
+    --bases-cards-line-height: 24px;
+    --bases-cards-radius: var(--radius-m);
+    --bases-cards-scale: 1;
+    --bases-cards-shadow-hover: var(--shadow-raised), var(--shadow-lg);
+    --bases-cards-shadow: var(--shadow-raised);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item {
+    padding: 0 0 0 0;
+    transition: all var(--transition);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item:hover {
+    --bases-cards-background: var(--color-surface-high);
+}
+
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item .bases-cards-property {
+
+    padding-inline: var(--space-d4);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item .bases-cards-property .bases-rendered-value {
+    font-family: var(--font-text);
+    color: var(--color-muted);
+    font-size: var(--font-ui-medium);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item .bases-cards-label {
+    font-family: var(--font-interface);
+    color: var(--color-subtle);
+    font-size: var(--font-ui-medium);
+}
+
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item .bases-cards-property.mod-title   {
+
+    padding: var(--space-d2) var(--space-d4) var(--space-d4) var(--space-d4);
+    margin-block-end: var(--space);
+    background: var(--color-surface-high);
+    box-shadow: var(--shadow-raised);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item .bases-cards-property.mod-title .bases-rendered-value {
+    font-family: var(--font-header);
+    font-size: var(--font-ui-medium);
+    color: var(--color-foreground);
+}
+body.stnd-adapter.stnd-base-tweaks .bases-cards-item:hover .bases-cards-property.mod-title {
+    background: var(--color-surface-higher);
+}
+
+
 body.stnd-adapter.stnd-base-tweaks .bases-embed {
     --bases-embed-border-width: 10px !important;
     --bases-table-font-size: var(--font-size);
@@ -328,6 +388,17 @@ body.stnd-adapter.stnd-base-tweaks .bases-rendered-value {
     --table-border-color: var(--border-color);
     --bases-table-header-background: var(--background-secondary);
 }
+body.stnd-adapter.stnd-base-tweaks {
+    --table-header-border-width: 0;
+    --table-column-first-border-width: 0;
+    --table-column-last-border-width: 0;
+    --table-row-last-border-width: 0;
+    --table-edge-cell-padding-first: var(--space-d2);
+
+    --table-edge-cell-padding-last: var(--space-d2);
+    --table-cell-padding: var(--space-d4) var(--space-d2) var(--space-d2) var(--space-d2);
+
+}
 body.stnd-adapter.stnd-base-tweaks .bases-header,
 body.stnd-adapter.stnd-base-tweaks .bases-thead,
 body.stnd-adapter.stnd-base-tweaks .bases-tr,
@@ -335,6 +406,16 @@ body.stnd-adapter.stnd-base-tweaks .bases-td {
     box-shadow: none;
     border: 0;
     --bases-header-border-width: 0;
+}
+body.stnd-adapter.stnd-base-tweaks .markdown-rendered th {
+    font-size: var(--table-header-size);
+    font-weight: var(--table-header-weight);
+    color: var(--color-subtle);
+    font-family: var(--font-header);
+    line-height: var(--line-height-tight);
+}
+body.stnd-adapter.stnd-base-tweaks {
+ --bases-table-row-height: calc(var(--space)+var(--space));
 }
 body.stnd-adapter.stnd-base-tweaks .bases-tr:not(:last-child) {
     border-bottom: 1px solid var(--divider-color);
@@ -346,7 +427,8 @@ body.stnd-adapter.stnd-base-tweaks .bases-embed .bases-view {
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header,
 body.stnd-adapter.stnd-base-tweaks .bases-header {
-    opacity: 0.05;
+    opacity: 0.4;
+    transition: all var(--transition);
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-header:hover,
 body.stnd-adapter.stnd-base-tweaks .bases-header:hover,
@@ -354,7 +436,8 @@ body.stnd-adapter.stnd-base-tweaks .bases-thead:hover {
     opacity: 1;
 }
 body.stnd-adapter.stnd-base-tweaks .bases-thead {
-    opacity: 0.33;
+    opacity: 0.4;
+    transition: all var(--transition);
 }
 body.stnd-adapter.stnd-base-tweaks .mod-sidedock .bases-thead {
     display: none;

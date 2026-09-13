@@ -323,4 +323,7 @@ esbuild
       );
     }
   })
-  .catch(() => process.exit(1));
+  .catch((err) => {
+    console.error("Build failed:", err);
+    process.exit(1);
+  });

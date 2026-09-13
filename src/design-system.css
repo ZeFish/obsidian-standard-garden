@@ -52,6 +52,119 @@
     --h6-font: var(--font-header);
     font-feature-settings: var(--font-interface-feature);
     font-variation-settings: var(--font-interface-variation);
+
+
+
+
+    /**
+     * @name Animation, Timing & Curves
+     * @description Cubic bezier easing curves, transition durations, and physics-driven motion presets.
+     *
+     * @property {variable} --ease-snappy Fast response curve for small icons and toggles (`cubic-bezier(0.2, 0, 0, 1)`).
+     * @property {variable} --ease-standard Standard curve for general UI transitions (`cubic-bezier(0.4, 0, 0.2, 1)`).
+     * @property {variable} --ease-soft Gentle curve for large modals, overlays, and drawer panels (`cubic-bezier(0.16, 1, 0.3, 1)`).
+     * @property {variable} --ease-emphasis Weighted curve with anticipation and subtle overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`).
+     * @property {variable} --ease-aggressive Rapid acceleration curve for urgent transitions (`cubic-bezier(0.7, 0, 0.3, 1)`).
+     * @property {variable} --ease-stnd Standard signature ease curve (`cubic-bezier(0, 0.3, 0, 1)`).
+     * @property {variable} --ease-stnd-heavy Heavy standard signature ease curve (`cubic-bezier(0.5, 0, 0, 1)`).
+     * @property {variable} --ease-invisibolt Sudden bolt curve (`cubic-bezier(1, 0, 0, 1)`).
+     * @property {variable} --ease-friction Analog physical friction curve with swift attack and long taper (`cubic-bezier(0.22, 1, 0.36, 1)`).
+     * @property {variable} --duration-instant Instant duration for micro-interactions (`100ms`).
+     * @property {variable} --duration-fast Fast duration for button hover, active states, and menus (`350ms`).
+     * @property {variable} --duration-standard Standard duration for UI component state transitions (`500ms`).
+     * @property {variable} --duration-slow Slow duration for large panels, dialogs, and navigation sheets (`1000ms`).
+     * @property {variable} --transition-fast Fast transition shorthand (`0.5s var(--ease-friction)`).
+     * @property {variable} --transition Standard transition shorthand (`1s var(--ease-friction)`).
+     * @property {variable} --transition-slow Slow transition shorthand (`2s var(--ease-friction)`).
+     * @property {variable} --ease-shape-snappy Snappy shape alias curve (`cubic-bezier(0.2, 0, 0, 1)`).
+     * @property {variable} --ease-shape-bounce Bouncy shape alias curve with overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`).
+     * @property {variable} --ease-shape-soft Soft shape alias curve (`cubic-bezier(0.16, 1, 0.3, 1)`).
+     * @property {variable} --ease-interaction Preset transition for interactive controls (`var(--duration-fast) var(--ease-shape-snappy)`).
+     * @property {variable} --ease-feedback Preset transition for validation and feedback states (`var(--duration-standard) var(--ease-shape-bounce)`).
+     * @property {variable} --ease-surface Preset transition for large panels and sidebars (`var(--duration-slow) var(--ease-shape-soft)`).
+     * @property {variable} --ease-enter Preset transition for entering elements (`var(--duration-fast) ease-out`).
+     * @property {variable} --ease-exit Preset transition for exiting elements (`var(--duration-standard) ease-in`).
+     */
+    /* The *“Snappy”* - for small icons or toggles (Short duration) */
+    --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+
+    /* The *“Standard”* - for general UI transitions (Your 0.5s sweet spot) */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* The *“Soft”* - for large modals or overlays (The *“softest”* feel) */
+    --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* The *“Emphasis”* - has a tiny bit of weight/anticipation */
+    --ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Special Effects */
+    --ease-aggressive: cubic-bezier(0.7, 0, 0.3, 1);
+
+    --ease-stnd: cubic-bezier(0, 0.3, 0, 1);
+    --ease-stnd-heavy: cubic-bezier(0.5, 0, 0, 1);
+
+    --ease-invisibolt: cubic-bezier(1, 0, 0, 1);
+
+    /* Analog : It starts with a burst of energy (the push) and spends 80% of its time slowly losing that energy. */
+    --ease-friction: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Reference notes only, not live code — mixes prose with invalid CSS
+       (e.g. "Soft Fade Out" as a bare declaration) on purpose, scratch
+       rationale for the eases defined around it, not meant to be uncommented.
+    Animation
+    a {
+      text-decoration-color: rgba(0,0,0,0);
+      transition: text-decoration-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      Soft Fade Out
+    }
+    a:hover {
+      text-decoration-color: rgba(0,0,0,1);
+      transition: text-decoration-color 0.15s ease-out;
+      Snappy Fade In
+    }
+    Intent	Variable Name	Value	Recommended Duration
+    Reaction	--ease-react	cubic-bezier(0.2, 1, 0.4, 1)	0.15s
+    Exit	--ease-out-soft	cubic-bezier(0.4, 0, 1, 1)	0.3s
+    .stnd-button {
+      transition:
+        background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .stnd-button:active {
+      transform: scale(0.98); Tiny physical feedback
+    }
+    */
+
+    --duration-instant: 100ms;
+    --duration-fast: 350ms;
+    --duration-standard: 500ms;
+    --duration-slow: 1000ms;
+
+    --transition-fast: 0.5s var(--ease-friction);
+    --transition: 1s var(--ease-friction);
+    --transition-slow: 2s var(--ease-friction);
+
+    /* Shape Aliases */
+    --ease-shape-snappy: cubic-bezier(0.2, 0, 0, 1);
+    --ease-shape-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-shape-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Interaction (Buttons, Links, Toggles) */
+    --ease-interaction: var(--duration-fast) var(--ease-shape-snappy);
+
+    /* Feedback (Success/Error states, validation) */
+    --ease-feedback: var(--duration-standard) var(--ease-shape-bounce);
+
+    /* Layout (Sidebars, expanding cards, Digital Garden navigation) */
+    --ease-surface: var(--duration-slow) var(--ease-shape-soft);
+
+    /* Enter/Exit (Modals, tooltips) */
+    --ease-enter: var(--duration-fast) ease-out;
+    --ease-exit: var(--duration-standard) ease-in;
+
+
+
 }
 .stnd-adapter .vertical-tab-header-group-title,
 .stnd-adapter .setting-item-heading .setting-item-name {
@@ -198,20 +311,20 @@ body.stnd-adapter:where(.theme-light, .theme-dark),
 body.is-mobile.stnd-adapter.theme-light,
 body.is-mobile.stnd-adapter.theme-dark {
     /* --color-background:						var(--color-background); */
-    --color-base-00: color-mix(in oklch, var(--color-foreground, CanvasText) 0%, var(--color-background, Canvas));
-    --color-base-05: color-mix(in oklch, var(--color-foreground, CanvasText) 2%, var(--color-background, Canvas));
-    --color-base-10: color-mix(in oklch, var(--color-foreground, CanvasText) 5%, var(--color-background, Canvas));
-    --color-base-20: color-mix(in oklch, var(--color-foreground, CanvasText) 20%, var(--color-background, Canvas));
-    --color-base-25: color-mix(in oklch, var(--color-foreground, CanvasText) 25%, var(--color-background, Canvas));
-    --color-base-30: color-mix(in oklch, var(--color-foreground, CanvasText) 30%, var(--color-background, Canvas));
-    --color-base-35: color-mix(in oklch, var(--color-foreground, CanvasText) 35%, var(--color-background, Canvas));
-    --color-base-40: color-mix(in oklch, var(--color-foreground, CanvasText) 40%, var(--color-background, Canvas));
-    --color-base-50: color-mix(in oklch, var(--color-foreground, CanvasText) 50%, var(--color-background, Canvas));
-    --color-base-60: color-mix(in oklch, var(--color-foreground, CanvasText) 60%, var(--color-background, Canvas));
-    --color-base-70: color-mix(in oklch, var(--color-foreground, CanvasText) 70%, var(--color-background, Canvas));
-    --color-base-80: color-mix(in oklch, var(--color-foreground, CanvasText) 80%, var(--color-background, Canvas));
-    --color-base-90: color-mix(in oklch, var(--color-foreground, CanvasText) 90%, var(--color-background, Canvas));
-    --color-base-100: color-mix(in oklch, var(--color-foreground, CanvasText) 100%, var(--color-background, Canvas));
+    --color-base-00: color-mix(in srgb, var(--color-foreground, CanvasText) 0%, var(--color-background, Canvas));
+    --color-base-05: color-mix(in srgb, var(--color-foreground, CanvasText) 2%, var(--color-background, Canvas));
+    --color-base-10: color-mix(in srgb, var(--color-foreground, CanvasText) 5%, var(--color-background, Canvas));
+    --color-base-20: color-mix(in srgb, var(--color-foreground, CanvasText) 20%, var(--color-background, Canvas));
+    --color-base-25: color-mix(in srgb, var(--color-foreground, CanvasText) 25%, var(--color-background, Canvas));
+    --color-base-30: color-mix(in srgb, var(--color-foreground, CanvasText) 30%, var(--color-background, Canvas));
+    --color-base-35: color-mix(in srgb, var(--color-foreground, CanvasText) 35%, var(--color-background, Canvas));
+    --color-base-40: color-mix(in srgb, var(--color-foreground, CanvasText) 40%, var(--color-background, Canvas));
+    --color-base-50: color-mix(in srgb, var(--color-foreground, CanvasText) 50%, var(--color-background, Canvas));
+    --color-base-60: color-mix(in srgb, var(--color-foreground, CanvasText) 60%, var(--color-background, Canvas));
+    --color-base-70: color-mix(in srgb, var(--color-foreground, CanvasText) 70%, var(--color-background, Canvas));
+    --color-base-80: color-mix(in srgb, var(--color-foreground, CanvasText) 80%, var(--color-background, Canvas));
+    --color-base-90: color-mix(in srgb, var(--color-foreground, CanvasText) 90%, var(--color-background, Canvas));
+    --color-base-100: color-mix(in srgb, var(--color-foreground, CanvasText) 100%, var(--color-background, Canvas));
     --background-primary: var(--color-background);
     --background-primary-alt: var(--color-base-05);
     --background-secondary: var(--color-base-05);
@@ -221,7 +334,8 @@ body.is-mobile.stnd-adapter.theme-dark {
     --color-accent-default: hsl(var(--accent-h) var(--accent-s) var(--accent-l));
     --color-interactive: color-mix(in oklch, var(--color-accent) 25%, transparent);
     --color-interactive-hover: color-mix(in oklch, var(--color-accent) 50%, transparent);
-    --color-interactive-hover-backgound: color-mix(in oklch, var(--color-accent) 15%, transparent);
+    --color-interactive-hover-background: color-mix(in oklch, var(--color-accent) 15%, transparent);
+    --color-interactive-hover-backgound: var(--color-interactive-hover-background);
     --color-icon: var(--text-muted);
     --bold-color: var(--color-bold);
     --italic-color: var(--color-italic);
@@ -231,7 +345,7 @@ body.is-mobile.stnd-adapter.theme-dark {
     --color-h4: var(--color-foreground);
     --color-h5: var(--color-foreground);
     --color-h6: var(--color-foreground);
-    --background-modifier-hover: var(--color-interactive-hover-backgound);
+    --background-modifier-hover: var(--color-interactive-hover-background);
     --background-modifier-active-hover: var(--background-secondary);
     --background-modifier-border: var(--background-secondary);
     --background-modifier-border-hover: var(--color-base-20);
@@ -241,7 +355,7 @@ body.is-mobile.stnd-adapter.theme-dark {
     --background-modifier-success: var(--color-base-05);
     --background-modifier-message: var(--color-base-05);
     --background-modifier-form-field: var(--color-base-05);
-    --border-color: color-mix(in oklch, var(--color-foreground, CanvasText) 10%, var(--color-background, Canvas));
+    --border-color: color-mix(in srgb, var(--color-foreground, CanvasText) 10%, var(--color-background, Canvas));
     --border-width: 1px;
     --divider-color: var(--border-color);
     --divider-width: var(--border-width);
@@ -249,14 +363,11 @@ body.is-mobile.stnd-adapter.theme-dark {
     --hr-thickness: var(--border-width);
     --tab-outline-color: var(--border-color);
     --tab-outline-width: var(--border-width);
-    --tab-outline-color: var(--border-color);
-    --tab-outline-width: var(--border-width);
-    --tab-text-color-focused-active-current: var(--foreground-color);
+    --tab-text-color-focused-active-current: var(--color-foreground);
     --prompt-border-color: var(--border-color);
     --prompt-border-width: var(--border-width);
     --table-border-color: var(--border-color);
     --modal-border-color: var(--border-color);
-    --status-bar-border-width: var(--border-width);
     --status-bar-border-color: var(--border-color);
     --status-bar-border-width: 0;
     --blockquote-border-thickness: 2px;
@@ -305,14 +416,14 @@ body.is-mobile.stnd-adapter.theme-dark {
     --text-on-accent: var(--color-foreground);
     --text-on-accent-inverted: var(--color-background);
     --text-success: var(--color-green);
-    --text-warning: var(--color-red);
+    --text-warning: var(--color-orange);
     --text-error: var(--color-red);
     --text-accent: var(--color-accent);
     --text-accent-hover: var(--color-foreground);
     --text-selection: color-mix(in oklch, var(--color-accent) 15%, var(--color-background));
     --metadata-label-text-color: var(--color-icon);
     --link-external-color: var(--color-green);
-    --link-external-color-hover: color-mix(in oklch, var(--color-foreground) 25%, var(--color-background));
+    --link-external-color-hover: color-mix(in srgb, var(--color-foreground) 25%, var(--color-background));
     --link-color: var(--color-accent);
     --link-color-hover: color-mix(in oklch, var(--link-color) 25%, var(--color-foreground));
     --tag-background: color-mix(in oklch, black 2%, transparent);
@@ -331,8 +442,8 @@ body.is-mobile.stnd-adapter.theme-dark {
     --nav-collapse-icon-color-hover: color-mix(in oklch, var(--text-normal) 100%, transparent);
     --nav-collapse-icon-color-collapsed: color-mix(in oklch, var(--text-normal) 100%, transparent);
     --nav-indentation-guide-color: color-mix(in oklch, var(--text-normal) 5%, transparent);
-    --nav-item-background-hover: var(--color-interactive-hover-backgound);
-    --nav-item-background-active: var(--color-interactive-hover-backgound);
+    --nav-item-background-hover: var(--color-interactive-hover-background);
+    --nav-item-background-active: var(--color-interactive-hover-background);
     --nav-item-color-highlighted: var(--color-foreground);
     --ribbon-background: var(--background-secondary);
     --ribbon-background-collapsed: var(--background-secondary);
@@ -342,8 +453,8 @@ body.is-mobile.stnd-adapter.theme-dark {
     --tab-container-background: var(--background-secondary) !important;
     --indentation-guide-color: color-mix(in oklch, var(--color-foreground) 12%, transparent);
     --indentation-guide-color-active: color-mix(in oklch, var(--color-foreground) 3%, transparent);
-    --scrollbar-active-thumb-bg: color-mix(in oklch, var(---color-foreground) 20%, transparent);
-    --scrollbar-bg: color-mix(in oklch, var(--color-foreground) 5%, transparent);
+    --scrollbar-active-thumb-bg: color-mix(in oklch, var(--color-foreground) 20%, transparent);
+    --scrollbar-bg: transparent;
     --scrollbar-thumb-bg: color-mix(in oklch, var(--color-foreground) 1%, transparent);
     --swatch-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-foreground) 1%, transparent);
     --workspace-background-translucent: color-mix(in oklch, var(--color-foreground) 40%, transparent);
@@ -363,7 +474,7 @@ body.is-mobile.stnd-adapter.theme-dark {
     --callout-summary: var(--color-cyan);
     --callout-tip: var(--color-green);
     --callout-todo: var(--color-blue);
-    --callout-warning: var(--color-red);
+    --callout-warning: var(--color-orange);
     --callout-quote: var(--color-foreground);
     --callout-cite: var(--color-foreground);
 
@@ -505,9 +616,9 @@ body.stnd-adapter.theme-dark.is-mobile {
     --color-bold: var(--color-dark-bold, var(--color-bold-default));
     --color-italic: var(--color-dark-italic, var(--color-italic-default));
     --blockquote-border-color: var(--text-faint);
-    --color-h1: color-mix(in oklch, var(--color-foreground) 85%, var(--color-background));
-    --color-h2: color-mix(in oklch, var(--color-foreground) 90%, var(--color-background));
-    --color-h3: color-mix(in oklch, var(--color-foreground) 95%, var(--color-background));
+    --color-h1: color-mix(in srgb, var(--color-foreground) 85%, var(--color-background));
+    --color-h2: color-mix(in srgb, var(--color-foreground) 90%, var(--color-background));
+    --color-h3: color-mix(in srgb, var(--color-foreground) 95%, var(--color-background));
     --color-h4: var(--color-foreground);
     --color-h5: var(--color-foreground);
     --color-h6: var(--color-foreground);
@@ -609,7 +720,7 @@ body.stnd-adapter.theme-dark input.document-replace-input.mod-no-match {
 @media (hover: hover) {
     body.stnd-adapter.theme-light .view-header-title-parent .view-header-breadcrumb:hover,
     body.stnd-adapter.theme-dark .view-header-title-parent .view-header-breadcrumb:hover {
-        background-color: var(--color-interactive-hover-backgound);
+        background-color: var(--color-interactive-hover-background);
         color: var(--color-accent);
     }
 }
@@ -813,9 +924,9 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 }
 .stnd-adapter {
     --tag-border-width: 1px;
-    --tag-radius: calc(var(--marge) * 0.25);
-    --tag-padding-x: calc(var(--marge) * 0.25);
-    --tag-padding-y: calc(var(--marge) * 0.25);
+    --tag-radius: calc(var(--marge) * 0.25rem);
+    --tag-padding-x: calc(var(--marge) * 0.25rem);
+    --tag-padding-y: calc(var(--marge) * 0.25rem);
     --table-margin: auto;
 
     --marge: var(--font-density);
