@@ -15,6 +15,16 @@ const srcDir = path.join(__dirname, "src");
 const yaml = require("js-yaml");
 const sass = require("sass");
 
+let mapWebSelectorsToObsidian = (css) => css;
+try {
+  const mapPath = path.resolve(__dirname, "../../packages/themes/_scripts/utils/selector-map.cjs");
+  if (fs.existsSync(mapPath)) {
+    mapWebSelectorsToObsidian = require(mapPath).mapWebSelectorsToObsidian;
+  }
+} catch (e) {
+  console.warn("Could not load selector-map utility:", e.message);
+}
+
 // Use local packages directory if we are in the monorepo workspace, otherwise fall back to node_modules
 let themesDir = path.resolve(__dirname, "../../packages/themes");
 if (!fs.existsSync(themesDir)) {
@@ -49,6 +59,8 @@ if (fs.existsSync(themesDir)) {
         // Normalize theme selector to parent selector &
         scssContent = scssContent.replace(new RegExp(`:root\\[data-theme=["']?${themeName}["']?\\]`, "g"), "&");
         scssContent = scssContent.replace(new RegExp(`\\[data-theme=["']?${themeName}["']?\\]`, "g"), "&");
+        // Remap standard web selectors to Obsidian dual selectors
+        scssContent = mapWebSelectorsToObsidian(scssContent);
       }
 
       const wrappedThemeScss = `body.stnd-adapter[data-stnd-theme="${themeName}"] {\n${decls}\n\n${scssContent}\n}`;
@@ -146,10 +158,10 @@ console.log("Generated fonts.generated.js and copied binary fonts");
 // ─── Bundle JS ───────────────────────────────────────────────────────────────
 esbuild
   .build({
-    entryPoints: ["main.js"],
+    entryPoints: [path.join(__dirname, "main.js")],
     bundle: true,
     platform: "browser",
-    outfile: "dist/main.js",
+    outfile: path.join(distDir, "main.js"),
     external: [
       "obsidian",
       "electron",

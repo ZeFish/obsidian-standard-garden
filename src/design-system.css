@@ -300,6 +300,7 @@
 .stnd-adapter .markdown-reading-view ul > li,
 .stnd-adapter .mod-cm6 .HyperMD-list-line.cm-line {
     line-height: max(var(--line-height-normal) * 0.75, var(--line-height-tight));
+    line-height: var(--line-height-normal);
 }
 
 body {
@@ -995,6 +996,7 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 .stnd-adapter .markdown-preview-view [class^="el-"] ol > li + li,
 .stnd-adapter .markdown-preview-view [class^="el-"] ul > li + li {
     margin-block-start: 0.5rlh;
+    margin-block-start: var(--line-height-normal);
 }
 
 .stnd-adapter .mod-cm6 .cm-line:not(.HyperMD-list-line) {
