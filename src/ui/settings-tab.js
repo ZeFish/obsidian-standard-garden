@@ -3,6 +3,7 @@
 const obsidian_1 = require("obsidian");
 
 // Core setting tabs
+const { isPublishIntent } = require("../constants.js");
 const { GardenSettingTab } = require("../core/garden/settings-tab.js");
 const { DesignSystemSettingTab } = require("../core/design-system/settings-tab.js");
 const { GeneralSettingTab } = require("./general-tab.js");
@@ -193,11 +194,12 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
     // Calculate local published count instantly
     const publishKey =
       (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-    const localCount = this.app.vault
-      .getMarkdownFiles()
-      .filter(
-        (f) => this.app.metadataCache.getFileCache(f)?.frontmatter?.[publishKey],
-      ).length;
+    const files = this.plugin.garden?.getPublishableFiles
+      ? this.plugin.garden.getPublishableFiles()
+      : this.app.vault.getMarkdownFiles();
+    const localCount = files.filter(
+      (f) => isPublishIntent(this.app.metadataCache.getFileCache(f)?.frontmatter?.[publishKey]),
+    ).length;
 
     // ── Account Stats Card ──
     const statsContainer = containerEl.createEl("div", {

@@ -132,6 +132,7 @@ const DEFAULT_SETTINGS = {
   autoSyncStartup: false,
   autoSyncInterval: "0",
   syncDirection: "1way",
+  excludedFolders: "Utopie",
   mediaManager: {
     enableSmartRename: true,
     mediaFolder: "Kernel/attachments",

@@ -138,6 +138,22 @@ class GardenSettingTab extends PluginSettingTab {
         })
     );
 
+    const excludedFoldersSetting = new Setting(containerEl)
+      .setName("Excluded folders")
+      .setDesc(descWithLinks(
+        "Folders to exclude from publication and sync (comma-separated, e.g. `Utopie, Archive`). Notes inside these folders will never be uploaded to your garden.",
+        [{ text: "configuration", href: "https://stnd.build/3-archives/obsidian-plugin#configuration" }]
+      ));
+    excludedFoldersSetting.addText((text) =>
+      text
+        .setPlaceholder("Utopie")
+        .setValue(this.plugin.settings.excludedFolders || "")
+        .onChange(async (value) => {
+          this.plugin.settings.excludedFolders = value.trim();
+          await this.plugin.saveSettings();
+        })
+    );
+
     const openSetting = new Setting(containerEl)
       .setName("Open after publish")
       .setDesc(descWithLinks(

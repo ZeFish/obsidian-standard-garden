@@ -563,6 +563,28 @@ class GardenFeature {
     this.syncIntervalTimer = null;
   }
 
+  isPathExcluded(filePath) {
+    const raw = this.plugin.settings.excludedFolders;
+    if (!raw) return false;
+    const folders = Array.isArray(raw)
+      ? raw
+      : String(raw)
+          .split(",")
+          .map((f) => f.trim().replace(/^\/+|\/+$/g, ""))
+          .filter(Boolean);
+    if (folders.length === 0) return false;
+    const normalizedPath = filePath.replace(/^\/+/, "");
+    return folders.some(
+      (folder) =>
+        normalizedPath.startsWith(folder + "/") || normalizedPath === folder
+    );
+  }
+
+  getPublishableFiles() {
+    const all = this.app.vault.getMarkdownFiles();
+    return all.filter((file) => !this.isPathExcluded(file.path));
+  }
+
   async load() {
     if (this.plugin.settings.autoSyncStartup && this.plugin.settings.apiKey) {
       setTimeout(() => {
@@ -713,7 +735,7 @@ class GardenFeature {
     if (!this.checkApiKeyAndShowModal()) {
       return;
     }
-    const files = this.app.vault.getMarkdownFiles();
+    const files = this.getPublishableFiles();
     const publishKey =
       (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
 
@@ -1074,7 +1096,7 @@ class GardenFeature {
     if (!this.checkApiKeyAndShowModal()) {
       return;
     }
-    const files = this.app.vault.getMarkdownFiles();
+    const files = this.getPublishableFiles();
     const publishKey =
       (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
 
@@ -1185,6 +1207,10 @@ class GardenFeature {
       new obsidian_1.Notice("Standard: No active note to publish.");
       return;
     }
+    if (this.isPathExcluded(activeFile.path)) {
+      new obsidian_1.Notice(`Standard : Cette note se trouve dans un dossier exclu de la publication (${activeFile.path}).`);
+      return;
+    }
     const result = await this.publishWithCheck(activeFile);
     if (result === true) {
       new obsidian_1.Notice(`Standard: "${activeFile.basename}" published.`);
@@ -1246,7 +1272,7 @@ class GardenFeature {
         return;
       }
 
-      const files = this.app.vault.getMarkdownFiles();
+      const files = this.getPublishableFiles();
       const localIndex = new LocalNoteIndex(this.app, files);
       const publishKey =
         (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
@@ -1943,7 +1969,7 @@ class GardenFeature {
   // Returns true (deleted), false (API error), or null (user cancelled).
 
   async checkNoteStatus(file) {
-    if (!this.plugin.settings.apiKey) {
+    if (!this.plugin.settings.apiKey || this.isPathExcluded(file.path)) {
       return { status: "unpublished" };
     }
 
