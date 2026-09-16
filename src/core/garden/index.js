@@ -501,15 +501,22 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
         body: options.body,
         throw: false,
       });
+      const safeParseJson = () => {
+        try {
+          return JSON.parse(res.text || "{}");
+        } catch {
+          return null;
+        }
+      };
       if (res.status === 429) {
         if (attempt >= maxAttempts) {
           return {
             ...res,
             ok: false,
-            json: async () => (typeof res.json === "object" && res.json !== null ? res.json : JSON.parse(res.text || "{}")),
+            json: async () => safeParseJson(),
           };
         }
-        const retryHeader = res.headers["retry-after"] || res.headers["Retry-After"];
+        const retryHeader = res.headers && (res.headers["retry-after"] || res.headers["Retry-After"]);
         let waitMs = 0;
         if (retryHeader) {
           const seconds = parseInt(retryHeader, 10);
@@ -527,7 +534,7 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
       return {
         ...res,
         ok: res.status >= 200 && res.status < 300,
-        json: async () => (typeof res.json === "object" && res.json !== null ? res.json : JSON.parse(res.text || "{}")),
+        json: async () => safeParseJson(),
       };
     } catch (err) {
       if (attempt >= maxAttempts) {
@@ -1725,7 +1732,7 @@ class GardenFeature {
         fmSlugBefore != null ? String(fmSlugBefore).replace(/^\/+|\/+$/g, "") : basenameSlug;
       const slug = resolvedSlug === "" ? "~root" : resolvedSlug;
       const response = await fetchWithRetry(
-        `${this.plugin.settings.apiUrl}/publish/${slug}`,
+        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
         {
           method: "PUT",
           headers: {
