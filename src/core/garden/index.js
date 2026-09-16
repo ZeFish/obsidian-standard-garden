@@ -125,9 +125,10 @@ class LocalNoteIndex {
 // running ok/fail counts, a rolling error list, and a Cancel button. The sync
 // loop polls `.cancelled` to stop early and calls update()/addError()/done().
 class SyncProgressModal extends obsidian_1.Modal {
-  constructor(app, total) {
+  constructor(app, total, breakdown) {
     super(app);
     this.total = total;
+    this.breakdown = breakdown || {}; // { toPublish, toUnpublish, toCreate, skippedIdentical }
     this.cancelled = false;
     this.finished = false;
     this.syncedNotes = [];      // Pushed to remote
@@ -155,6 +156,25 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.barEl = track.createDiv();
     this.barEl.style.cssText =
       "height:100%;width:0%;background:var(--interactive-accent);transition:width .15s ease;";
+
+    // ── Ventilation des tâches à venir ──────────────────────────────────────
+    const b = this.breakdown;
+    const breakdownEl = contentEl.createDiv();
+    breakdownEl.style.cssText =
+      "display:flex;flex-wrap:wrap;gap:6px;margin:0.5em 0 0.75em;";
+
+    const chip = (label, count, color) => {
+      if (!count) return;
+      const el = breakdownEl.createEl("span");
+      el.style.cssText =
+        `display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;` +
+        `font-size:var(--font-ui-smaller);background:var(--background-secondary);color:${color};border:1px solid currentColor;opacity:.85;`;
+      el.setText(`${label} ${count}`);
+    };
+
+    chip("↑ À publier", b.toPublish, "var(--color-green)");
+    chip("− À dépublier", b.toUnpublish, "var(--color-orange)");
+    chip("↓ À télécharger", b.toCreate, "var(--color-blue)");
 
     this.currentEl = contentEl.createEl("div", {
       cls: "stnd-modal-detail",
@@ -732,7 +752,12 @@ class GardenFeature {
         return;
       }
 
-      const modal = new SyncProgressModal(this.app, syncTasks.length);
+      const breakdown = {
+        toPublish:   syncTasks.filter(t => t.type === "local_published").length,
+        toUnpublish: syncTasks.filter(t => t.type === "local_draft_remote_exists").length,
+        toCreate:    syncTasks.filter(t => t.type === "remote_only").length,
+      };
+      const modal = new SyncProgressModal(this.app, syncTasks.length, breakdown);
       modal.open();
 
       let synced = 0;
