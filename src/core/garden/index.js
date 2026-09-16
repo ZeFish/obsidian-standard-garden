@@ -136,7 +136,8 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.createdNotes = [];     // Created locally
     this.unpublishedNotes = []; // Removed publish status locally
     this.skippedNotes = [];     // Skipped because identical
-    this.failedNotes = [];      // Errors
+    this.failedNotes = [];      // Errors (objects with name and detail)
+    this.logs = [];             // Chronological event log
     this.startTime = Date.now();
   }
 
@@ -183,10 +184,40 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.currentEl.style.cssText =
       "opacity:.7;font-size:var(--font-ui-smaller);min-height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 
+    // ── Journal d'activité en direct ─────────────────────────────────────────
+    const logHeader = contentEl.createEl("div", {
+      text: "Journal de synchronisation :",
+      cls: "stnd-modal-detail",
+    });
+    logHeader.style.cssText =
+      "margin-top: 0.75em; margin-bottom: 0.25em; font-weight: 600; font-size: var(--font-ui-smaller);";
+
+    this.logContainer = contentEl.createDiv();
+    this.logContainer.style.cssText =
+      "height: 160px; overflow-y: auto; background: var(--background-primary-alt); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 6px 10px; font-family: var(--font-monospace); font-size: 11px; line-height: 1.5;";
+
     this.reconciliationEl = contentEl.createEl("div");
-    this.reconciliationEl.style.cssText = "margin-top:1em; max-height: 250px; overflow-y: auto; font-size:var(--font-ui-smaller);";
+    this.reconciliationEl.style.cssText =
+      "margin-top: 0.75em; max-height: 180px; overflow-y: auto; font-size: var(--font-ui-smaller);";
 
     const btns = contentEl.createEl("div", { cls: "stnd-modal-btns" });
+    
+    this.copyBtn = btns.createEl("button", {
+      text: "Copier le log",
+      cls: "stnd-modal-btn-cancel",
+    });
+    this.copyBtn.addEventListener("click", () => {
+      if (this.logs.length === 0) {
+        new obsidian_1.Notice("Le journal est vide pour le moment.");
+        return;
+      }
+      const text = this.logs
+        .map((l) => `[${l.time}] [${l.tag}] ${l.name}${l.detail ? " — " + l.detail : ""}`)
+        .join("\n");
+      navigator.clipboard.writeText(text);
+      new obsidian_1.Notice(`Journal copié (${this.logs.length} entrées) !`);
+    });
+
     this.actionBtn = btns.createEl("button", { text: "Annuler", cls: "mod-warning" });
     this.actionBtn.addEventListener("click", () => {
       if (this.finished) return this.close();
@@ -209,13 +240,61 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.currentEl.setText(current ? `Traitement : ${current}` : "");
   }
 
-  recordResult(type, name) {
-    if (type === "synced") this.syncedNotes.push(name);
-    else if (type === "pulled") this.pulledNotes.push(name);
-    else if (type === "created") this.createdNotes.push(name);
-    else if (type === "unpublished") this.unpublishedNotes.push(name);
-    else if (type === "skipped") this.skippedNotes.push(name);
-    else if (type === "failed") this.failedNotes.push(name);
+  recordResult(type, name, detail = "") {
+    const time = new Date().toLocaleTimeString();
+    let tag = "INFO";
+    let color = "var(--text-muted)";
+    let textColor = "var(--text-normal)";
+
+    if (type === "synced") {
+      this.syncedNotes.push(name);
+      tag = "↑ PUBLIÉ";
+      color = "var(--color-green)";
+    } else if (type === "pulled") {
+      this.pulledNotes.push(name);
+      tag = "↓ TÉLÉCHARGÉ";
+      color = "var(--color-blue)";
+    } else if (type === "created") {
+      this.createdNotes.push(name);
+      tag = "+ CRÉÉ";
+      color = "var(--color-blue)";
+    } else if (type === "unpublished") {
+      this.unpublishedNotes.push(name);
+      tag = "− DÉPUBLIÉ";
+      color = "var(--color-orange)";
+    } else if (type === "skipped") {
+      this.skippedNotes.push(name);
+      tag = "○ IDENTIQUE";
+      color = "var(--text-faint)";
+      textColor = "var(--text-muted)";
+    } else if (type === "failed") {
+      this.failedNotes.push({ name, detail });
+      tag = "✗ ÉCHEC";
+      color = "var(--color-red)";
+      textColor = "var(--color-red)";
+    }
+
+    this.logs.push({ time, tag, type, name, detail });
+
+    if (this.logContainer) {
+      const row = this.logContainer.createDiv();
+      row.style.cssText =
+        "display: flex; gap: 6px; align-items: baseline; word-break: break-all; margin-bottom: 2px;";
+
+      const timeSpan = row.createSpan();
+      timeSpan.style.cssText = "color: var(--text-faint); font-size: 10px; flex-shrink: 0;";
+      timeSpan.setText(time);
+
+      const tagSpan = row.createSpan();
+      tagSpan.style.cssText = `color: ${color}; font-weight: 600; flex-shrink: 0; font-size: 10px;`;
+      tagSpan.setText(tag);
+
+      const msgSpan = row.createSpan();
+      msgSpan.style.cssText = `color: ${textColor}; flex: 1;`;
+      msgSpan.setText(name + (detail ? ` — ${detail}` : ""));
+
+      this.logContainer.scrollTop = this.logContainer.scrollHeight;
+    }
   }
 
   done({ synced, pulled, created, unpublished, skipped, failed }) {
@@ -233,7 +312,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.reconciliationEl.empty();
     
     const summaryHeader = this.reconciliationEl.createEl("h4", {
-      text: "Rapport de réconciliation bidirectionnelle :",
+      text: "Rapport de réconciliation :",
       cls: "stnd-reconciliation-title"
     });
     summaryHeader.style.cssText = "margin: 0 0 0.5em 0;";
@@ -249,7 +328,8 @@ class SyncProgressModal extends obsidian_1.Modal {
       const subUl = ul.createEl("ul");
       subUl.style.cssText = "padding-left: 1.5em; margin-bottom: 0.5em; list-style-type: circle;";
       for (const n of notes) {
-        subUl.createEl("li", { text: n });
+        const text = typeof n === "object" ? `${n.name}${n.detail ? " — " + n.detail : ""}` : n;
+        subUl.createEl("li", { text });
       }
     };
 
@@ -801,7 +881,7 @@ class GardenFeature {
                     modal.recordResult("synced", file.basename);
                   } else {
                     failed++;
-                    modal.recordResult("failed", file.basename);
+                    modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
                   }
                 } else {
                   // In 2-way mode, delete locally (mark publish: false)
@@ -826,7 +906,7 @@ class GardenFeature {
                   modal.recordResult("synced", file.basename);
                 } else {
                   failed++;
-                  modal.recordResult("failed", file.basename);
+                  modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
                 }
               }
             } else {
@@ -855,7 +935,7 @@ class GardenFeature {
                     modal.recordResult("synced", file.basename);
                   } else {
                     failed++;
-                    modal.recordResult("failed", file.basename);
+                    modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
                   }
                 } else {
                   // In 2-way mode, compare mtimes
@@ -875,7 +955,7 @@ class GardenFeature {
                       modal.recordResult("synced", file.basename);
                     } else {
                       failed++;
-                      modal.recordResult("failed", file.basename);
+                      modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
                     }
                   }
                 }
@@ -915,13 +995,14 @@ class GardenFeature {
               modal.recordResult("pulled", file.basename);
             } else {
               // Local draft wins: Keep draft locally, unpublish remotely
-              const ok = await this.unpublishNote(file);
+              const targetSlug = task.remoteNote?.slug || task.slug;
+              const ok = await this.unpublishNote(file, targetSlug);
               if (ok) {
                 unpublished++;
                 modal.recordResult("unpublished", file.basename);
               } else {
                 failed++;
-                modal.recordResult("failed", file.basename);
+                modal.recordResult("failed", file.basename, this.lastError || "Erreur de dépublication");
               }
             }
           } 
@@ -1659,6 +1740,14 @@ class GardenFeature {
         },
       );
       if (response.status < 200 || response.status >= 300) {
+        let errDetail = `HTTP ${response.status}`;
+        try {
+          const errBody = JSON.parse(response.text || "{}");
+          if (errBody.error) errDetail += `: ${errBody.error}`;
+        } catch {
+          if (response.text) errDetail += `: ${response.text.slice(0, 80)}`;
+        }
+        this.lastError = errDetail;
         console.error(
           `Standard: Publish failed for ${file.basename}:`,
           response.status,
@@ -1688,6 +1777,7 @@ class GardenFeature {
 
       return true;
     } catch (error) {
+      this.lastError = error.message || String(error);
       console.error(`Standard: Publish error for ${file.basename}:`, error);
       return false;
     }
@@ -1719,6 +1809,14 @@ class GardenFeature {
       );
       // 200..299 = supprimé, 404 = déjà inexistant en ligne (nettoyage local valide)
       if (response.status !== 404 && (response.status < 200 || response.status >= 300)) {
+        let errDetail = `HTTP ${response.status}`;
+        try {
+          const errBody = JSON.parse(response.text || "{}");
+          if (errBody.error) errDetail += `: ${errBody.error}`;
+        } catch {
+          if (response.text) errDetail += `: ${response.text.slice(0, 80)}`;
+        }
+        this.lastError = errDetail;
         console.error(
           `Standard: Unpublish failed for ${file ? file.basename : slug}:`,
           response.status,
