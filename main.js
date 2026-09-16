@@ -194,6 +194,11 @@ class StandardPlugin extends obsidian_1.Plugin {
       callback: () => this.garden.syncAllPublished(),
     });
     this.addCommand({
+      id: "clean-unpublished-notes",
+      name: "Clean up unpublished notes (Prune remote drafts)",
+      callback: () => this.garden.cleanUnpublishedNotes(),
+    });
+    this.addCommand({
       id: "ask-garden-ai",
       name: "Ask Garden (Questionner le jardin)",
       callback: () => this.garden.askGardenAI(),

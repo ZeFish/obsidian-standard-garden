@@ -36,6 +36,21 @@ class GardenSettingTab extends PluginSettingTab {
         })
     );
 
+    const pruneSetting = new Setting(containerEl)
+      .setName("Clean up unpublished notes")
+      .setDesc(descWithLinks(
+        "Scan your garden for notes that are §, then offers to remove them from the online garden and clean up stale `garden-url` / `garden-short` metadata in your local files.",
+        [{ text: "no longer marked publish: true locally", href: "https://stnd.build/3-archives/obsidian-plugin#manual-actions" }]
+      ));
+    pruneSetting.addButton((btn) =>
+      btn
+        .setButtonText("Clean up")
+        .setWarning()
+        .onClick(async () => {
+          await this.plugin.garden.cleanUnpublishedNotes();
+        })
+    );
+
     const downloadSetting = new Setting(containerEl)
       .setName("Download new online notes")
       .setDesc(descWithLinks(

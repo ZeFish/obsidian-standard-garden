@@ -254,6 +254,140 @@ class SyncProgressModal extends obsidian_1.Modal {
   }
 }
 
+// ─── Prune Unpublished Notes Modal ──────────────────────────────────────────
+class PruneUnpublishedModal extends obsidian_1.Modal {
+  constructor(app, gardenFeature, itemsToPrune) {
+    super(app);
+    this.garden = gardenFeature;
+    this.items = itemsToPrune; // Array of { slug, title, file, reason }
+    this.cancelled = false;
+    this.inProgress = false;
+  }
+
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    contentEl.addClass("stnd-modal");
+    titleEl.setText("Standard — Nettoyage des notes dépubliées");
+
+    contentEl.createEl("p", {
+      text: `Les ${this.items.length} note(s) suivante(s) sont encore en ligne sur votre jardin ou possèdent des métadonnées de publication obsolètes, mais ne sont plus publiques localement :`,
+      cls: "stnd-modal-detail",
+    });
+
+    const listContainer = contentEl.createDiv();
+    listContainer.style.cssText =
+      "max-height: 220px; overflow-y: auto; border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 8px 12px; margin: 12px 0; background: var(--background-primary-alt);";
+
+    const ul = listContainer.createEl("ul");
+    ul.style.cssText = "list-style-type: none; padding: 0; margin: 0;";
+
+    for (const item of this.items) {
+      const li = ul.createEl("li");
+      li.style.cssText =
+        "display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--background-modifier-border-focus); font-size: var(--font-ui-smaller);";
+
+      const nameSpan = li.createEl("span", {
+        text: item.title,
+      });
+      nameSpan.style.cssText =
+        "font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 68%;";
+
+      let label = "Brouillon local";
+      if (item.reason === "orphan") label = "Orpheline en ligne";
+      else if (item.reason === "stale_local") label = "Lien local résiduel";
+
+      const reasonSpan = li.createEl("span", {
+        text: label,
+      });
+      reasonSpan.style.cssText =
+        "color: var(--text-warning); font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--background-modifier-hover); flex-shrink: 0;";
+    }
+
+    // Progress bar container (hidden initially)
+    this.progressContainer = contentEl.createDiv();
+    this.progressContainer.style.display = "none";
+    this.progressContainer.style.margin = "12px 0";
+
+    const track = this.progressContainer.createDiv();
+    track.style.cssText =
+      "height: 8px; border-radius: 4px; background: var(--background-modifier-border); overflow: hidden;";
+    this.barEl = track.createDiv();
+    this.barEl.style.cssText =
+      "height: 100%; width: 0%; background: var(--interactive-accent); transition: width .15s ease;";
+
+    this.progressText = this.progressContainer.createEl("div", {
+      cls: "stnd-modal-detail",
+      text: "Traitement...",
+    });
+    this.progressText.style.cssText = "margin-top: 6px; font-size: var(--font-ui-smaller);";
+
+    const btns = contentEl.createEl("div", { cls: "stnd-modal-btns" });
+    this.cancelBtn = btns.createEl("button", {
+      text: "Annuler",
+      cls: "stnd-modal-btn-cancel",
+    });
+    this.cancelBtn.addEventListener("click", () => {
+      this.close();
+    });
+
+    this.confirmBtn = btns.createEl("button", {
+      text: `Supprimer du jardin (${this.items.length})`,
+      cls: "mod-warning",
+    });
+    this.confirmBtn.addEventListener("click", async () => {
+      await this.runPrune();
+    });
+  }
+
+  async runPrune() {
+    this.inProgress = true;
+    this.confirmBtn.disabled = true;
+    this.cancelBtn.disabled = true;
+    this.confirmBtn.setText("Nettoyage en cours...");
+    this.progressContainer.style.display = "block";
+
+    let deleted = 0;
+    let failed = 0;
+    const total = this.items.length;
+
+    for (let i = 0; i < total; i++) {
+      if (this.cancelled) break;
+      const item = this.items[i];
+      const pct = Math.round(((i + 1) / total) * 100);
+      this.barEl.style.width = pct + "%";
+      this.progressText.setText(`${i + 1} / ${total} : ${item.title}`);
+
+      try {
+        const ok = await this.garden.unpublishNote(item.file, item.slug);
+        if (ok) {
+          deleted++;
+        } else {
+          failed++;
+        }
+      } catch (e) {
+        failed++;
+      }
+    }
+
+    this.progressText.setText(
+      `Terminé : ${deleted} note(s) nettoyée(s)${failed > 0 ? `, ${failed} en échec` : ""}.`
+    );
+    this.confirmBtn.style.display = "none";
+    this.cancelBtn.disabled = false;
+    this.cancelBtn.setText("Fermer");
+    this.cancelBtn.removeClass("stnd-modal-btn-cancel");
+    this.cancelBtn.addClass("mod-cta");
+    new obsidian_1.Notice(
+      `Standard : ${deleted} note(s) dépubliée(s) du jardin.`
+    );
+  }
+
+  onClose() {
+    this.cancelled = true;
+    this.contentEl.empty();
+  }
+}
+
 async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
   let attempt = 0;
   let delay = 2000;
@@ -976,6 +1110,97 @@ class GardenFeature {
     // null = cancelled
   }
 
+  // Nettoie et dépublie du jardin toutes les notes qui ne sont plus publiques localement
+  async cleanUnpublishedNotes() {
+    if (!this.checkApiKeyAndShowModal()) {
+      return;
+    }
+
+    new obsidian_1.Notice("Standard : Recherche des notes à dépublier...");
+
+    try {
+      const res = await fetchWithRetry(`${this.plugin.settings.apiUrl}/publish`, {
+        method: "GET",
+        headers: { "x-api-key": this.plugin.settings.apiKey },
+      });
+
+      let remoteNotes = [];
+      if (res.ok) {
+        const data = await res.json();
+        remoteNotes = data.notes || [];
+      } else {
+        new obsidian_1.Notice("Standard : Impossible de récupérer les notes distantes.");
+        return;
+      }
+
+      const files = this.app.vault.getMarkdownFiles();
+      const localIndex = new LocalNoteIndex(this.app, files);
+      const publishKey =
+        (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
+
+      const itemsToPrune = [];
+      const handledFiles = new Set();
+
+      // 1. Examiner les notes en ligne : si la note locale est brouillon ou inexistante
+      for (const remoteNote of remoteNotes) {
+        const localFile = localIndex.findMatchForRemote(remoteNote);
+        const slug = remoteNote.slug || "~root";
+
+        if (!localFile) {
+          itemsToPrune.push({
+            slug,
+            title: remoteNote.title || remoteNote.slug || "Sans titre",
+            file: null,
+            reason: "orphan",
+          });
+        } else {
+          handledFiles.add(localFile);
+          const fm = this.app.metadataCache.getFileCache(localFile)?.frontmatter || {};
+          if (!isPublishIntent(fm[publishKey])) {
+            itemsToPrune.push({
+              slug,
+              title: localFile.basename,
+              file: localFile,
+              reason: "draft",
+            });
+          }
+        }
+      }
+
+      // 2. Examiner les notes locales possédant des métadonnées de publication obsolètes
+      for (const file of files) {
+        if (handledFiles.has(file)) continue;
+        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+        if (!isPublishIntent(fm[publishKey]) && (fm["garden-url"] || fm["garden-short"])) {
+          const fmSlug = fm.permalink ?? fm.slug;
+          const basenameSlug = slugify(file.basename);
+          const resolved =
+            fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
+          const slug = resolved === "" ? "~root" : resolved;
+
+          itemsToPrune.push({
+            slug,
+            title: file.basename,
+            file,
+            reason: "stale_local",
+          });
+        }
+      }
+
+      if (itemsToPrune.length === 0) {
+        new obsidian_1.Notice(
+          "Standard : Aucune note dépubliée à nettoyer. Le jardin est parfaitement synchronisé !"
+        );
+        return;
+      }
+
+      new PruneUnpublishedModal(this.app, this, itemsToPrune).open();
+    } catch (error) {
+      console.error("Standard : Erreur lors du nettoyage :", error);
+      new obsidian_1.Notice("Standard : Erreur lors de la recherche des notes.");
+    }
+  }
+
   getGardenDomain() {
     try {
       const files = this.app.vault.getMarkdownFiles();
@@ -1443,16 +1668,21 @@ class GardenFeature {
     }
   }
 
-  async unpublishNote(file) {
+  async unpublishNote(file, targetSlug = null) {
     try {
-      // Résoudre le slug de la même façon que la publication : permalink > slug > basename
-      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-      const fmSlug = fm.permalink ?? fm.slug;
-      const basenameSlug = slugify(file.basename);
-      const resolved =
-        fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
-      // La note racine résout en "" — non envoyable en segment d'URL, mappé à "~root"
-      const slug = resolved === "" ? "~root" : resolved;
+      // Résoudre le slug : targetSlug > permalink > slug > basename
+      let slug = targetSlug;
+      if (!slug && file) {
+        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+        const fmSlug = fm.permalink ?? fm.slug;
+        const basenameSlug = slugify(file.basename);
+        const resolved =
+          fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
+        // La note racine résout en "" — non envoyable en segment d'URL, mappé à "~root"
+        slug = resolved === "" ? "~root" : resolved;
+      }
+      if (!slug) return false;
+
       const response = await fetchWithRetry(
         `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
         {
@@ -1462,31 +1692,34 @@ class GardenFeature {
           },
         },
       );
-      if (response.status < 200 || response.status >= 300) {
+      // 200..299 = supprimé, 404 = déjà inexistant en ligne (nettoyage local valide)
+      if (response.status !== 404 && (response.status < 200 || response.status >= 300)) {
         console.error(
-          `Standard: Unpublish failed for ${file.basename}:`,
+          `Standard: Unpublish failed for ${file ? file.basename : slug}:`,
           response.status,
         );
         return false;
       }
 
-      // Mettre à jour le frontmatter en passant publish à false et en retirant garden_url
-      const publishKey =
-        (this.plugin.settings.keyPrefix || "") +
-        this.plugin.settings.publishKey;
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        fm[publishKey] = false;
-        delete fm.published;
-        delete fm.url_public;
-        delete fm["garden-url"];
-        // Le lien court est écrit aux mêmes endroits que `garden-url` ; le
-        // laisser derrière produit une adresse stnd.gd qui répond 404.
-        delete fm["garden-short"];
-      });
+      // Mettre à jour le frontmatter si le fichier local existe
+      if (file) {
+        const publishKey =
+          (this.plugin.settings.keyPrefix || "") +
+          this.plugin.settings.publishKey;
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
+          fm[publishKey] = false;
+          delete fm.published;
+          delete fm.url_public;
+          delete fm["garden-url"];
+          // Le lien court est écrit aux mêmes endroits que `garden-url` ; le
+          // laisser derrière produit une adresse stnd.gd qui répond 404.
+          delete fm["garden-short"];
+        });
+      }
 
       return true;
     } catch (error) {
-      console.error(`Standard: Unpublish error for ${file.basename}:`, error);
+      console.error(`Standard: Unpublish error for ${file ? file.basename : targetSlug}:`, error);
       return false;
     }
   }
