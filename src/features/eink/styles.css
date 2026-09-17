@@ -70,15 +70,14 @@ body.stnd-eink-active .chisel-color.is-mobile {
 
 /* Stop caret blinking */
 body.stnd-eink-active .cm-cursor {
-    animation-play-state: paused !important;
+    /*animation-play-state: paused !important;*/
     animation: none !important; /* disables blinking animation */
     background-color: var(--text-accent) !important; /* optional: keeps caret visible */
 }
 
 body.stnd-eink-active * {
-    animation-play-state: paused !important;
+    /*animation-play-state: paused !important;*/
     animation: none !important;
-    transition-duration: 0 !important;
 }
 body.stnd-eink-active a,
 body.stnd-eink-active .link-decoration-off .markdown-reading-view a {
@@ -166,8 +165,8 @@ body.stnd-eink-active .link-decoration-off .markdown-reading-view a {
     display: none;
 }
 
-body.stnd-eink-active.theme-dark,
-body.stnd-eink-active.theme-light {
+body.stnd-adapter.stnd-eink-active.theme-dark,
+body.stnd-adapter.stnd-eink-active.theme-light {
     --color-base-00: white !important;
     --color-base-05: color-mix(in srgb, var(--color-base-100) 0%, var(--color-base-00)) !important;
     --color-base-10: color-mix(in srgb, var(--color-base-100) 10%, var(--color-base-00)) !important;
@@ -229,7 +228,9 @@ body.stnd-eink-active.theme-light {
     --text-normal: var(--color-base-100) !important;
     --text-muted: var(--color-base-70) !important;
     --text-faint: var(--color-base-50) !important;
-    --text-on-accent: var(--text-normal) !important;
+    --color-muted: var(--color-base-70) !important;
+    --color-faint: var(--color-base-50) !important;
+    --text-on-accent: var(--color-base-00) !important;
     --text-on-accent-inverted: var(--text-normal0) !important;
     --text-success: var(--color-base-100) !important;
     --text-warning: var(--color-base-100) !important;
@@ -409,12 +410,11 @@ body.stnd-eink-active.is-mobile:not(.floating-button-off):not(.advanced-toolbar)
 
 body.stnd-eink-active .modal-close-button:hover,
 body.stnd-eink-active .setting-item-control button,
-body.stnd-eink-active .setting-item-control select,
 body.stnd-eink-active:not(.colorful-active) .horizontal-tab-nav-item.is-active,
 body.stnd-eink-active:not(.colorful-active) .horizontal-tab-nav-item:hover,
 body.stnd-eink-active:not(.colorful-active) .vertical-tab-nav-item.is-active,
 body.stnd-eink-active:not(.colorful-active) .vertical-tab-nav-item:hover {
-    color: var(--color-base-00) !important;
+    color: var(--color-base-100) !important;
 }
 body.stnd-eink-active .suggestion-item.mod-complex.is-selected {
     color: var(--color-base-00);

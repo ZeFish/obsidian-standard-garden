@@ -1045,6 +1045,12 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 /* ============================================= */
 /* Standard Blockquotes in Obsidian              */
 /* ============================================= */
+.stnd-adapter .markdown-reading-view .el-blockquote,
+.stnd-adapter .markdown-rendered .el-blockquote,
+.stnd-adapter .markdown-preview-view .el-blockquote {
+    padding: var(--space-2, 2rlh) 0;
+
+}
 .stnd-adapter .markdown-reading-view blockquote,
 .stnd-adapter .markdown-rendered blockquote,
 .stnd-adapter .markdown-preview-view blockquote {

@@ -256,8 +256,8 @@ body.stnd-note-published.stnd-note-private
 }
 
 .stnd-settings-nav-btn.active {
-    background: var(--interactive-accent) !important;
-    color: var(--text-on-accent) !important;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
     border-color: var(--interactive-accent) !important;
 }
 
