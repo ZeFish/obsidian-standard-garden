@@ -1,7 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
-const { KNOWN_TOKENS } = require("../constants");
+const { KNOWN_TOKENS, isPublishIntent } = require("../constants");
 const { StndConfirmModal } = require("./confirm-modal");
 
 // ─── Side Panel View ──────────────────────────────────────────────────────────
@@ -191,9 +191,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     const section = container.createEl("div", { cls: "stnd-panel-section" });
 
     // Publish status + actions
-    const publishKey =
-      (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-    const publishValue = fm[publishKey]; // true | false | undefined
+    const isPublished = isPublishIntent(fm);
     // garden_url is the confirmation stamp; url_public/published = legacy notes
     const isConfirmedOnline =
       !!fm["garden-url"] ||
@@ -210,14 +208,14 @@ class StandardGardenView extends obsidian_1.ItemView {
           text: "Online",
           cls: "stnd-panel-badge stnd-panel-badge-online",
         });
-      } else if (publishValue === true || publishValue === "true") {
+      } else if (isPublished) {
         statusRow.createEl("span", {
           text: "Queued",
           cls: "stnd-panel-badge stnd-panel-badge-pending",
         });
-      } else if (publishValue === false || publishValue === "false") {
+      } else if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
         statusRow.createEl("span", {
-          text: "Excluded",
+          text: "Draft",
           cls: "stnd-panel-badge stnd-panel-badge-excluded",
         });
       } else {

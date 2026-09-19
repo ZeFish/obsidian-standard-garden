@@ -77,46 +77,8 @@ const FONT_TOKENS = new Set([
 // Settings interface
 const DEFAULT_SETTINGS = {
   // Design-system layers (frontmatter tokens → CSS variables)
-  enableDesignSystem: false,
+  enableDesignSystem: true,
   defaultTheme: "",
-  designSystem: {
-    enableBetterHighlights: false,
-    enableBlurryModals: false,
-    enableCallouts: false,
-    enableCodeTweaks: false,
-    enableSubduedLinks: false,
-    enableCompactFiletree: false,
-    enableCleanFrontmatter: false,
-    enableCleanUI: false,
-    enableMinimalImages: false,
-    enableTextTrim: false,
-    enableBaseTweaks: false,
-    enableSidenotes: false,
-    enableCleanTransclusions: false,
-    enableZoomLargeScreen: false,
-  },
-  
-  // Artisan Tools (Helpers)
-  enableSeedbeds: false,
-  enableScrollMap: false,
-  enableSnippets: false,
-  enableMycelium: false,
-  enableBase64Fold: false,
-  enableSyntaxPreview: false,
-  enableDailyNav: false,
-  enableEink: false,
-
-  seedbeds: {
-    rules: [
-      {
-        folder: "Journal/Daily",
-        frontmatter: {
-          tags: ["daily"],
-          status: "log"
-        }
-      }
-    ]
-  },
   startupSnapshot: {
     cssClasses: [],
     theme: "",
@@ -125,41 +87,17 @@ const DEFAULT_SETTINGS = {
   themeCache: {},
   apiKey: "",
   apiUsername: "",
-  publishKey: "publish",
   apiUrl: "https://standard.garden/api",
   openAfterPublish: false,
   publishStatusLocation: "titlebar", // Location of the publish status action: titlebar, statusbar, ribbon, hidden
-  autoSyncStartup: false,
-  autoSyncInterval: "0",
-  syncDirection: "1way",
+  autoSyncStartup: true,
+  syncDirection: "2way",
   excludedFolders: "Utopie",
-  mediaManager: {
-    enableSmartRename: true,
-    mediaFolder: "Kernel/attachments",
-    timestampFormat: "YYMMDD_HHmm",
-    timestampRegex: "^\\d{6}_\\d{4}_",
-    excludeFolders: []
-  },
+  enableMycelium: false,
   mycelium: {
     enableGhostLinks: false,
     enableGraftingCommand: true,
     enableCompostFooter: true
-  },
-  dailyNav: {
-    navigationMode: "chronological"
-  },
-  eink: {
-    mode: "auto", // auto, always, never
-    interceptVolume: true,
-    interceptPageKeys: true,
-    interceptArrows: false,
-    scrollDistance: 85,
-    disableSmoothScroll: true,
-    volUpAction: "scroll-up",
-    volDownAction: "scroll-down",
-    fontWeight: "normal",
-    fontFamily: "Fraunces",
-    bookModeEnabled: true,
   }
 };
 
@@ -198,20 +136,33 @@ function descWithLinks(text, links = []) {
   return frag;
 }
 
-
-// `publish:` accepte deux formes. `true` veut dire « publie-la ». Une date veut
-// dire « publie-la, et c'est cette date qui la situe dans le jardin » — elle
-// pilote l'affichage et l'ordre côté serveur, qui distingue les deux parce que
-// SQLite stocke le booléen en entier et la date en texte.
-//
-// Seuls `false`, l'absence, et une valeur illisible valent « ne publie pas ».
-// Une date qui n'a pas encore eu lieu publie quand même : masquer une note à
-// cause d'une coquille de date serait une dépublication silencieuse.
+// Détection native de l'intention de publication.
+// Supporte nativement `status: public` (ou `status: draft`) ainsi que `publish: true` ou date.
 function isPublishIntent(value) {
+  if (value == null) return false;
+
+  // Si un objet frontmatter complet est passé
+  if (typeof value === "object" && !(value instanceof Date)) {
+    if (typeof value.status === "string") {
+      const s = value.status.trim().toLowerCase();
+      if (s === "public" || s === "published") return true;
+      if (s === "draft" || s === "private" || s === "internal" || s === "archived") return false;
+    }
+    if (value.publish !== undefined) {
+      return isPublishIntent(value.publish);
+    }
+    return false;
+  }
+
   if (value === true) return true;
-  if (value === false || value == null || value === "") return false;
+  if (value === false || value === "") return false;
   if (value instanceof Date) return !isNaN(value.getTime());
-  if (typeof value === "string") return !isNaN(new Date(value).getTime());
+  if (typeof value === "string") {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === "public" || trimmed === "published" || trimmed === "true") return true;
+    if (trimmed === "draft" || trimmed === "private" || trimmed === "archived" || trimmed === "false") return false;
+    return !isNaN(new Date(value).getTime());
+  }
   return false;
 }
 

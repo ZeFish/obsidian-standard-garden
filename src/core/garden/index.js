@@ -800,7 +800,7 @@ class GardenFeature {
           fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
         const slug = resolved === "" ? "~root" : resolved;
 
-        const isPublishedLocal = isPublishIntent(fm[publishKey]);
+        const isPublishedLocal = isPublishIntent(fm);
         const hasGardenUrl = fm["garden-url"] != null;
         const remoteNote = findRemoteForLocal(file, fm);
         if (remoteNote) matchedRemoteNotes.add(remoteNote);
@@ -1010,7 +1010,7 @@ class GardenFeature {
                 // Ne pas écraser une date : `publish: 2026-08-07` est une intention
                 // de publication valide *et* la clé de tri du jardin. La remplacer
                 // par `true` à chaque publication détruirait l\'ordre voulu.
-                if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+                if (!isPublishIntent(fm)) fm.status = "public";
                 fm["garden-url"] = this.getLiveUrl(file);
                 if (remoteNote.nano_id) {
                   fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
@@ -1056,7 +1056,7 @@ class GardenFeature {
               // Ne pas écraser une date : `publish: 2026-08-07` est une intention
               // de publication valide *et* la clé de tri du jardin. La remplacer
               // par `true` à chaque publication détruirait l\'ordre voulu.
-              if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+              if (!isPublishIntent(fm)) fm.status = "public";
               fm["garden-url"] = this.getLiveUrl(file);
               fm.permalink = remoteNote.slug;
               if (remoteNote.nano_id) {
@@ -1132,7 +1132,7 @@ class GardenFeature {
       // on synchronise simplement les métadonnées (garden-url, garden-short, permalink) sans créer de doublon.
       for (const { remoteNote, file } of remoteMatchedLocal) {
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+          if (!isPublishIntent(fm)) fm.status = "public";
           if (!fm["garden-url"]) fm["garden-url"] = this.getLiveUrl(file);
           if (!fm.permalink && remoteNote.slug && remoteNote.slug !== slugify(file.basename)) {
             fm.permalink = remoteNote.slug;
@@ -1177,7 +1177,7 @@ class GardenFeature {
           // Ne pas écraser une date : `publish: 2026-08-07` est une intention
           // de publication valide *et* la clé de tri du jardin. La remplacer
           // par `true` à chaque publication détruirait l\'ordre voulu.
-          if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+          if (!isPublishIntent(fm)) fm.status = "public";
           fm["garden-url"] = this.getLiveUrl(file);
           fm.permalink = remoteNote.slug;
           if (remoteNote.nano_id) {
@@ -1295,7 +1295,7 @@ class GardenFeature {
         } else {
           handledFiles.add(localFile);
           const fm = this.app.metadataCache.getFileCache(localFile)?.frontmatter || {};
-          if (!isPublishIntent(fm[publishKey])) {
+          if (!isPublishIntent(fm)) {
             itemsToPrune.push({
               slug,
               title: localFile.basename,
@@ -1310,7 +1310,7 @@ class GardenFeature {
       for (const file of files) {
         if (handledFiles.has(file)) continue;
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        if (!isPublishIntent(fm[publishKey]) && (fm["garden-url"] || fm["garden-short"])) {
+        if (!isPublishIntent(fm) && (fm["garden-url"] || fm["garden-short"])) {
           const fmSlug = fm.permalink ?? fm.slug;
           const basenameSlug = slugify(file.basename);
           const resolved =
@@ -1346,8 +1346,9 @@ class GardenFeature {
       for (const file of files) {
         const cache = this.app.metadataCache.getFileCache(file);
         const fm = cache?.frontmatter || {};
-        if (fm.permalink === "/" && fm.garden_domain) {
-          return String(fm.garden_domain)
+        const rawDomain = fm.garden_domain ?? fm.domain;
+        if (fm.permalink === "/" && rawDomain) {
+          return String(rawDomain)
             .trim()
             .replace(/^https?:\/\//, "")
             .replace(/\/$/, "");
@@ -1859,11 +1860,13 @@ class GardenFeature {
 
       // Mettre à jour le frontmatter si le fichier local existe
       if (file) {
-        const publishKey =
-          (this.plugin.settings.keyPrefix || "") +
-          this.plugin.settings.publishKey;
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          fm[publishKey] = false;
+          if (fm.status === "public" || fm.status === "published") {
+            fm.status = "draft";
+          }
+          if (fm.publish !== undefined) {
+            fm.publish = false;
+          }
           delete fm.published;
           delete fm.url_public;
           delete fm["garden-url"];
@@ -1922,17 +1925,12 @@ class GardenFeature {
     }
     const meta = this.app.metadataCache.getFileCache(file);
     const fm = meta?.frontmatter || {};
-    const publishKey =
-      (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-    const publishValue = fm[publishKey];
 
     const doPublish = async () => {
-      // Marquer publish: true pour que la clé de synchronisation soit correcte
+      // Marquer status: public pour que la note soit publiée
       await this.app.fileManager.processFrontMatter(file, (fm) => {
-        // Ne pas écraser une date : `publish: 2026-08-07` est une intention
-        // de publication valide *et* la clé de tri du jardin. La remplacer
-        // par `true` à chaque publication détruirait l\'ordre voulu.
-        if (!isPublishIntent(fm[publishKey])) fm[publishKey] = true;
+        // Ne pas écraser une intention valide existante
+        if (!isPublishIntent(fm)) fm.status = "public";
       });
       const ok = await this.publishNote(file);
       return ok;
@@ -1941,8 +1939,8 @@ class GardenFeature {
     // Guardrails — gather any reason this note might surprise you, then ask
     // once before planting it anyway.
     const warnings = [];
-    if (publishValue === false || publishValue === "false") {
-      warnings.push(`• ${publishKey}: false — it asked to stay a draft`);
+    if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
+      warnings.push(`• status: draft — it asked to stay a draft`);
     }
     if (String(fm.visibility || "").toLowerCase() === "private") {
       warnings.push(`• visibility: private — visitors won't see it`);

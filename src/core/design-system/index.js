@@ -306,30 +306,17 @@ class DesignSystemFeature {
   }
 
   getStructuralClasses() {
-    const classes = [];
-    const designSettings = this.plugin.settings.designSystem || {};
-    const toggles = [
-      { id: "enableBetterHighlights", class: "stnd-better-highlights" },
-      { id: "enableBlurryModals", class: "stnd-blurry-modals" },
-      { id: "enableCallouts", class: "stnd-callouts" },
-      { id: "enableCodeTweaks", class: "stnd-code-tweaks" },
-      { id: "enableSubduedLinks", class: "stnd-subdued-links" },
-      { id: "enableCompactFiletree", class: "stnd-compact-filetree" },
-      { id: "enableCleanFrontmatter", class: "stnd-clean-frontmatter" },
-      { id: "enableCleanUI", class: "stnd-clean-ui" },
-      { id: "enableMinimalImages", class: "stnd-minimal-images" },
-      { id: "enableTextTrim", class: "stnd-text-trim" },
-      { id: "enableBaseTweaks", class: "stnd-base-tweaks" },
-      { id: "enableSidenotes", class: "stnd-sidenotes" },
-      { id: "enableCleanTransclusions", class: "stnd-clean-transclusions" },
-      { id: "enableZoomLargeScreen", class: "stnd-zoom-large-screen" },
+    // Les bons réglages par défaut du Standard Design System imposés nativement
+    return [
+      "stnd-callouts",
+      "stnd-better-highlights",
+      "stnd-code-tweaks",
+      "stnd-subdued-links",
+      "stnd-clean-frontmatter",
+      "stnd-text-trim",
+      "stnd-base-tweaks",
+      "stnd-clean-transclusions",
     ];
-    toggles.forEach(t => {
-      if (designSettings[t.id] === true) {
-        classes.push(t.class);
-      }
-    });
-    return classes;
   }
 
   async updateBodyClasses() {

@@ -1,6 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { isPublishIntent } = require("../../constants.js");
 
 // ─── Publish Status ───────────────────────────────────────────────────────────
 // A live "magic" status icon/button in Obsidian.
@@ -65,19 +66,11 @@ class PublishStatusFeature {
   }
 
   // ── State ────────────────────────────────────────────────────────────────────
-  // Distinguishes INTENT (`publish: true`) from REALITY (the plugin stamps
+  // Distinguishes INTENT (`status: public`) from REALITY (the plugin stamps
   // `garden_url` only on confirmed publish — its presence IS "actually live").
   stateKey(frontmatter, path) {
     const fm = frontmatter || {};
-    const publishKey =
-      (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-    const pub = fm[publishKey];
-    const wantsPublish =
-      pub === true ||
-      pub === "true" ||
-      pub === "public" ||
-      pub === "unlisted" ||
-      pub === "private";
+    const wantsPublish = isPublishIntent(fm);
     if (!wantsPublish) return "unpublished";
     if (!fm["garden-url"] && !fm.url_public) return "pending";
 
@@ -89,9 +82,7 @@ class PublishStatusFeature {
       }
     }
 
-    const vis = String(fm.visibility || pub || "")
-      .toLowerCase()
-      .trim();
+    const vis = String(fm.visibility || "").toLowerCase().trim();
     if (vis === "private") return "private";
     if (vis === "unlisted") return "unlisted";
     return "public";
@@ -104,14 +95,7 @@ class PublishStatusFeature {
     if (!hasKey) return;
 
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-    const publishKey = (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-    const pub = fm[publishKey];
-    const wantsPublish =
-      pub === true ||
-      pub === "true" ||
-      pub === "public" ||
-      pub === "unlisted" ||
-      pub === "private";
+    const wantsPublish = isPublishIntent(fm);
     const hasGardenUrl = fm["garden-url"] != null || fm.url_public != null;
 
     if (!wantsPublish || !hasGardenUrl) {

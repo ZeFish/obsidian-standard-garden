@@ -193,7 +193,6 @@ esbuild
       "design-system.css",
       "panel.css",
       "image.css",
-      "snippets.css",
     ];
 
     let combinedCss = "";

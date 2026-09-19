@@ -43,9 +43,6 @@ class StandardPlugin extends obsidian_1.Plugin {
     const {
       DesignSystemFeature,
     } = require("./src/core/design-system/index.js");
-    const {
-      SnippetManagerFeature,
-    } = require("./src/features/snippet-manager/index.js");
 
     this.features = [];
 
@@ -53,18 +50,12 @@ class StandardPlugin extends obsidian_1.Plugin {
       this.design = new DesignSystemFeature(this.app, this);
       this.features.push(this.design);
     }
-    
-    if (this.settings.enableSnippets) {
-      this.snippetManager = new SnippetManagerFeature(this.app, this);
-      this.features.push(this.snippetManager);
-    }
 
     // Load visual features in parallel
     await Promise.all(this.features.map(f => f.load()));
 
     // Inject the last session's visual state (classes, theme, tokens)
-    // synchronously so the UI is themed before the first render. Runs after the
-    // visual features are loaded so stnd-theme-snippet is appended after stnd-global.
+    // synchronously so the UI is themed before the first render.
     if (this.design) {
       this.design.applyStartupSnapshotSynchronously();
     }
@@ -78,31 +69,17 @@ class StandardPlugin extends obsidian_1.Plugin {
   }
 
   async loadRemainingFeatures(startTime) {
-    // Lazy-require functional features to avoid execution cost during Phase 1/2
+    // Lazy-require functional features
     const { GardenFeature } = require("./src/core/garden/index.js");
-    const { SeedbedsFeature } = require("./src/features/seedbeds/index.js");
-    const {
-      InterfaceManagerFeature,
-    } = require("./src/features/interface-manager/index.js");
-    const {
-      MyceliumFeature,
-    } = require("./src/features/mycelium/index.js");
-
-    const { ScrollMapFeature } = require("./src/features/scroll-map/index.js");
-    const {
-      Base64FoldFeature,
-    } = require("./src/features/base64-fold/index.js");
     const {
       PublishStatusFeature,
     } = require("./src/features/publish-status/index.js");
     const {
-      VaultAuditFeature,
-    } = require("./src/features/vault-audit/index.js");
-    const {
       SyntaxPreviewFeature,
     } = require("./src/features/syntax-preview/index.js");
-    const { DailyNavFeature } = require("./src/features/daily-nav/index.js");
-    const { EinkFeature } = require("./src/features/eink/index.js");
+    const {
+      MyceliumFeature,
+    } = require("./src/features/mycelium/index.js");
 
     this.garden = new GardenFeature(this.app, this);
     this.features.push(this.garden);
@@ -114,31 +91,14 @@ class StandardPlugin extends obsidian_1.Plugin {
     });
 
     const functionalInstances = [];
-    functionalInstances.push(new InterfaceManagerFeature(this.app, this));
     functionalInstances.push(new PublishStatusFeature(this.app, this));
-    functionalInstances.push(new VaultAuditFeature(this.app, this));
+    if (this.settings.enableSyntaxPreview !== false) {
+      functionalInstances.push(new SyntaxPreviewFeature(this.app, this));
+    }
 
     if (this.settings.enableMycelium) {
       this.mycelium = new MyceliumFeature(this.app, this);
       functionalInstances.push(this.mycelium);
-    }
-    if (this.settings.enableSeedbeds) {
-      functionalInstances.push(new SeedbedsFeature(this.app, this));
-    }
-    if (this.settings.enableScrollMap) {
-      functionalInstances.push(new ScrollMapFeature(this.app, this));
-    }
-    if (this.settings.enableBase64Fold) {
-      functionalInstances.push(new Base64FoldFeature(this.app, this));
-    }
-    if (this.settings.enableSyntaxPreview) {
-      functionalInstances.push(new SyntaxPreviewFeature(this.app, this));
-    }
-    if (this.settings.enableDailyNav) {
-      functionalInstances.push(new DailyNavFeature(this.app, this));
-    }
-    if (this.settings.enableEink) {
-      functionalInstances.push(new EinkFeature(this.app, this));
     }
 
     this.features.push(...functionalInstances);
@@ -192,11 +152,6 @@ class StandardPlugin extends obsidian_1.Plugin {
       id: "sync-all-published",
       name: "Tend the garden (Sync all notes)",
       callback: () => this.garden.syncAllPublished(),
-    });
-    this.addCommand({
-      id: "clean-unpublished-notes",
-      name: "Clean up unpublished notes (Prune remote drafts)",
-      callback: () => this.garden.cleanUnpublishedNotes(),
     });
     this.addCommand({
       id: "ask-garden-ai",

@@ -1,151 +1,28 @@
 "use strict";
 
-const obsidian_1 = require("obsidian");
-
-// Core setting tabs
+const { PluginSettingTab, requestUrl, setIcon } = require("obsidian");
 const { isPublishIntent } = require("../constants.js");
 const { GardenSettingTab } = require("../core/garden/settings-tab.js");
 const { DesignSystemSettingTab } = require("../core/design-system/settings-tab.js");
-const { GeneralSettingTab } = require("./general-tab.js");
 
-// Feature setting tabs
-// (Echo, Hollow, Feed moved to the Atelier plugin — see apps/obsidian-atelier.)
-const { SeedbedsSettingTab } = require("../features/seedbeds/index.js");
-const { MyceliumSettingTab } = require("../features/mycelium/index.js");
-const { ScrollMapSettingTab } = require("../features/scroll-map/index.js");
-const { SnippetManagerSettingTab } = require("../features/snippet-manager/index.js");
-const { MediaManagerSettingTab } = require("../features/vault-audit/index.js");
-const { EinkSettingTab } = require("../features/eink/index.js");
-
-class ArtisanSettingTab {
-  constructor(app, plugin, parentTab) {
+class AccountSettingTab {
+  constructor(app, plugin) {
     this.app = app;
     this.plugin = plugin;
-    this.parentTab = parentTab;
-  }
-
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    
-    containerEl.createEl("h3", { text: "🪚 Artisan Tools" });
-    containerEl.createEl("p", { 
-      text: "Sculpt your writing experience with these optional tools. Enable only what you need to keep your path unobstructed.",
-      cls: "setting-item-description"
-    });
-
-    const tools = [
-      { id: "enableDesignSystem", name: "Wood Cuts (Design System)", desc: "Classical typography and visual temperaments for your garden." },
-      { id: "enableSeedbeds", name: "Seedbeds", desc: "Automatically route your notes to specific plots based on rules." },
-      { id: "enableScrollMap", name: "Scroll Map", desc: "A mini-map showing your vertical progress on the trail." },
-      { id: "enableSnippets", name: "Snippets", desc: "Custom carving tools (CSS snippets) to alter the grain." },
-      { id: "enableMycelium", name: "Mycelium", desc: "Tends the roots of your garden (unlinked mentions discovery)." },
-      { id: "enableBase64Fold", name: "Base64 Fold", desc: "Hide complex image roots to keep your raw text clean." },
-      { id: "enableSyntaxPreview", name: "Syntax Preview", desc: "Live preview of formatting while you type." },
-      { id: "enableDailyNav", name: "Daily Nav", desc: "Walk the daily trails with chronological navigation." },
-      { id: "enableEink", name: "E-ink / Boox Support", desc: "Enable physical button interception and visual themes optimized for E-ink screens." }
-    ];
-
-    for (const tool of tools) {
-      new obsidian_1.Setting(containerEl)
-        .setName(tool.name)
-        .setDesc(tool.desc)
-        .addToggle((toggle) => {
-          toggle.setValue(this.plugin.settings[tool.id] || false)
-            .onChange(async (val) => {
-              this.plugin.settings[tool.id] = val;
-              await this.plugin.saveSettings();
-              new obsidian_1.Notice(tool.name + (val ? " enabled. Restart Obsidian to apply." : " disabled. Restart Obsidian to apply."));
-              this.parentTab.display(); // Refresh tabs
-            });
-        });
-    }
-  }
-}
-
-class StandardSettingTab extends obsidian_1.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-    this.currentTab = "The Gatehouse (Garden)";
   }
 
   display() {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.style.paddingTop = "32px";
-
-    const headerTitle = containerEl.createEl("h2", { text: "Standard::Garden" });
-    headerTitle.style.cssText = "margin: 0 0 16px 0; font-size: var(--font-ui-large); font-weight: 600; text-align: left;";
-
-    const hasHeader = !!this.plugin.settings.apiUsername;
-    if (hasHeader) {
-      this._renderPersistentHeader(containerEl);
-
-      const divider = containerEl.createEl("hr", { cls: "stnd-settings-divider" });
-      divider.style.cssText = "margin: 24px 0; border: 0; border-top: 1px solid var(--background-modifier-border);";
-    }
-
-    const navEl = containerEl.createEl("div", { cls: "stnd-settings-nav" });
-    navEl.style.cssText = `display: flex; justify-content: flex-start; gap: 6px; flex-wrap: wrap; margin: ${hasHeader ? "0" : "12px"} 0 12px;`;
-
-    const tabs = [];
-    
-    // Core Tabs
-    tabs.push({ id: "The Gatehouse (Garden)", tab: new GardenSettingTab(this.app, this.plugin) });
-    tabs.push({ id: "The Soil (General)", tab: new GeneralSettingTab(this.app, this.plugin) });
-    tabs.push({ id: "Media Manager", tab: new MediaManagerSettingTab(this.app, this.plugin) });
-    
-    // Artisan Tools (Toggle Tab)
-    tabs.push({ id: "Artisan Tools", tab: new ArtisanSettingTab(this.app, this.plugin, this) });
-    
-    // Conditionally pushed feature tabs
-    if (this.plugin.settings.enableDesignSystem) {
-      tabs.push({ id: "Wood Cuts (Design)", tab: new DesignSystemSettingTab(this.app, this.plugin) });
-    }
-    if (this.plugin.settings.enableSeedbeds) {
-      tabs.push({ id: "Seedbeds", tab: new SeedbedsSettingTab(this.app, this.plugin) });
-    }
-    if (this.plugin.settings.enableSnippets) {
-      tabs.push({ id: "Snippets", tab: new SnippetManagerSettingTab(this.app, this.plugin) });
-    }
-    if (this.plugin.settings.enableMycelium) {
-      tabs.push({ id: "Mycelium", tab: new MyceliumSettingTab(this.app, this.plugin) });
-    }
-    if (this.plugin.settings.enableScrollMap) {
-      tabs.push({ id: "Scroll Map", tab: new ScrollMapSettingTab(this.app, this.plugin) });
-    }
-    if (this.plugin.settings.enableEink) {
-      tabs.push({ id: "Eink", tab: new EinkSettingTab(this.app, this.plugin) });
-    }
-
-
-    for (const { id } of tabs) {
-      const button = navEl.createEl("button", {
-        text: id,
-        cls: `stnd-settings-nav-btn ${this.currentTab === id ? "active" : ""}`,
-      });
-      button.onclick = () => {
-        this.currentTab = id;
-        this.display();
-      };
-    }
-
-    const contentEl = containerEl.createEl("div", {
-      cls: "stnd-settings-content",
-    });
-
-    const active = tabs.find((t) => t.id === this.currentTab);
-
-    if (active?.tab) {
-      active.tab.containerEl = contentEl;
-      active.tab.display();
-    }
-  }
-
-  _renderPersistentHeader(containerEl) {
     const username = this.plugin.settings.apiUsername;
+    if (!username) {
+      this._renderDisconnected(containerEl);
+      return;
+    }
+
+    containerEl.createEl("h2", { text: "Compte" });
+
     const base = (this.plugin.settings.apiUrl || "https://standard.garden/api")
       .replace(/\/api\/?$/, "");
     const gardenUrl = `${base}/@${username}`;
@@ -153,21 +30,21 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
     // ── Identity card ──
     const card = containerEl.createEl("div");
     card.style.cssText =
-      "display:flex;align-items:center;gap:12px;padding:14px 16px;" +
-      "border:1px solid var(--background-modifier-border);border-radius:12px;margin-top:0px;margin-bottom:12px;";
+      "display:flex;align-items:center;gap:14px;padding:16px;" +
+      "border:1px solid var(--background-modifier-border);border-radius:12px;margin-bottom:16px;";
 
     const avatar = card.createEl("div", {
       text: username.slice(0, 2).toLowerCase(),
     });
     avatar.style.cssText =
-      "width:42px;height:42px;border-radius:50%;display:flex;align-items:center;" +
+      "width:44px;height:44px;border-radius:50%;display:flex;align-items:center;" +
       "justify-content:center;font-weight:600;flex:0 0 auto;" +
       "background:var(--background-secondary);color:var(--interactive-accent);";
 
     const idCol = card.createEl("div");
     idCol.style.cssText = "flex:1;min-width:0;";
     const name = idCol.createEl("div", { text: `@${username}` });
-    name.style.cssText = "font-weight:600;";
+    name.style.cssText = "font-weight:600;font-size:var(--font-ui-medium);";
     const link = idCol.createEl("a", {
       text: gardenUrl.replace(/^https?:\/\//, ""),
       href: gardenUrl,
@@ -177,7 +54,7 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
       "font-size:var(--font-ui-smaller);color:var(--text-accent);text-decoration:none;";
 
     const actions = card.createEl("div");
-    actions.style.cssText = "display:flex;gap:6px;flex:0 0 auto;";
+    actions.style.cssText = "display:flex;gap:8px;flex:0 0 auto;";
     const viewGarden = actions.createEl("button", { text: "Online" });
     viewGarden.classList.add("mod-cta");
     viewGarden.onclick = () => window.open(gardenUrl, "_blank");
@@ -187,51 +64,44 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
       this.plugin.settings.apiUsername = "";
       this.plugin.statsCache = null;
       await this.plugin.saveSettings();
-      this.plugin.updateRibbonIconsVisibility();
       this.display();
     };
 
-    // Calculate local published count instantly
-    const publishKey =
-      (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
+    // Calculate local published count
     const files = this.plugin.garden?.getPublishableFiles
       ? this.plugin.garden.getPublishableFiles()
       : this.app.vault.getMarkdownFiles();
     const localCount = files.filter(
-      (f) => isPublishIntent(this.app.metadataCache.getFileCache(f)?.frontmatter?.[publishKey]),
+      (f) => isPublishIntent(this.app.metadataCache.getFileCache(f)?.frontmatter),
     ).length;
 
     // ── Account Stats Card ──
     const statsContainer = containerEl.createEl("div", {
       cls: "stnd-account-stats-container",
     });
-    statsContainer.style.marginBottom = "0px";
 
     const cachedData = this.plugin.statsCache;
-
     if (cachedData) {
       this._renderStatsValues(statsContainer, cachedData, localCount);
-
-      obsidian_1.requestUrl({
+      requestUrl({
         url: `${this.plugin.settings.apiUrl}/me`,
         headers: { "x-api-key": this.plugin.settings.apiKey },
         throw: false,
       })
         .then((res) => {
           if (res.status >= 200 && res.status < 300) {
-            const data = res.json;
-            this.plugin.statsCache = data;
-            this._updateStatsValues(statsContainer, data, localCount);
+            this.plugin.statsCache = res.json;
+            this._updateStatsValues(statsContainer, res.json, localCount);
           }
         })
         .catch(() => {});
     } else {
       statsContainer.createEl("span", {
         cls: "stnd-account-stats-loading",
-        text: "Loading stats from garden...",
+        text: "Loading garden stats...",
       });
 
-      obsidian_1.requestUrl({
+      requestUrl({
         url: `${this.plugin.settings.apiUrl}/me`,
         headers: { "x-api-key": this.plugin.settings.apiKey },
         throw: false,
@@ -253,6 +123,39 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
           });
         });
     }
+  }
+
+  _renderDisconnected(containerEl) {
+    containerEl.createEl("h2", { text: "Compte" });
+
+    const card = containerEl.createEl("div");
+    card.style.cssText =
+      "text-align:center;padding:32px 20px;border:1px solid var(--background-modifier-border);border-radius:12px;margin-top:8px;";
+
+    const badge = card.createEl("div");
+    badge.style.cssText =
+      "width:48px;height:48px;border-radius:50%;display:flex;align-items:center;" +
+      "justify-content:center;margin:0 auto 14px;background:var(--background-secondary);" +
+      "color:var(--interactive-accent);";
+    setIcon(badge, "leaf");
+
+    const heading = card.createEl("div", {
+      text: "Connect your vault to the web",
+    });
+    heading.style.cssText =
+      "font-size:var(--font-ui-large);font-weight:600;margin-bottom:8px;";
+
+    const desc = card.createEl("div", {
+      text: "Publish notes to your digital garden with a single status: public frontmatter property.",
+      cls: "setting-item-description",
+    });
+    desc.style.cssText = "max-width:380px;margin:0 auto 20px;line-height:1.5;";
+
+    const btn = card.createEl("button", {
+      text: "Connect to Garden",
+    });
+    btn.classList.add("mod-cta");
+    btn.onclick = () => this.plugin.garden.startConnect();
   }
 
   _renderStatsValues(container, data, localCount) {
@@ -318,6 +221,56 @@ class StandardSettingTab extends obsidian_1.PluginSettingTab {
         syncText = new Date(data.lastSync).toLocaleDateString();
       }
       syncEl.setText(syncText);
+    }
+  }
+}
+
+class StandardSettingTab extends PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+    this.currentTab = "Compte";
+  }
+
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.style.paddingTop = "24px";
+
+    const headerTitle = containerEl.createEl("h2", { text: "Standard Garden" });
+    headerTitle.style.cssText =
+      "margin: 0 0 16px 0; font-size: var(--font-ui-large); font-weight: 600; text-align: left;";
+
+    const navEl = containerEl.createEl("div", { cls: "stnd-settings-nav" });
+    navEl.style.cssText =
+      "display: flex; justify-content: flex-start; gap: 8px; margin-bottom: 20px;";
+
+    const tabs = [
+      { id: "Compte", tab: new AccountSettingTab(this.app, this.plugin) },
+      { id: "Publication", tab: new GardenSettingTab(this.app, this.plugin) },
+      { id: "Apparence", tab: new DesignSystemSettingTab(this.app, this.plugin) },
+    ];
+
+    for (const { id } of tabs) {
+      const button = navEl.createEl("button", {
+        text: id,
+        cls: `stnd-settings-nav-btn ${this.currentTab === id ? "active" : ""}`,
+      });
+      button.style.padding = "6px 16px";
+      button.onclick = () => {
+        this.currentTab = id;
+        this.display();
+      };
+    }
+
+    const contentEl = containerEl.createEl("div", {
+      cls: "stnd-settings-content",
+    });
+
+    const active = tabs.find((t) => t.id === this.currentTab) || tabs[0];
+    if (active?.tab) {
+      active.tab.containerEl = contentEl;
+      active.tab.display();
     }
   }
 }
