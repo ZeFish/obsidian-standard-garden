@@ -15,7 +15,7 @@ Standard Garden bridges your local Obsidian vault with our curated design system
 - **The Gatehouse**: Publish your polished notes directly to the web with a single click. Your thoughts remain entirely local until you decide they are ready to bloom.
 - **Woodcuts (Design System)**: Instantly change the aesthetic and mood of individual notes. Cultivate different atmospheres depending on what you are writing.
 - **The Mycelium Engine**: A quiet companion that uncovers hidden connections and unlinked mentions naturally as you write, encouraging you to weave your ideas together.
-- **Ask Garden (RAG / Discussion)**: Ask questions directly against your note garden. The system embeds your query, retrieves semantically similar notes from your vault via Cloudflare Vectorize, and generates an AI response (Llama 3.1 8B on Cloudflare Workers AI) grounded only in your own knowledge.
+- **Ask Hyphe (Semantic Intelligence)**: Ask questions directly to Hyphe against your note garden. The system embeds your query, retrieves semantically similar notes from your vault via Cloudflare Vectorize, and generates an answer grounded only in your own knowledge.
 - **Seedbeds**: Automate the organization of your vault. When a seedling (note) is planted in a specific folder, its metadata is automatically structured.
 - **Smart Snippets**: Manage CSS snippets effortlessly to customize the grain of your vault without restarting.
 - **E-ink / Boox Support**: Optimize Obsidian for E-ink screens (like Onyx Boox) with custom high-contrast CSS (animations/transitions disabled) and physical button navigation mapping.

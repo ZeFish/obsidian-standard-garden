@@ -155,7 +155,7 @@ class StandardPlugin extends obsidian_1.Plugin {
     });
     this.addCommand({
       id: "ask-garden-ai",
-      name: "Ask Garden (Questionner le jardin)",
+      name: "Ask Hyphe",
       callback: () => this.garden.askGardenAI(),
     });
 

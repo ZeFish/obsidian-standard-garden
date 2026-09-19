@@ -14,19 +14,19 @@ class StndAskModal extends obsidian_1.Modal {
 
     // Titre de la modal
     contentEl.createEl("h2", {
-      text: "Questionner le Jardin",
+      text: "✨ Ask Hyphe",
       cls: "stnd-modal-title",
     });
 
     contentEl.createEl("p", {
-      text: "Posez une question sur le contenu de vos notes. L'IA de votre jardin va analyser vos notes pour y répondre.",
+      text: "Ask Hyphe a question about your notes. Hyphe will search across your digital garden to answer.",
       cls: "stnd-modal-detail",
     });
 
     // Zone de texte pour la question
     const textarea = contentEl.createEl("textarea", {
       cls: "stnd-modal-textarea",
-      placeholder: "Ex: Qu'est-ce que j'ai appris sur la permaculture dernièrement ?",
+      placeholder: "e.g., What did I learn about permaculture recently?",
     });
     textarea.style.width = "100%";
     textarea.style.height = "100px";
@@ -61,7 +61,7 @@ class StndAskModal extends obsidian_1.Modal {
     const btns = contentEl.createEl("div", { cls: "stnd-modal-btns" });
 
     const cancelBtn = btns.createEl("button", {
-      text: "Fermer",
+      text: "Close",
       cls: "stnd-modal-btn-cancel",
     });
     cancelBtn.addEventListener("click", () => {
@@ -69,25 +69,25 @@ class StndAskModal extends obsidian_1.Modal {
     });
 
     const askBtn = btns.createEl("button", {
-      text: "Poser la question",
+      text: "Ask Hyphe",
       cls: "mod-cta",
     });
 
     askBtn.addEventListener("click", async () => {
       const question = textarea.value.trim();
       if (!question) {
-        new obsidian_1.Notice("Veuillez saisir une question.");
+        new obsidian_1.Notice("Please enter a question.");
         return;
       }
 
       // Désactiver le bouton et la saisie
       askBtn.disabled = true;
       textarea.disabled = true;
-      askBtn.text = "Recherche en cours...";
+      askBtn.text = "Hyphe is searching...";
       
       // Afficher le statut de chargement
       resultContainer.style.display = "block";
-      resultText.setText("Recherche dans vos notes et génération de la réponse par le jardin...");
+      resultText.setText("Hyphe is searching your notes and generating an answer...");
       resultText.style.fontStyle = "italic";
 
       try {
@@ -105,7 +105,7 @@ class StndAskModal extends obsidian_1.Modal {
 
         if (response.status < 200 || response.status >= 300) {
           const errText = response.text;
-          throw new Error(errText || `Erreur serveur (${response.status})`);
+          throw new Error(errText || `Server error (${response.status})`);
         }
 
         const data = response.json;
@@ -113,16 +113,16 @@ class StndAskModal extends obsidian_1.Modal {
         if (data.answer) {
           resultText.setText(data.answer);
         } else {
-          resultText.setText("Aucune réponse n'a été retournée par le service d'IA.");
+          resultText.setText("No response was returned by Hyphe.");
         }
       } catch (err) {
         resultText.style.fontStyle = "normal";
-        resultText.setText(`Erreur : ${err.message}`);
-        console.error("Erreur lors de la requête RAG :", err);
+        resultText.setText(`Error: ${err.message}`);
+        console.error("Error during Hyphe query:", err);
       } finally {
         askBtn.disabled = false;
         textarea.disabled = false;
-        askBtn.text = "Poser la question";
+        askBtn.text = "Ask Hyphe";
       }
     });
   }
