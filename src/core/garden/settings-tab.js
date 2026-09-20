@@ -13,11 +13,6 @@ class GardenSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    if (!this.plugin.settings.apiUsername) {
-      this._renderDisconnected(containerEl);
-      return;
-    }
-
     // ─── Sync & Publication Section ──────────────────────────────────────────
     containerEl.createEl("h2", { text: "Publication" });
 
@@ -104,40 +99,6 @@ class GardenSettingTab extends PluginSettingTab {
             if (feature) feature.refreshAll();
           }),
       );
-  }
-
-  _renderDisconnected(containerEl) {
-    containerEl.createEl("h2", { text: "Garden Settings" });
-
-    const card = containerEl.createEl("div");
-    card.style.cssText =
-      "text-align:center;padding:28px 20px;border:1px solid var(--background-modifier-border);border-radius:12px;margin-top:8px;";
-
-    const badge = card.createEl("div");
-    badge.style.cssText =
-      "width:46px;height:46px;border-radius:50%;display:flex;align-items:center;" +
-      "justify-content:center;margin:0 auto 12px;background:var(--background-secondary);" +
-      "color:var(--interactive-accent);";
-    const { setIcon } = require("obsidian");
-    setIcon(badge, "leaf");
-
-    const heading = card.createEl("div", {
-      text: "Connect your workshop to the web",
-    });
-    heading.style.cssText =
-      "font-size:var(--font-ui-large);font-weight:600;margin-bottom:6px;";
-
-    const desc = card.createEl("div", {
-      text: "Publish your notes to your public garden, sync, and stay in control from Obsidian. All notes remain yours, stored in Markdown.",
-      cls: "setting-item-description",
-    });
-    desc.style.cssText = "max-width:380px;margin:0 auto 16px;line-height:1.5;";
-
-    const btn = card.createEl("button", {
-      text: "Connect to Garden",
-    });
-    btn.classList.add("mod-cta");
-    btn.onclick = () => this.plugin.garden.startConnect();
   }
 }
 

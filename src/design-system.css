@@ -639,8 +639,6 @@ body.stnd-adapter.theme-light pre,
 body.stnd-adapter.theme-dark pre {
     color: var(--color-base-70);
     background-color: var(--background-secondary);
-    border: 1px solid var(--border-color);
-    box-shadow: inset 0 0 0.75rlh color-mix(in oklch, black 5%, transparent);
 
 }
 body.stnd-adapter.theme-light .markdown-rendered mark,
@@ -1012,11 +1010,14 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     padding-bottom: calc(var(--line-height-normal) * 0.25em);
 }
 
-.stnd-adapter .markdown-reading-view pre,
+
 .stnd-adapter .markdown-reading-view figure,
 .stnd-adapter .markdown-reading-view .callout,
 .stnd-adapter .markdown-reading-view img {
     box-shadow: var(--shadow-raised), var(--shadow-ring);
+}
+.stnd-adapter .markdown-reading-view pre {
+    box-shadow: var(--shadow-inset), var(--shadow-ring);
 }
 
 .stnd-adapter .markdown-reading-view blockquote,

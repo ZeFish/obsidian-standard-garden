@@ -205,60 +205,33 @@ body.stnd-note-published.stnd-note-private
 }
 */
 
-/* ─── Settings Navigation & Tab Grouping ─────────────────────────────────── */
+/* ─── Settings Sections (Flat Layout) ────────────────────────────────────── */
 
-.stnd-settings-groups-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 24px;
+.stnd-settings-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--background-modifier-border);
 }
 
-.stnd-settings-group {
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
-    padding: 12px;
-    background: var(--background-primary-alt);
-}
-
-.stnd-settings-group-title {
-    font-size: var(--font-smallest, 0.75rem);
-    font-weight: var(--font-semibold, 600);
-    text-transform: uppercase;
-    color: var(--text-muted);
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
+.stnd-settings-section:first-child {
     margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
-.stnd-settings-nav {
-    display: flex;
-    justify-content: flex-start;
-    gap: 8px;
-    flex-wrap: wrap;
+.stnd-settings-section h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: var(--font-ui-large, 1.25rem);
+    font-weight: 600;
 }
 
-.stnd-settings-nav-btn {
-    padding: 4px 12px;
-    font-size: var(--font-ui-small, 0.9rem);
-    border-radius: 4px;
-    background: var(--button-background, var(--background-secondary));
-    color: var(--text-normal);
-    border: 1px solid var(--background-modifier-border);
-    cursor: pointer;
-    transition:
-        background-color 0.15s,
-        color 0.15s;
-}
-
-.stnd-settings-nav-btn:hover {
-    background: var(--background-modifier-hover);
-}
-
-.stnd-settings-nav-btn.active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent) !important;
+.stnd-settings-section .setting-item-description:not(.setting-item .setting-item-description) {
+    margin-top: 4px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    line-height: 1.5;
 }
 
 /* ─── Garden Connected Account Card Stats ────────────────────────────────── */
@@ -306,29 +279,6 @@ body.stnd-note-published.stnd-note-private
     text-transform: uppercase;
     font-weight: 500;
     margin-top: 2px;
-}
-
-.stnd-settings-content {
-    margin-top: 12px;
-    border-top: 1px solid var(--background-modifier-border);
-    padding-top: 16px;
-}
-
-.stnd-settings-content h2 {
-    margin-top: 24px;
-    margin-bottom: 16px;
-}
-
-.stnd-settings-content > h2:first-of-type,
-.stnd-settings-content > div:first-of-type > h2:first-of-type {
-    margin-top: 0;
-}
-
-/* Standalone settings tab descriptions alignment */
-.stnd-settings-content .setting-item-description:not(.setting-item .setting-item-description) {
-    padding-left: 16px;
-    margin-top: 8px;
-    margin-bottom: 12px;
 }
 
 /* Reset CodeMirror widget buffers which are <img> tags */

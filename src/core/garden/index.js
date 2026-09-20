@@ -297,7 +297,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     }
   }
 
-  done({ synced, pulled, created, unpublished, skipped, failed }) {
+  done({ synced, pulled, created, unpublished, skipped, failed, totalRemoteNotes, stats }) {
     this.finished = true;
     if (!this.barEl) return;
     const secs = Math.round((Date.now() - this.startTime) / 1000);
@@ -310,12 +310,27 @@ class SyncProgressModal extends obsidian_1.Modal {
 
     // Rapport de réconciliation
     this.reconciliationEl.empty();
-    
+
     const summaryHeader = this.reconciliationEl.createEl("h4", {
       text: "Rapport de réconciliation :",
-      cls: "stnd-reconciliation-title"
+      cls: "stnd-reconciliation-title",
     });
     summaryHeader.style.cssText = "margin: 0 0 0.5em 0;";
+
+    const totalOnline = totalRemoteNotes != null ? totalRemoteNotes : (synced + skipped);
+    const missing = failed || 0;
+    const imagesInfo = stats && (stats.imagesChecked > 0)
+      ? ` + ${stats.imagesReused + stats.imagesUploaded} image(s) en ligne (${stats.imagesReused} dédupliquée(s))`
+      : "";
+
+    const summaryCard = this.reconciliationEl.createDiv({
+      cls: "stnd-reconciliation-summary",
+    });
+    summaryCard.style.cssText =
+      "padding: 10px 14px; border-radius: 8px; background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); margin-bottom: 12px; font-weight: 500; font-size: var(--font-ui-small);";
+    summaryCard.setText(
+      `✓ ${totalOnline} note(s)${imagesInfo}, ${missing} manquante${missing > 1 ? "s" : ""}.`,
+    );
 
     const ul = this.reconciliationEl.createEl("ul");
     ul.style.cssText = "list-style-type: none; padding-left: 0; margin: 0;";
@@ -876,6 +891,12 @@ class GardenFeature {
       let skipped = 0;
       let failed = 0;
       let i = 0;
+      const syncStats = {
+        imagesChecked: 0,
+        imagesReused: 0,
+        imagesUploaded: 0,
+        imagesFailed: 0,
+      };
 
       for (const task of syncTasks) {
         if (modal.cancelled) break;
@@ -903,7 +924,7 @@ class GardenFeature {
                 if (this.plugin.settings.syncDirection === "1way") {
                   // In 1-way mode, local wins: republish to remote
                   const raw = await this.app.vault.read(file);
-                  const finalContent = await this.uploadContentImages(raw, file, true);
+                  const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
                   const result = await this.publishNote(file, true, finalContent);
                   if (result) {
                     synced++;
@@ -928,7 +949,7 @@ class GardenFeature {
               } else {
                 // New local note, push it!
                 const raw = await this.app.vault.read(file);
-                const finalContent = await this.uploadContentImages(raw, file, true);
+                const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
                 const result = await this.publishNote(file, true, finalContent);
                 if (result) {
                   synced++;
@@ -941,7 +962,7 @@ class GardenFeature {
             } else {
               // Exists on both sides, compare content
               const raw = await this.app.vault.read(file);
-              const finalContent = await this.uploadContentImages(raw, file, true);
+              const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
 
               // Compute local hash
               const hashBuffer = await crypto.subtle.digest(
@@ -1081,7 +1102,16 @@ class GardenFeature {
         modal.update({ index: i, current: task.name, synced, pulled, created, unpublished, skipped, failed });
       }
 
-      modal.done({ synced, pulled, created, unpublished, skipped, failed });
+      modal.done({
+        synced,
+        pulled,
+        created,
+        unpublished,
+        skipped,
+        failed,
+        totalRemoteNotes: remoteNotes.length,
+        stats: syncStats,
+      });
 
       new obsidian_1.Notice(
         `Garden : Synchronisation ${modal.cancelled ? "annulée" : "terminée"}. ${synced + pulled + created + unpublished} action(s), ${skipped} identique(s), ${failed} en échec.`,
@@ -1554,7 +1584,7 @@ class GardenFeature {
     return result;
   }
 
-  async uploadContentImages(content, sourceFile, isBulk = false) {
+  async uploadContentImages(content, sourceFile, isBulk = false, stats = null) {
     if (!this.plugin.settings.apiKey) return content;
 
     // Résoudre d'abord les transclusions de notes (![[Note]] / ![[Note#Section]])
@@ -1597,6 +1627,10 @@ class GardenFeature {
           if (checkData?.exists && checkData.url) {
             const cdnUrl = new URL(checkData.url, this.plugin.settings.apiUrl).href;
             uploaded.set(vaultFile.path, cdnUrl);
+            if (stats) {
+              stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+              stats.imagesReused = (stats.imagesReused || 0) + 1;
+            }
             return cdnUrl;
           }
         }
@@ -1638,6 +1672,10 @@ class GardenFeature {
             `Standard: Failed to upload ${vaultFile.name}`,
             res.status,
           );
+          if (stats) {
+            stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+            stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+          }
           return null;
         }
 
@@ -1651,13 +1689,25 @@ class GardenFeature {
             `Standard: ${vaultFile.name} accepté par le serveur sans URL en retour`,
             data,
           );
+          if (stats) {
+            stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+            stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+          }
           return null;
         }
         const cdnUrl = new URL(data.url, this.plugin.settings.apiUrl).href;
         uploaded.set(vaultFile.path, cdnUrl);
+        if (stats) {
+          stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+          stats.imagesUploaded = (stats.imagesUploaded || 0) + 1;
+        }
         return cdnUrl;
       } catch (err) {
         console.warn(`Standard: Error uploading ${vaultFile.name}`, err);
+        if (stats) {
+          stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+          stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+        }
         return null;
       }
     };

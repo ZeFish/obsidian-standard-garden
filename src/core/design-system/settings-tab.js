@@ -14,7 +14,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ─── Design System Section ───────────────────────────────────────────
-    containerEl.createEl("h2", { text: "Wood Cuts (Design System)" });
+    containerEl.createEl("h2", { text: "Apparence" });
     const desc = containerEl.createEl("p", {
       text: "The Standard Design System guarantees 1:1 typographic fidelity between your local editor and your online garden. Frontmatter tokens and curated typography are rendered directly in the workspace.",
       cls: "setting-item-description",
@@ -57,6 +57,8 @@ class DesignSystemSettingTab extends PluginSettingTab {
           });
       });
 
+    // Cache and hooks settings hidden for now
+    /*
     const cacheSetting = new Setting(containerEl)
       .setName("Clear theme cache")
       .setDesc("Forces the plugin to re-scan and reload all theme stylesheets defined in your vault.")
@@ -80,6 +82,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
           window.open("https://stnd.build/2-system/css-hooks", "_blank");
         }),
       );
+    */
   }
 }
 

@@ -6,9 +6,10 @@ const { GardenSettingTab } = require("../core/garden/settings-tab.js");
 const { DesignSystemSettingTab } = require("../core/design-system/settings-tab.js");
 
 class AccountSettingTab {
-  constructor(app, plugin) {
+  constructor(app, plugin, rootTab) {
     this.app = app;
     this.plugin = plugin;
+    this.rootTab = rootTab;
   }
 
   display() {
@@ -64,7 +65,11 @@ class AccountSettingTab {
       this.plugin.settings.apiUsername = "";
       this.plugin.statsCache = null;
       await this.plugin.saveSettings();
-      this.display();
+      if (this.rootTab) {
+        this.rootTab.display();
+      } else {
+        this.display();
+      }
     };
 
     // Calculate local published count
@@ -229,48 +234,34 @@ class StandardSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
-    this.currentTab = "Compte";
   }
 
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.style.paddingTop = "24px";
+    containerEl.addClass("stnd-settings-flat");
 
-    const headerTitle = containerEl.createEl("h2", { text: "Standard Garden" });
-    headerTitle.style.cssText =
-      "margin: 0 0 16px 0; font-size: var(--font-ui-large); font-weight: 600; text-align: left;";
+    // ── 1. Compte ──
+    const accountTab = new AccountSettingTab(this.app, this.plugin, this);
+    accountTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+    accountTab.display();
 
-    const navEl = containerEl.createEl("div", { cls: "stnd-settings-nav" });
-    navEl.style.cssText =
-      "display: flex; justify-content: flex-start; gap: 8px; margin-bottom: 20px;";
+    // ── 2. Publication ──
+    const gardenTab = new GardenSettingTab(this.app, this.plugin);
+    gardenTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+    gardenTab.display();
 
-    const tabs = [
-      { id: "Compte", tab: new AccountSettingTab(this.app, this.plugin) },
-      { id: "Publication", tab: new GardenSettingTab(this.app, this.plugin) },
-      { id: "Apparence", tab: new DesignSystemSettingTab(this.app, this.plugin) },
-    ];
+    // ── 3. Apparence ──
+    const designTab = new DesignSystemSettingTab(this.app, this.plugin);
+    designTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+    designTab.display();
 
-    for (const { id } of tabs) {
-      const button = navEl.createEl("button", {
-        text: id,
-        cls: `stnd-settings-nav-btn ${this.currentTab === id ? "active" : ""}`,
-      });
-      button.style.padding = "6px 16px";
-      button.onclick = () => {
-        this.currentTab = id;
-        this.display();
-      };
-    }
-
-    const contentEl = containerEl.createEl("div", {
-      cls: "stnd-settings-content",
-    });
-
-    const active = tabs.find((t) => t.id === this.currentTab) || tabs[0];
-    if (active?.tab) {
-      active.tab.containerEl = contentEl;
-      active.tab.display();
+    // ── 4. Mycelium (optional) ──
+    if (this.plugin.settings.enableMycelium) {
+      const { MyceliumSettingTab } = require("../features/mycelium/index.js");
+      const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
+      myceliumTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+      myceliumTab.display();
     }
   }
 }
