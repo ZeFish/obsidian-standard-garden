@@ -42,7 +42,7 @@ class StandardPlugin extends obsidian_1.Plugin {
     // Only load what's needed for the immediate theme and CSS injection.
     const {
       DesignSystemFeature,
-    } = require("./src/core/design-system/index.js");
+    } = require("./src/features/design-system/index.js");
 
     this.features = [];
 
@@ -70,7 +70,7 @@ class StandardPlugin extends obsidian_1.Plugin {
 
   async loadRemainingFeatures(startTime) {
     // Lazy-require functional features
-    const { GardenFeature } = require("./src/core/garden/index.js");
+    const { GardenFeature } = require("./src/features/garden/index.js");
     const {
       PublishStatusFeature,
     } = require("./src/features/publish-status/index.js");
@@ -80,6 +80,9 @@ class StandardPlugin extends obsidian_1.Plugin {
     const {
       MyceliumFeature,
     } = require("./src/features/mycelium/index.js");
+    const {
+      FeedFeature,
+    } = require("./src/features/feed/index.js");
 
     this.garden = new GardenFeature(this.app, this);
     this.features.push(this.garden);
@@ -92,6 +95,7 @@ class StandardPlugin extends obsidian_1.Plugin {
 
     const functionalInstances = [];
     functionalInstances.push(new PublishStatusFeature(this.app, this));
+    functionalInstances.push(new FeedFeature(this.app, this));
     if (this.settings.enableSyntaxPreview !== false) {
       functionalInstances.push(new SyntaxPreviewFeature(this.app, this));
     }
@@ -112,22 +116,27 @@ class StandardPlugin extends obsidian_1.Plugin {
     const {
       StandardGardenView,
       STND_PANEL_VIEW,
-    } = require("./src/ui/panel-view.js");
+    } = require("./src/features/panel/index.js");
     this.registerView(
       STND_PANEL_VIEW,
       (leaf) => new StandardGardenView(leaf, this),
     );
 
     // Add settings tab
-    const { StandardSettingTab } = require("./src/ui/settings-tab.js");
+    const { StandardSettingTab } = require("./src/features/settings/index.js");
     this.settingTab = new StandardSettingTab(this.app, this);
     this.addSettingTab(this.settingTab);
 
-    // ─── Ribbon icons ────────────────────────────────────────────────────────
-    // Supprimé au profit du bouton contextuel de statut dans chaque note.
+    // ─── Ribbon icon ─────────────────────────────────────────────────────────
+    this.addRibbonIcon("flower", "Standard Garden Panel", () => {
+      this.activatePanel();
+    });
+
+    // Automatically reveal Garden panel on load
+    this.activatePanel();
 
     // ─── Commands ────────────────────────────────────────────────────────────
-    const { STND_PANEL_VIEW: PANEL_ID } = require("./src/ui/panel-view.js");
+    const { STND_PANEL_VIEW: PANEL_ID } = require("./src/features/panel/index.js");
     this.addCommand({
       id: "open-stnd-panel",
       name: "Open Garden panel",
@@ -172,12 +181,12 @@ class StandardPlugin extends obsidian_1.Plugin {
     }
     if (this.themeObserver) this.themeObserver.disconnect();
     document.body.classList.remove("stnd");
-    const { STND_PANEL_VIEW } = require("./src/ui/panel-view.js");
+    const { STND_PANEL_VIEW } = require("./src/features/panel/index.js");
     this.app.workspace.detachLeavesOfType(STND_PANEL_VIEW);
   }
 
   async activatePanel(viewId) {
-    const { STND_PANEL_VIEW } = require("./src/ui/panel-view.js");
+    const { STND_PANEL_VIEW } = require("./src/features/panel/index.js");
     const id = viewId || STND_PANEL_VIEW;
     const existing = this.app.workspace.getLeavesOfType(id);
     if (existing.length) {

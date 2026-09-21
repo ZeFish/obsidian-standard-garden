@@ -1,8 +1,13 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
-const { KNOWN_TOKENS, isPublishIntent } = require("../constants");
-const { StndConfirmModal } = require("./confirm-modal");
+const { KNOWN_TOKENS, isPublishIntent } = require("../../constants");
+const { StndConfirmModal } = require("../garden/modals/confirm-modal");
+const { StndShareModal } = require("../garden/modals/share-modal");
+const {
+  findOutgoingUnlinkedMentions,
+  createMentionLink,
+} = require("../mycelium/index.js");
 
 // ─── Side Panel View ──────────────────────────────────────────────────────────
 
@@ -22,6 +27,24 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.searchingCandidates = {};
     this.linksData = null;
     this.isLoadingLinks = false;
+    this.noteStatsCache = new Map();
+    this.isLoadingStats = false;
+  }
+
+  async loadNoteStats(file) {
+    if (!file || this.isLoadingStats) return;
+    this.isLoadingStats = true;
+    try {
+      const stats = await this.plugin.garden.getNoteStats(file);
+      if (stats) {
+        this.noteStatsCache.set(file.path, stats);
+      }
+    } catch (e) {
+      console.error("[Standard] Error loading note stats:", e);
+    } finally {
+      this.isLoadingStats = false;
+      this.render();
+    }
   }
 
   getViewType() {
@@ -42,7 +65,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       if (this._writing) return;
       const active = this.plugin.app.workspace.getActiveFile();
       if (active && file === active) {
-        if (this.activeTab === "links") {
+        if (this.activeTab === "mycelium" || this.activeTab === "links") {
           this.linksData = null;
         }
         this.render();
@@ -132,12 +155,16 @@ class StandardGardenView extends obsidian_1.ItemView {
       this.render();
     });
 
-    const linksTabBtn = tabsEl.createEl("button", {
-      cls: "stnd-panel-tab" + (this.activeTab === "links" ? " is-active" : ""),
-      text: "Links",
+    const myceliumTabBtn = tabsEl.createEl("button", {
+      cls:
+        "stnd-panel-tab" +
+        (this.activeTab === "mycelium" || this.activeTab === "links"
+          ? " is-active"
+          : ""),
+      text: "Mycelium",
     });
-    linksTabBtn.addEventListener("click", () => {
-      this.activeTab = "links";
+    myceliumTabBtn.addEventListener("click", () => {
+      this.activeTab = "mycelium";
       this.linksData = null;
       this.render();
       this.refreshLinksData();
@@ -174,7 +201,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       // ── Token Groups ────────────────────────────────────────────────────
       this._renderTokenGroups(container, file, fm);
-    } else if (this.activeTab === "links") {
+    } else if (this.activeTab === "mycelium" || this.activeTab === "links") {
       const activeFile = this.plugin.app.workspace.getActiveFile();
       if (activeFile && (!this.linksData || this.linksData.file !== activeFile) && !this.isLoadingLinks) {
         this.refreshLinksData();
@@ -204,10 +231,27 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     if (this.plugin.settings.apiKey) {
       if (isConfirmedOnline) {
-        statusRow.createEl("span", {
-          text: "Online",
-          cls: "stnd-panel-badge stnd-panel-badge-online",
-        });
+        const cachedStats = this.noteStatsCache.get(file.path);
+        const remoteTime = cachedStats?.updated_at
+          ? new Date(cachedStats.updated_at).getTime()
+          : 0;
+        const localTime = file.stat?.mtime || 0;
+        const isModifiedLocally =
+          remoteTime > 0 && localTime > remoteTime + 3000;
+
+        if (isModifiedLocally) {
+          const badge = statusRow.createEl("span", {
+            text: "Modified",
+            cls: "stnd-panel-badge stnd-panel-badge-pending",
+          });
+          badge.title = "Local edits not yet synced to Garden";
+        } else {
+          const badge = statusRow.createEl("span", {
+            text: "Synced",
+            cls: "stnd-panel-badge stnd-panel-badge-online",
+          });
+          badge.title = "Up to date with Garden";
+        }
       } else if (isPublished) {
         statusRow.createEl("span", {
           text: "Queued",
@@ -236,7 +280,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       const actions = statusRow.createEl("div", { cls: "stnd-panel-actions" });
 
       const publishBtn = actions.createEl("button", {
-        text: isConfirmedOnline ? "Tend Soil" : "Plant Seed",
+        text: isConfirmedOnline ? "Update" : "Publish",
         cls: "stnd-panel-btn",
       });
       publishBtn.addEventListener("click", async () => {
@@ -244,18 +288,18 @@ class StandardGardenView extends obsidian_1.ItemView {
         publishBtn.textContent = "...";
         const ok = await this.plugin.garden.publishWithCheck(file);
         if (ok === true) {
-          new obsidian_1.Notice(`"${file.basename}" planted.`);
+          new obsidian_1.Notice(`Standard : "${file.basename}" publié.`);
           if (this.plugin.settings.openAfterPublish) {
             this.plugin.garden.viewLiveVersion(file);
           }
           this.render();
         } else if (ok === false) {
-          new obsidian_1.Notice(`Failed to plant "${file.basename}".`);
+          new obsidian_1.Notice(`Standard : Échec de la publication de "${file.basename}".`);
           this.render();
         } else {
           // null = user cancelled the confirmation — restore button
           publishBtn.disabled = false;
-          publishBtn.textContent = isConfirmedOnline ? "Tend Soil" : "Plant Seed";
+          publishBtn.textContent = isConfirmedOnline ? "Update" : "Publish";
         }
       });
 
@@ -267,6 +311,14 @@ class StandardGardenView extends obsidian_1.ItemView {
           cls: "stnd-panel-btn stnd-panel-btn-secondary",
         });
         viewBtn.addEventListener("click", () => this.plugin.garden.viewLiveVersion(file));
+
+        const shareBtn = actions.createEl("button", {
+          text: "Share",
+          cls: "stnd-panel-btn stnd-panel-btn-secondary",
+        });
+        shareBtn.addEventListener("click", () => {
+          new StndShareModal(this.plugin.app, file.basename, liveUrl).open();
+        });
 
         const copyBtn = actions.createEl("button", {
           text: "Copy",
@@ -280,7 +332,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       if (isConfirmedOnline) {
         const removeBtn = actions.createEl("button", {
-          text: "Remove",
+          text: "Unpublish",
           cls: "stnd-panel-btn stnd-panel-btn-danger",
         });
         removeBtn.addEventListener("click", async () => {
@@ -289,18 +341,128 @@ class StandardGardenView extends obsidian_1.ItemView {
           const ok = await this.plugin.garden.deleteOnlineVersion(file);
           if (ok === true) {
             new obsidian_1.Notice(
-              `"${file.basename}" removed from Standard Garden.`,
+              `Standard : "${file.basename}" retiré du jardin.`,
             );
             this.render();
           } else if (ok === false) {
-            new obsidian_1.Notice(`Failed to remove "${file.basename}".`);
+            new obsidian_1.Notice(`Standard : Échec du retrait de "${file.basename}".`);
             this.render();
           } else {
             // null = user cancelled — restore button
             removeBtn.disabled = false;
-            removeBtn.textContent = "Remove";
+            removeBtn.textContent = "Unpublish";
           }
         });
+      }
+
+      // ── Stats & Citations ─────────────────────────────────────────────
+      if (isConfirmedOnline) {
+        const statsBox = section.createEl("div", { cls: "stnd-panel-stats-box" });
+        statsBox.style.cssText =
+          "margin-top: var(--size-4-3); padding-top: var(--size-4-2); border-top: 1px solid var(--background-modifier-border);";
+
+        const cachedStats = this.noteStatsCache.get(file.path);
+        if (!cachedStats && !this.isLoadingStats) {
+          this.loadNoteStats(file);
+        }
+
+        const statsRow = statsBox.createEl("div", { cls: "stnd-panel-stats-row" });
+        statsRow.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2); font-size: var(--font-ui-smaller); color: var(--text-muted);";
+
+        const viewsEl = statsRow.createEl("div", { cls: "stnd-panel-views-count" });
+        viewsEl.style.cssText = "display: flex; align-items: center; gap: 4px;";
+        const eyeIcon = viewsEl.createEl("span");
+        obsidian_1.setIcon(eyeIcon, "eye");
+        const viewsCount = cachedStats ? cachedStats.views : (this.isLoadingStats ? "..." : 0);
+        viewsEl.createEl("span", {
+          text: `${viewsCount} ${viewsCount === 1 ? "view" : "views"}`,
+        });
+
+        if (cachedStats?.updated_at) {
+          const date = new Date(cachedStats.updated_at);
+          const formatted = date.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+          statsRow.createEl("span", {
+            text: `Updated ${formatted}`,
+            cls: "stnd-panel-meta",
+          });
+        }
+
+        // Citations List
+        const citations = cachedStats?.citations || [];
+        const citationsSection = statsBox.createEl("div", { cls: "stnd-panel-citations" });
+        citationsSection.style.cssText = "margin-top: var(--size-4-2);";
+
+        const citationsHeader = citationsSection.createEl("div", {
+          cls: "stnd-panel-citations-header",
+        });
+        citationsHeader.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--size-4-1);";
+        citationsHeader.createEl("span", {
+          text: `Citations (${citations.length})`,
+        });
+
+        if (citations.length > 0) {
+          const citationsList = citationsSection.createEl("div", {
+            cls: "stnd-panel-citations-list",
+          });
+          citationsList.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
+
+          for (const cit of citations) {
+            const citCard = citationsList.createEl("div", {
+              cls: "stnd-panel-citation-card",
+            });
+            citCard.style.cssText =
+              "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: var(--radius-s); background: var(--background-modifier-hover); cursor: pointer; transition: background 0.15s ease;";
+
+            citCard.addEventListener("mouseenter", () => {
+              citCard.style.background = "var(--background-modifier-active-hover)";
+            });
+            citCard.addEventListener("mouseleave", () => {
+              citCard.style.background = "var(--background-modifier-hover)";
+            });
+
+            const citInfo = citCard.createEl("div", { cls: "stnd-panel-citation-info" });
+            citInfo.style.cssText =
+              "display: flex; flex-direction: column; min-width: 0; overflow: hidden;";
+            const citTitle = citInfo.createEl("span", {
+              text: cit.title || cit.slug,
+              cls: "stnd-panel-citation-title",
+            });
+            citTitle.style.cssText =
+              "font-size: var(--font-ui-smaller); font-weight: var(--font-medium); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+
+            const citAuthor = citInfo.createEl("span", {
+              text: `@${cit.username}`,
+              cls: "stnd-panel-citation-author",
+            });
+            citAuthor.style.cssText = "font-size: 11px; color: var(--text-faint);";
+
+            const extIcon = citCard.createEl("span", {
+              cls: "stnd-panel-citation-icon",
+            });
+            extIcon.style.cssText =
+              "color: var(--text-faint); display: flex; align-items: center; flex-shrink: 0; margin-left: 6px;";
+            obsidian_1.setIcon(extIcon, "external-link");
+
+            citCard.addEventListener("click", () => {
+              if (cit.url) {
+                window.open(cit.url, "_blank");
+              }
+            });
+          }
+        } else if (!this.isLoadingStats) {
+          const emptyCit = citationsSection.createEl("div", {
+            cls: "stnd-panel-citations-empty",
+          });
+          emptyCit.style.cssText =
+            "font-size: var(--font-ui-smaller); color: var(--text-faint); font-style: italic;";
+          emptyCit.createEl("span", { text: "No citations yet" });
+        }
       }
     }
   }
@@ -312,44 +474,17 @@ class StandardGardenView extends obsidian_1.ItemView {
       cls: "stnd-panel-section stnd-panel-ai",
     });
 
-    // 1. Section Title
-    section.createEl("div", {
-      text: "Design",
-      cls: "stnd-panel-group-title", // Using a semantic class name
-      style:
-        "font-weight: var(--font-semibold); font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); margin-bottom: var(--size-4-4); text-align: center;",
-    });
-
-    // 2. Instruction Label
-    section.createEl("div", {
-      text: "Instructions",
-      cls: "stnd-panel-meta",
-      style:
-        "margin-bottom: var(--size-4-1); font-size: var(--font-ui-smaller);",
-    });
-
-    // 3. Textarea
-    const textarea = section.createEl("textarea", {
-      cls: "stnd-panel-ai-input",
-      attr: {
-        placeholder: "e.g. 'warm autumn palette', 'minimalist dark', etc.",
-        rows: 2,
-      },
-    });
-    textarea.style.marginBottom = "var(--size-4-4)";
-
-    // 4. Button Row
-    const row = section.createEl("div", { cls: "stnd-panel-ai-row" });
-    row.style.display = "flex";
-    row.style.gap = "var(--size-4-2)";
-    row.style.marginTop = "0"; // Reset since we use margin on textarea
-
     const hasTokens = Object.keys(fm).some(
       (key) =>
         KNOWN_TOKENS.has(key) ||
         key.startsWith("stnd-") ||
         key.startsWith("stnd_"),
     );
+
+    const row = section.createEl("div", { cls: "stnd-panel-ai-row" });
+    row.style.display = "flex";
+    row.style.gap = "var(--size-4-2)";
+    row.style.marginTop = "0";
 
     if (hasTokens) {
       const resetBtn = row.createEl("button", {
@@ -391,22 +526,20 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
 
     const genBtn = row.createEl("button", {
-      text: "Generate",
+      text: "Generate theme with AI",
       cls: "stnd-panel-btn",
     });
-    genBtn.style.flex = "1";
+    genBtn.style.flex = "2";
 
     const view = this;
     genBtn.addEventListener("click", async () => {
-      let instruction = textarea.value.trim();
-
       genBtn.disabled = true;
       genBtn.textContent = "Generating…";
 
       try {
         const noteContent = await view.plugin.app.vault.cachedRead(file);
         const tokens = await view.plugin.garden.generateTokens(
-          instruction,
+          "",
           noteContent,
           fm,
         );
@@ -429,7 +562,7 @@ class StandardGardenView extends obsidian_1.ItemView {
         new obsidian_1.Notice(`Generation failed: ${e.message}`);
       } finally {
         genBtn.disabled = false;
-        genBtn.textContent = "Generate";
+        genBtn.textContent = "Generate theme with AI";
       }
     });
   }
@@ -466,57 +599,25 @@ class StandardGardenView extends obsidian_1.ItemView {
             placeholder: "System-UI",
           },
           {
-            key: "optical-ratio",
-            label: "Type scale",
-            type: "number",
-            placeholder: "1.333",
-            step: "0.01",
-          },
-          {
-            key: "font-density",
-            label: "Line height",
-            type: "number",
-            placeholder: "1.7",
-            step: "0.05",
-          },
-          {
-            key: "font-weight",
+            key: "font-weight-body",
             label: "Body weight",
             type: "number",
             placeholder: "400",
-            step: "100",
+            step: "50",
           },
           {
-            key: "font-weight-bold",
-            label: "Bold weight",
-            type: "number",
-            placeholder: "700",
-            step: "100",
-          },
-          {
-            key: "font-header-weight",
+            key: "font-weight-header",
             label: "Heading weight",
             type: "number",
-            placeholder: "600",
-            step: "100",
+            placeholder: "700",
+            step: "50",
           },
           {
-            key: "font-header-letter-spacing",
-            label: "Heading tracking",
-            type: "text",
-            placeholder: "-0.02em",
-          },
-          {
-            key: "font-header-style",
-            label: "Heading style",
-            type: "dropdown",
-            options: ["", "normal", "italic"],
-          },
-          {
-            key: "line-width",
-            label: "Line width",
-            type: "text",
-            placeholder: "35rlh",
+            key: "line-height",
+            label: "Line height",
+            type: "number",
+            placeholder: "1.6",
+            step: "0.05",
           },
         ],
       },
@@ -581,8 +682,21 @@ class StandardGardenView extends obsidian_1.ItemView {
       },
     ];
 
+    const advancedAccordion = container.createEl("details", {
+      cls: "stnd-panel-group stnd-panel-advanced-design",
+    });
+    const summary = advancedAccordion.createEl("summary", {
+      text: "Advanced Design Settings",
+    });
+    summary.style.fontWeight = "var(--font-medium)";
+
+    const contentWrap = advancedAccordion.createEl("div", {
+      cls: "stnd-panel-advanced-body",
+    });
+    contentWrap.style.paddingLeft = "var(--size-4-2)";
+
     for (const group of groups) {
-      const details = container.createEl("details", {
+      const details = contentWrap.createEl("details", {
         cls: "stnd-panel-group",
       });
       if (group.open) details.setAttribute("open", "");
@@ -845,7 +959,50 @@ class StandardGardenView extends obsidian_1.ItemView {
     );
   }
 
+  _getFileTags(file) {
+    const cache = this.plugin.app.metadataCache.getFileCache(file);
+    const tags = [];
+    if (cache?.tags) {
+      tags.push(...cache.tags.map((t) => t.tag.toLowerCase().replace(/^#/, "")));
+    }
+    if (cache?.frontmatter?.tags) {
+      const ft = cache.frontmatter.tags;
+      if (Array.isArray(ft)) {
+        tags.push(...ft.map((t) => String(t).toLowerCase().replace(/^#/, "")));
+      } else if (typeof ft === "string") {
+        tags.push(
+          ...ft
+            .split(",")
+            .map((t) => t.trim().toLowerCase().replace(/^#/, "")),
+        );
+      }
+    }
+    return tags;
+  }
+
+  async _addTagToFile(file, tag) {
+    const clean = tag.replace(/^#/, "");
+    await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
+      let tags = fm.tags || [];
+      if (typeof tags === "string") tags = tags.split(",").map((s) => s.trim());
+      if (!tags.includes(clean)) {
+        tags.push(clean);
+        fm.tags = tags;
+      }
+    });
+  }
+
+  async _removeTagFromFile(file, tag) {
+    const clean = tag.replace(/^#/, "");
+    await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
+      let tags = fm.tags || [];
+      if (typeof tags === "string") tags = tags.split(",").map((s) => s.trim());
+      fm.tags = tags.filter((t) => t !== clean);
+    });
+  }
+
   async refreshLinksData() {
+    window.stndPanelRefreshLinks = () => this.refreshLinksData();
     const activeFile = this.plugin.app.workspace.getActiveFile();
     if (!activeFile) {
       this.linksData = null;
@@ -854,12 +1011,27 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.isLoadingLinks = true;
     this.render();
     try {
-      const incoming = this.plugin.linkAssist.getIncomingLinks(activeFile);
-      const unlinked = await this.plugin.linkAssist.getUnlinkedMentions(activeFile);
+      // 1. Incoming linked mentions (Backlinks)
+      const incoming = [];
+      const resolvedLinks = this.plugin.app.metadataCache.resolvedLinks || {};
+      for (const [sourcePath, targets] of Object.entries(resolvedLinks)) {
+        if (sourcePath !== activeFile.path && targets.hasOwnProperty(activeFile.path)) {
+          const file = this.plugin.app.vault.getAbstractFileByPath(sourcePath);
+          if (file) incoming.push(file);
+        }
+      }
+
+      // 2. Unlinked mentions via Mycelium (with excluded folders filtered)
+      const unlinked = await findOutgoingUnlinkedMentions(
+        this.plugin.app,
+        activeFile,
+        this.plugin,
+      );
+
       this.linksData = {
         incoming,
         unlinked,
-        file: activeFile
+        file: activeFile,
       };
     } catch (e) {
       console.error("[Standard] Error loading links data", e);
@@ -867,36 +1039,6 @@ class StandardGardenView extends obsidian_1.ItemView {
       this.isLoadingLinks = false;
       this.render();
     }
-  }
-
-  _isFileExcluded(file, activeFileTags, blockedTag, localFilterRules) {
-    const fileCache = this.app.metadataCache.getFileCache(file);
-    if (!fileCache) return false;
-    const fileTags = this.plugin.linkAssist.getTagsFromFileCache(fileCache);
-    
-    // 1. Check blocked tag
-    const cleanBlocked = blockedTag.toLowerCase().replace(/^#/, "");
-    if (fileTags.includes(cleanBlocked)) {
-      return true;
-    }
-    
-    // 2. Check local filter rules
-    if (localFilterRules.length > 0) {
-      for (const rule of localFilterRules) {
-        if (!rule.sourceTag || !rule.targetTag) continue;
-        if (
-          activeFileTags.includes(
-            rule.sourceTag.toLowerCase().replace(/^#/, ""),
-          ) &&
-          fileTags.includes(
-            rule.targetTag.toLowerCase().replace(/^#/, ""),
-          )
-        ) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   _renderLinksTab(container) {
@@ -910,82 +1052,153 @@ class StandardGardenView extends obsidian_1.ItemView {
     const linksWrap = container.createEl("div", { cls: "stnd-audit-container" });
 
     const headerRow = linksWrap.createEl("div", { cls: "stnd-audit-header-row" });
-    headerRow.createEl("h3", { text: "Link Assist", cls: "stnd-audit-title" });
+    headerRow.createEl("h3", { text: "Mycelium & Links", cls: "stnd-audit-title" });
 
     const refreshBtn = headerRow.createEl("button", {
       cls: "stnd-audit-refresh-btn" + (this.isLoadingLinks ? " is-loading" : ""),
-      title: "Refresh mentions"
+      title: "Refresh mentions",
     });
     obsidian_1.setIcon(refreshBtn, "refresh-cw");
     refreshBtn.addEventListener("click", () => this.refreshLinksData());
+
+    // ── Quick Preferences (Ghost links & Compost footer toggles) ──
+    const prefsCard = linksWrap.createEl("div", { cls: "stnd-panel-mycelium-prefs" });
+    prefsCard.style.cssText =
+      "display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--size-4-3) 0; padding: 10px 12px; background: var(--background-secondary); border-radius: var(--radius-m); border: 1px solid var(--background-modifier-border);";
+
+    const makeToggleRow = (label, desc, isEnabled, onToggle) => {
+      const row = prefsCard.createEl("div");
+      row.style.cssText =
+        "display: flex; align-items: center; justify-content: space-between; gap: 8px;";
+
+      const textWrap = row.createEl("div");
+      textWrap.style.cssText =
+        "display: flex; flex-direction: column; min-width: 0;";
+      const lbl = textWrap.createEl("span", { text: label });
+      lbl.style.cssText =
+        "font-size: var(--font-ui-smaller); font-weight: var(--font-medium); color: var(--text-normal);";
+      const sub = textWrap.createEl("span", { text: desc });
+      sub.style.cssText = "font-size: 11px; color: var(--text-faint);";
+
+      const toggleBtn = row.createEl("div", {
+        cls: "checkbox-container" + (isEnabled ? " is-enabled" : ""),
+      });
+      toggleBtn.style.cssText = "cursor: pointer; flex-shrink: 0;";
+
+      toggleBtn.addEventListener("click", async () => {
+        const next = !toggleBtn.hasClass("is-enabled");
+        toggleBtn.toggleClass("is-enabled", next);
+        await onToggle(next);
+      });
+    };
+
+    if (!this.plugin.settings.mycelium) {
+      this.plugin.settings.mycelium = {
+        enableGhostLinks: false,
+        enableLinkingCommand: true,
+        enableCompostFooter: true,
+      };
+    }
+    const mySettings = this.plugin.settings.mycelium;
+
+    makeToggleRow(
+      "Ghost links",
+      "Underline mentions in editor (Alt+click or tap to link)",
+      !!mySettings.enableGhostLinks,
+      async (enabled) => {
+        mySettings.enableGhostLinks = enabled;
+        window.stndMyceliumSettings = mySettings;
+        await this.plugin.saveSettings();
+        if (typeof window.stndRefreshMycelium === "function") {
+          window.stndRefreshMycelium();
+        }
+        new obsidian_1.Notice(
+          enabled ? "Ghost links enabled in editor." : "Ghost links disabled.",
+        );
+      },
+    );
+
+    makeToggleRow(
+      "Compost footer",
+      "Show suggested links at bottom of reading view",
+      !!mySettings.enableCompostFooter,
+      async (enabled) => {
+        mySettings.enableCompostFooter = enabled;
+        window.stndMyceliumSettings = mySettings;
+        await this.plugin.saveSettings();
+        const view = this.plugin.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
+        if (view?.previewMode) {
+          view.previewMode.rerender(true);
+        }
+        new obsidian_1.Notice(
+          enabled ? "Compost footer enabled." : "Compost footer hidden.",
+        );
+      },
+    );
 
     if (this.isLoadingLinks) {
       const loadingEl = linksWrap.createEl("div", { cls: "stnd-audit-loading" });
       const spin = loadingEl.createEl("div", { cls: "stnd-audit-spinner" });
       obsidian_1.setIcon(spin, "loader");
-      loadingEl.createEl("p", { text: "Scanning mentions...", cls: "stnd-audit-loading-text" });
+      loadingEl.createEl("p", { text: "Scanning mycelium & links...", cls: "stnd-audit-loading-text" });
       return;
     }
 
     if (!this.linksData) return;
 
     const { incoming, unlinked } = this.linksData;
-    const blockedTag = this.plugin.linkAssist.settings.blockedTag || "backlink-exclude";
-    const localFilterRules = this.plugin.linkAssist.settings.localFilters || [];
-    
-    // Get active file tags
-    const activeFileCache = this.app.metadataCache.getFileCache(activeFile);
-    const activeFileTags = activeFileCache ? this.plugin.linkAssist.getTagsFromFileCache(activeFileCache) : [];
+    const blockedTag = "backlink-exclude";
 
     const linkedMentions = [];
-    const unlinkedMentions = [];
     const excludedMentions = [];
     const processedPaths = new Set();
 
-    // 1. Process incoming links
     for (const file of incoming) {
       if (processedPaths.has(file.path)) continue;
       processedPaths.add(file.path);
 
-      if (this._isFileExcluded(file, activeFileTags, blockedTag, localFilterRules)) {
+      const tags = this._getFileTags(file);
+      if (tags.includes(blockedTag)) {
         excludedMentions.push(file);
       } else {
         linkedMentions.push(file);
       }
     }
 
-    // 2. Process unlinked mentions
-    for (const file of unlinked) {
-      if (processedPaths.has(file.path)) continue;
-      processedPaths.add(file.path);
+    const unlinkedMentions = [];
+    for (const item of unlinked) {
+      // Never show a note in unlinked mentions if it is already in incoming backlinks or processed!
+      if (processedPaths.has(item.file.path)) continue;
+      processedPaths.add(item.file.path);
 
-      if (this._isFileExcluded(file, activeFileTags, blockedTag, localFilterRules)) {
-        excludedMentions.push(file);
+      const tags = this._getFileTags(item.file);
+      if (tags.includes(blockedTag)) {
+        excludedMentions.push(item.file);
       } else {
-        unlinkedMentions.push(file);
+        unlinkedMentions.push(item);
       }
     }
 
     // Section 1 : Mentions liées (Backlinks)
     this._renderAuditSection(
       linksWrap,
-      "Linked mentions",
+      "Linked mentions (Backlinks)",
       linkedMentions,
       "link",
       (el) => this._renderLinkedMentionsList(el, linkedMentions, blockedTag),
       null,
-      linkedMentions.length > 0
+      linkedMentions.length > 0,
     );
 
-    // Section 2 : Mentions non liées
+    // Section 2 : Mentions non liées (Mycélium)
     this._renderAuditSection(
       linksWrap,
-      "Unlinked mentions",
+      "Unlinked mentions (Mycelium)",
       unlinkedMentions,
       "link-2",
       (el) => this._renderUnlinkedMentionsList(el, unlinkedMentions, activeFile, blockedTag),
       null,
-      unlinkedMentions.length > 0
+      unlinkedMentions.length > 0,
     );
 
     // Section 3 : Exclusions actives
@@ -996,7 +1209,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       "eye-off",
       (el) => this._renderExcludedMentionsList(el, excludedMentions, blockedTag),
       null,
-      excludedMentions.length > 0
+      excludedMentions.length > 0,
     );
   }
 
@@ -1007,7 +1220,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
       const noteLink = sourceRow.createEl("a", {
         cls: "stnd-audit-note-link",
-        text: item.basename
+        text: item.basename,
       });
       noteLink.addEventListener("click", () => {
         this.app.workspace.getLeaf().openFile(item);
@@ -1017,12 +1230,12 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       const hideBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-panel-btn-secondary stnd-audit-btn-compact",
-        text: "Hide"
+        text: "Hide",
       });
       obsidian_1.setIcon(hideBtn.createEl("span", { cls: "btn-icon" }), "eye-off");
 
       hideBtn.addEventListener("click", async () => {
-        await this.plugin.linkAssist.addTagToFile(item, blockedTag);
+        await this._addTagToFile(item, blockedTag);
         new obsidian_1.Notice(`Hidden: ${item.basename}`);
         this.refreshLinksData();
       });
@@ -1036,37 +1249,43 @@ class StandardGardenView extends obsidian_1.ItemView {
       const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
       const noteLink = sourceRow.createEl("a", {
         cls: "stnd-audit-note-link",
-        text: item.basename
+        text: item.file.basename,
       });
       noteLink.addEventListener("click", () => {
-        this.app.workspace.getLeaf().openFile(item);
+        this.app.workspace.getLeaf().openFile(item.file);
       });
+
+      if (item.term) {
+        const termBadge = sourceRow.createEl("span", {
+          cls: "stnd-panel-meta",
+          text: `mention: "${item.term}"`,
+        });
+        termBadge.style.marginLeft = "6px";
+        termBadge.style.fontSize = "11px";
+      }
 
       const actionsRow = card.createEl("div", { cls: "stnd-audit-card-actions" });
 
       const linkBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-audit-btn-compact",
-        text: "Link"
+        text: "Link",
       });
       obsidian_1.setIcon(linkBtn.createEl("span", { cls: "btn-icon" }), "link");
 
       linkBtn.addEventListener("click", async () => {
-        const content = await this.app.vault.read(item);
-        const newContent = this.plugin.linkAssist.replaceFirstUnlinkedOccurrence(content, activeFile.basename);
-        await this.app.vault.modify(item, newContent);
-        new obsidian_1.Notice(`Linked: [[${activeFile.basename}]] in ${item.basename}`);
+        await createMentionLink(this.plugin.app, activeFile, item);
         this.refreshLinksData();
       });
 
       const hideBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-panel-btn-secondary stnd-audit-btn-compact",
-        text: "Hide"
+        text: "Hide",
       });
       obsidian_1.setIcon(hideBtn.createEl("span", { cls: "btn-icon" }), "eye-off");
 
       hideBtn.addEventListener("click", async () => {
-        await this.plugin.linkAssist.addTagToFile(item, blockedTag);
-        new obsidian_1.Notice(`Hidden: ${item.basename}`);
+        await this._addTagToFile(item.file, blockedTag);
+        new obsidian_1.Notice(`Hidden: ${item.file.basename}`);
         this.refreshLinksData();
       });
     });
@@ -1079,7 +1298,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
       const noteLink = sourceRow.createEl("a", {
         cls: "stnd-audit-note-link",
-        text: item.basename
+        text: item.basename,
       });
       noteLink.addEventListener("click", () => {
         this.app.workspace.getLeaf().openFile(item);
@@ -1089,12 +1308,12 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       const restoreBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-audit-btn-compact",
-        text: "Restore"
+        text: "Restore",
       });
       obsidian_1.setIcon(restoreBtn.createEl("span", { cls: "btn-icon" }), "undo");
 
       restoreBtn.addEventListener("click", async () => {
-        await this.plugin.linkAssist.removeTagFromFile(item, blockedTag);
+        await this._removeTagFromFile(item, blockedTag);
         new obsidian_1.Notice(`Restored: ${item.basename}`);
         this.refreshLinksData();
       });

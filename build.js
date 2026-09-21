@@ -57,7 +57,7 @@ if (fs.existsSync(themesDir)) {
         // Strip any @use statements
         scssContent = scssContent.replace(/@use\s+['"][^'"]+['"]\s*;?/g, "");
         // Normalize theme selector to parent selector &
-        scssContent = scssContent.replace(new RegExp(`:root\\[data-theme=["']?${themeName}["']?\\]`, "g"), "&");
+        scssContent = scssContent.replace(new RegExp(`:root\\[data-theme=["']?${themeName}["']?\\],?\\s*`, "g"), "");
         scssContent = scssContent.replace(new RegExp(`\\[data-theme=["']?${themeName}["']?\\]`, "g"), "&");
         // Remap standard web selectors to Obsidian dual selectors
         scssContent = mapWebSelectorsToObsidian(scssContent);
@@ -187,17 +187,10 @@ esbuild
     console.log("Built dist/main.js");
 
     // ─── Bundle CSS ───────────────────────────────────────────────────────────
-    // Base + feature CSS only. Curated themes are bundled into main.js (above).
-    const filesToCombine = [
-      "base.css",
-      "design-system.css",
-      "panel.css",
-      "image.css",
-    ];
-
+    // Framework core + feature CSS. Curated themes are bundled into main.js (above).
     let combinedCss = "";
     
-    // Inject standard CSS first
+    // 1. Inject standard CSS first
     let standardCssPath = path.resolve(__dirname, "../../packages/styles/dist/obsidian.css");
     if (!fs.existsSync(standardCssPath)) {
       standardCssPath = path.join(__dirname, "node_modules", "@stnd", "styles", "dist", "obsidian.css");
@@ -209,19 +202,21 @@ esbuild
         console.warn("Warning: @stnd/styles/dist/obsidian.css not found. Did you run pnpm install or build @stnd/styles?");
     }
 
-    for (const file of filesToCombine) {
-      const filePath = path.join(srcDir, file);
-      if (fs.existsSync(filePath)) {
-        combinedCss += fs.readFileSync(filePath, "utf8") + "\n\n";
-      } else {
-        console.warn(`Warning: ${file} not found in src/`);
-      }
+    const featuresDir = path.join(srcDir, "features");
+
+    // 2. Inject Design System adapter styles next
+    const dsCssPath = path.join(featuresDir, "design-system", "styles.css");
+    if (fs.existsSync(dsCssPath)) {
+      combinedCss += "/* --- Feature: design-system (Adapter) --- */\n";
+      combinedCss += fs.readFileSync(dsCssPath, "utf8") + "\n\n";
+    } else {
+      console.warn("Warning: design-system/styles.css not found.");
     }
 
-    // Feature CSS
-    const featuresDir = path.join(srcDir, "features");
+    // 3. Inject all other feature styles in deterministic order
     if (fs.existsSync(featuresDir)) {
       for (const feature of fs.readdirSync(featuresDir).sort()) {
+        if (feature === "design-system") continue; // already injected first
         const cssFile = path.join(featuresDir, feature, "styles.css");
         if (fs.existsSync(cssFile)) {
           combinedCss += `/* --- Feature: ${feature} --- */\n`;

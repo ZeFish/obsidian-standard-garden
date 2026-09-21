@@ -1,0 +1,63 @@
+/* ─── Mycelium Feature Styles ────────────────────────────────────────────── */
+
+/* --- Ghost Links (Editor / Live Preview) --- */
+.mycelium-ghost-link {
+  text-decoration: underline dotted var(--text-accent, #c99352);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mycelium-ghost-link:hover {
+  background-color: var(--background-modifier-hover, rgba(201, 147, 82, 0.15));
+  color: var(--text-accent, #c99352);
+}
+
+/* --- Compost Footer (Reading View) --- */
+.mycelium-compost-footer {
+  margin-top: 36px;
+  margin-bottom: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.mycelium-footer-title {
+  margin: 0 0 12px 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.mycelium-footer-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mycelium-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.mycelium-footer-btn:hover {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent, #ffffff);
+  border-color: var(--interactive-accent);
+  transform: translateY(-1px);
+}

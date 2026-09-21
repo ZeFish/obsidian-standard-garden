@@ -1,3 +1,299 @@
+/* ========================================================================== */
+/* Standard Design System: Obsidian Adapter & Core Styling                     */
+/* ========================================================================== */
+
+/* ─── 1. Obsidian DOM Adapter & Resets ───────────────────────────────────── */
+/* ============================================= */
+/* Standard Garden → Chisel Bridge               */
+/* ============================================= */
+/* When a stnd note sets Standard Garden tokens,  */
+/* this bridge feeds them into chisel's engine.   */
+/* Chisel defaults are used as fallbacks.         */
+/* ============================================= */
+
+body.stnd-adapter {
+    --body-max-width: none;
+
+    /* Typography bridge */
+    --font-header: var(--font-text);
+    --font-density: 1.7;
+    --font-ratio: 1.33;
+    --font-line-width: 35rem;
+    --font-weight: 400;
+    --font-feature: "";
+    --font-variation: "";
+    --font-size: var(--font-text-size);
+    --bold-weight: var(--font-weight-bold, 600);
+    --font-header-weight: var(--font-weight-header, 400);
+    --font-header-letter-spacing: -0.025em;
+    --font-header-line-height: 1.3em;
+    --font-header-feature: "";
+    --font-header-variation: "";
+    --font-monospace-feature: "";
+    --font-monospace-variation: "";
+    --font-interface-feature: "";
+    --font-interface-variation: "";
+}
+
+body.stnd-adapter:not(:has(.modal.mod-settings)) {
+    padding: 0 !important;
+}
+
+/* Force native buttons in Obsidian to drop the web framework's shadow and borders */
+body.stnd-adapter button:not(.btn) {
+    box-shadow: none !important;
+    border-color: transparent !important;
+    background-color: transparent;
+}
+
+/*
+ * Standard CSS sets max-width on typography elements globally, which breaks Obsidian's own
+ * centering mechanism (.is-readable-line-width) and causes text to stick to the left.
+ * We disable it globally for Obsidian so it can manage its own container width.
+ */
+body.stnd-adapter p,
+body.stnd-adapter h1,
+body.stnd-adapter h2,
+body.stnd-adapter h3,
+body.stnd-adapter h4,
+body.stnd-adapter h5,
+body.stnd-adapter h6,
+body.stnd-adapter li,
+body.stnd-adapter div.callout,
+body.stnd-adapter summary {
+    max-width: unset;
+}
+
+body.stnd-adapter hr.workspace-leaf-resize-handle {
+ border-color:var(--divider-color)  !important;
+}
+body.stnd-adapter hr.workspace-leaf-resize-handle::after {
+    display:none !important;
+}
+
+/* ─── Sidebar transition ──────────────────────────────────────────────────── */
+
+body:not(.is-mobile).stnd-adapter .workspace-split.mod-left-split,
+body:not(.is-mobile).stnd-adapter .workspace-split.mod-right-split,
+body:not(.is-mobile).stnd-adapter .workspace-ribbon.mod-left {
+    transition: none;
+}
+
+body.stnd-adapter .inline-title {
+    margin-block-start: var(--img-grid-gap);
+}
+
+body.stnd-adapter.mod-macos:not(.is-mobile) .workspace:not(.is-left-sidedock-open) .view-header {
+    padding-left: calc(var(--size-4-2) + var(--frame-left-space));
+}
+
+/* Pre-collapse animation — narrows to 0 before Obsidian hides the element */
+body:not(.is-mobile).stnd-collapsing-left .workspace-split.mod-left-split,
+body:not(.is-mobile).stnd-collapsing-left .workspace-ribbon.mod-left {
+    width: 0 !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+}
+body:not(.is-mobile).stnd-collapsing-right .workspace-split.mod-right-split {
+    width: 0 !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+}
+
+/* Auto-hide ribbon — width collapses with the same transition */
+body:not(.is-mobile).stnd-ribbon-hidden .workspace-ribbon.mod-left {
+    width: 0 !important;
+    overflow: hidden;
+}
+
+/* Auto-hide status bar — slide out, reveal on bottom hover */
+body:not(.is-mobile).stnd-autohide-statusbar .status-bar {
+    transform: translateY(100%);
+    transition: transform 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body:not(.is-mobile).stnd-autohide-statusbar.stnd-statusbar-visible .status-bar {
+    transform: translateY(0);
+}
+.stnd-statusbar-zone {
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 8px;
+    z-index: 10;
+    pointer-events: all;
+}
+
+/* Hide vault name */
+body.stnd-hide-vault-name .workspace-sidedock-vault-profile,
+body.stnd-hide-vault-name .nav-vault-profile,
+body.stnd-hide-vault-name .workspace-drawer-vault-profile,
+body.stnd-hide-vault-name:not(.is-mobile) .workspace-split.mod-left-split .workspace-sidedock-vault-profile {
+    display: none !important;
+}
+
+/* Hide file explorer header */
+body.stnd-hide-file-nav-header .workspace-leaf-content[data-type="file-explorer"] .nav-header {
+    display: none;
+}
+
+/* Auto-hide tab bar when only one tab is open */
+body.stnd-single-tab .mod-root .workspace-tabs .workspace-tab-header-container {
+    display: none;
+}
+
+/* Edge hover zones — always-hittable strips at the workspace edges */
+.stnd-sidebar-zone {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 80vh;
+    width: 4rem;
+    z-index: 10;
+    pointer-events: all;
+}
+.stnd-sidebar-zone-left {
+    left: 0;
+}
+.stnd-sidebar-zone-right {
+    right: 0;
+}
+
+/* ─── Resize handle ──────────────────────────────────────────────────────── */
+
+body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle {
+    width: 8px !important;
+    border-radius: 4px;
+    background: transparent;
+    transition: background 0.2s;
+}
+body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle:hover,
+body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle:active {
+    background: color-mix(in srgb, var(--text-normal) 12%, transparent);
+}
+
+/* ─── Published note aura ─────────────────────────────────────────────────── */
+/*
+body .mod-root {
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-m);
+  transition: box-shadow 1s ease;
+}
+.mod-sidedock {
+  opacity: 0.97;
+}
+body.stnd-note-published
+  .mod-root
+  .workspace-tab-container
+  .workspace-leaf-content
+  .view-content {
+  border-top: 1px dotted color-mix(in srgb, var(--color-green) 50%, transparent);
+}
+
+body.stnd-note-published.stnd-note-unlisted
+  .mod-root
+  .workspace-tab-container
+  .workspace-leaf-content
+  .view-content {
+  border-top: 1px dotted
+    color-mix(in srgb, var(--color-orange) 75%, transparent);
+}
+
+body.stnd-note-published.stnd-note-private
+  .mod-root
+  .workspace-tab-container
+  .workspace-leaf-content
+  .view-content {
+  border-top: 1px dotted color-mix(in srgb, var(--color-red) 100%, transparent);
+}
+*/
+
+/* ─── Settings Sections (Flat Layout) ────────────────────────────────────── */
+
+.stnd-settings-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.stnd-settings-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.stnd-settings-section h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: var(--font-ui-large, 1.25rem);
+    font-weight: 600;
+}
+
+.stnd-settings-section .setting-item-description:not(.setting-item .setting-item-description) {
+    margin-top: 4px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    line-height: 1.5;
+}
+
+/* ─── Garden Connected Account Card Stats ────────────────────────────────── */
+
+.stnd-account-stats-container {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--background-secondary-alt);
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.stnd-account-stats-loading {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    width: 100%;
+    text-align: center;
+}
+
+.stnd-account-stat-col {
+    flex: 1;
+    text-align: center;
+}
+
+.stnd-account-stat-col.wide {
+    flex: 1.5;
+}
+
+.stnd-account-stat-value {
+    font-weight: 600;
+    font-size: var(--font-ui-large, 1.25rem);
+    color: var(--text-normal);
+}
+
+.stnd-account-stat-value.medium {
+    font-size: var(--font-ui-medium, 1.1rem);
+    line-height: 1.5;
+}
+
+.stnd-account-stat-label {
+    font-size: var(--font-smallest, 0.75rem);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* Reset CodeMirror widget buffers which are <img> tags */
+.stnd-adapter .cm-widgetBuffer {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* ─── 2. Design System Tokens & Typography ───────────────────────────────── */
 /* ============================================= */
 /* Standard Design System                         */
 /* Typography + Color + Vertical Rhythm           */
@@ -333,9 +629,9 @@ body.is-mobile.stnd-adapter.theme-dark {
 
     /*--color-accent-default: var(--color-accent);*/
     --color-accent-default: hsl(var(--accent-h) var(--accent-s) var(--accent-l));
-    --color-interactive: color-mix(in oklch, var(--color-accent) 25%, transparent);
-    --color-interactive-hover: color-mix(in oklch, var(--color-accent) 50%, transparent);
-    --color-interactive-hover-background: color-mix(in oklch, var(--color-accent) 15%, transparent);
+    --color-interactive: color-mix(in srgb, var(--color-accent) 25%, transparent);
+    --color-interactive-hover: color-mix(in srgb, var(--color-accent) 50%, transparent);
+    --color-interactive-hover-background: color-mix(in srgb, var(--color-accent) 15%, transparent);
     --color-interactive-hover-backgound: var(--color-interactive-hover-background);
     --color-icon: var(--text-muted);
     --bold-color: var(--color-bold);
@@ -635,12 +931,6 @@ body.stnd-adapter.theme-dark.is-mobile {
     --metadata-input-text-color: var(--text-muted);
     --input-placeholder-color: var(--color-icon);
 }
-body.stnd-adapter.theme-light pre,
-body.stnd-adapter.theme-dark pre {
-    color: var(--color-base-70);
-    background-color: var(--background-secondary);
-
-}
 body.stnd-adapter.theme-light .markdown-rendered mark,
 body.stnd-adapter.theme-light .cm-s-obsidian span.cm-highlight,
 body.stnd-adapter.theme-dark .markdown-rendered mark,
@@ -799,7 +1089,8 @@ body.stnd-adapter.theme-dark .canvas:not(.is-connecting) .canvas-edges g:hover p
 /* We define them here so they stay in sync with the OKLCH color system.     */
 
 body.stnd-adapter:where(.theme-light, .theme-dark) {
-    --code-normal: var(--color-base-70);
+    --code-background: var(--color-surface);
+    --code-normal: var(--color-foreground);
     --code-comment: var(--color-base-40);
     --code-keyword: var(--color-cyan);
     --code-operator: var(--color-base-50);
@@ -1016,9 +1307,6 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 .stnd-adapter .markdown-reading-view img {
     box-shadow: var(--shadow-raised), var(--shadow-ring);
 }
-.stnd-adapter .markdown-reading-view pre {
-    box-shadow: var(--shadow-inset), var(--shadow-ring);
-}
 
 .stnd-adapter .markdown-reading-view blockquote,
 .stnd-adapter .markdown-reading-view pre,
@@ -1055,16 +1343,10 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 .stnd-adapter .markdown-reading-view blockquote,
 .stnd-adapter .markdown-rendered blockquote,
 .stnd-adapter .markdown-preview-view blockquote {
-    font-style: italic;
-    color: var(--text-muted);
+    font-style: var(--blockquote-font-style, italic);
+    color: var(--blockquote-color, var(--color-muted, var(--text-muted)));
     padding: var(--space, 1rlh);
-    border-left: var(--stroke-width-lg, 2px) solid var(--color-border, var(--border-color));
-    border-top: 0;
-    border-right: 0;
-    border-bottom: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    border-inline-start: var(--blockquote-border-thickness, var(--stroke-width-lg, 2px)) solid var(--blockquote-border-color, var(--color-border, var(--border-color)));
 }
 
 .stnd-adapter .markdown-reading-view blockquote cite,
@@ -1157,4 +1439,62 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     .stnd-adapter .markdown-preview-view [class^="el-"] p + p {
         margin-block-start: 0.5em !important;
     }
+}
+
+/* ─── 3. Image Layout & Embeds ───────────────────────────────────────────── */
+/* ============================================= */
+/* Image Layout Styling                         */
+/* ============================================= */
+
+body.stnd-adapter {
+  --img-grid-gap: 0.5rlh;
+  --image-grid-fit: cover;
+}
+
+/* Base image styling */
+body.stnd-adapter .markdown-preview-section img,
+body.stnd-adapter .markdown-source-view img:not(.cm-widgetBuffer),
+body.stnd-adapter .image-embed img,
+body.stnd-adapter .internal-embed img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: var(--shadow-raised, 0 4px 16px rgba(0, 0, 0, 0.12));
+  margin-block: 0.5em;
+}
+
+/* Image Embed Container - preserve normal block flow to allow CodeMirror height measurement */
+body.stnd-adapter .image-embed,
+body.stnd-adapter .image-embed.is-loaded {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  line-height: normal;
+}
+
+/* Grid Layout Logic (Triggered ONLY when 2+ images exist in the SAME paragraph in Reading View) */
+body.stnd-adapter .markdown-reading-view :is(div, p):has(> :is(.image-embed, img) ~ :is(.image-embed, img)):not(.callout-content p) {
+  display: grid;
+  margin-block-start: var(--img-grid-gap);
+  margin-block-end: var(--img-grid-gap);
+  padding: 0;
+  grid-column-gap: var(--img-grid-gap);
+  grid-row-gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+/* Image behavior inside grid */
+body.stnd-adapter .markdown-reading-view :is(div, p):has(> :is(.image-embed, img) ~ :is(.image-embed, img)) :is(img, .internal-embed img) {
+  object-fit: var(--image-grid-fit);
+  align-self: stretch;
+  height: 100%;
+  width: 100%;
+  margin-block: 0;
+}
+
+/* Artifact Cleanup */
+body.stnd-adapter .markdown-preview-section > div:has(img) p:empty,
+body.stnd-adapter .markdown-preview-section > div:has(img) :is(img, .image-embed) ~ br {
+  display: none;
 }

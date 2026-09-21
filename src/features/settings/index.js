@@ -1,9 +1,9 @@
 "use strict";
 
 const { PluginSettingTab, requestUrl, setIcon } = require("obsidian");
-const { isPublishIntent } = require("../constants.js");
-const { GardenSettingTab } = require("../core/garden/settings-tab.js");
-const { DesignSystemSettingTab } = require("../core/design-system/settings-tab.js");
+const { isPublishIntent } = require("../../constants.js");
+const { GardenSettingTab } = require("../garden/settings-tab.js");
+const { DesignSystemSettingTab } = require("../design-system/settings-tab.js");
 
 class AccountSettingTab {
   constructor(app, plugin, rootTab) {
@@ -234,12 +234,45 @@ class StandardSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
+    this._cleanupAltListeners = null;
+  }
+
+  hide() {
+    super.hide();
+    if (this._cleanupAltListeners) {
+      this._cleanupAltListeners();
+      this._cleanupAltListeners = null;
+    }
   }
 
   display() {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("stnd-settings-flat");
+
+    // Clean up any existing listeners before re-attaching
+    if (this._cleanupAltListeners) {
+      this._cleanupAltListeners();
+      this._cleanupAltListeners = null;
+    }
+
+    const onKeyDown = (e) => {
+      if (e.key === "Alt" || e.altKey) {
+        containerEl.addClass("stnd-show-advanced");
+      }
+    };
+    const onKeyUp = (e) => {
+      if (e.key === "Alt" || !e.altKey) {
+        containerEl.removeClass("stnd-show-advanced");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    this._cleanupAltListeners = () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
 
     // ── 1. Compte ──
     const accountTab = new AccountSettingTab(this.app, this.plugin, this);
@@ -258,11 +291,19 @@ class StandardSettingTab extends PluginSettingTab {
 
     // ── 4. Mycelium (optional) ──
     if (this.plugin.settings.enableMycelium) {
-      const { MyceliumSettingTab } = require("../features/mycelium/index.js");
+      const { MyceliumSettingTab } = require("../mycelium/index.js");
       const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
       myceliumTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
       myceliumTab.display();
     }
+
+    // ── 5. Alt Hint ──
+    const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    const keyName = isMac ? "⌥ Option" : "Alt";
+    const hint = containerEl.createDiv({ cls: "stnd-alt-hint" });
+    hint.createEl("span", {
+      text: `Maintenez la touche ${keyName} pour révéler les outils avancés de maintenance.`,
+    });
   }
 }
 

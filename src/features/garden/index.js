@@ -9,8 +9,8 @@ const {
   isAttachmentFile,
   getMimeType,
 } = require("../../constants");
-const { StndConfirmModal } = require("../../ui/confirm-modal");
-const { StndAskModal } = require("../../ui/ask-modal");
+const { StndConfirmModal } = require("./modals/confirm-modal");
+const { StndAskModal } = require("./modals/ask-modal");
 
 
 // Slugifie un nom de fichier pour l'URL publique.
@@ -601,9 +601,9 @@ class GardenFeature {
   }
 
   async load() {
-    if (this.plugin.settings.autoSyncStartup && this.plugin.settings.apiKey) {
+    if (this.plugin.settings.autoSync && this.plugin.settings.apiKey) {
       setTimeout(() => {
-        this.syncAllPublished();
+        this.pollRemoteChanges();
       }, 5000);
     }
     this.setupAutoSyncInterval();
@@ -622,14 +622,29 @@ class GardenFeature {
       this.syncIntervalTimer = null;
     }
 
-    const minutes = parseInt(this.plugin.settings.autoSyncInterval, 10) || 0;
-    if (minutes > 0 && this.plugin.settings.apiKey) {
+    const enabled = !!this.plugin.settings.autoSync;
+    if (enabled && this.plugin.settings.apiKey) {
+      // Polling passif toutes les 5 minutes (300 000 ms)
       const timer = window.setInterval(() => {
-        this.syncAllPublished();
-      }, minutes * 60 * 1000);
+        this.pollRemoteChanges();
+      }, 5 * 60 * 1000);
       
       this.syncIntervalTimer = timer;
       this.plugin.registerInterval(timer);
+    }
+  }
+
+  async pollRemoteChanges() {
+    if (!this.plugin.settings.apiKey) return;
+    try {
+      const activeFile = this.app.workspace.getActiveFile();
+      const { PublishStatusFeature } = require("../publish-status/index.js");
+      const statusFeature = this.plugin.features.find((f) => f instanceof PublishStatusFeature);
+      if (statusFeature && activeFile) {
+        await statusFeature.triggerStatusCheck(activeFile);
+      }
+    } catch (e) {
+      // Ignorer silencieusement les erreurs réseau en tâche de fond
     }
   }
 
@@ -1036,10 +1051,12 @@ class GardenFeature {
                 if (remoteNote.nano_id) {
                   fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
                 }
-                if (!fm.created) {
-                  fm.created = remoteNote.created_at || new Date(file.stat?.ctime || Date.now()).toISOString();
+                if (fm.created != null && remoteNote.created_at) {
+                  fm.created = remoteNote.created_at;
                 }
-                fm.modified = remoteNote.updated_at || new Date().toISOString();
+                if (fm.modified != null && remoteNote.updated_at) {
+                  fm.modified = remoteNote.updated_at;
+                }
               });
               pulled++;
               modal.recordResult("pulled", file.basename);
@@ -1083,10 +1100,12 @@ class GardenFeature {
               if (remoteNote.nano_id) {
                 fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
               }
-              if (!fm.created) {
-                fm.created = remoteNote.created_at || new Date().toISOString();
+              if (fm.created != null && remoteNote.created_at) {
+                fm.created = remoteNote.created_at;
               }
-              fm.modified = remoteNote.updated_at || new Date().toISOString();
+              if (fm.modified != null && remoteNote.updated_at) {
+                fm.modified = remoteNote.updated_at;
+              }
             });
 
             created++;
@@ -1170,10 +1189,10 @@ class GardenFeature {
           if (remoteNote.nano_id && !fm["garden-short"]) {
             fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
           }
-          if (!fm.created && remoteNote.created_at) {
+          if (fm.created != null && remoteNote.created_at) {
             fm.created = remoteNote.created_at;
           }
-          if (!fm.modified && remoteNote.updated_at) {
+          if (fm.modified != null && remoteNote.updated_at) {
             fm.modified = remoteNote.updated_at;
           }
         });
@@ -1206,17 +1225,19 @@ class GardenFeature {
         await this.app.fileManager.processFrontMatter(file, (fm) => {
           // Ne pas écraser une date : `publish: 2026-08-07` est une intention
           // de publication valide *et* la clé de tri du jardin. La remplacer
-          // par `true` à chaque publication détruirait l\'ordre voulu.
+          // par `true` à chaque publication détruirait l'ordre voulu.
           if (!isPublishIntent(fm)) fm.status = "public";
           fm["garden-url"] = this.getLiveUrl(file);
           fm.permalink = remoteNote.slug;
           if (remoteNote.nano_id) {
             fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
           }
-          if (!fm.created) {
-            fm.created = remoteNote.created_at || new Date().toISOString();
+          if (fm.created != null && remoteNote.created_at) {
+            fm.created = remoteNote.created_at;
           }
-          fm.modified = remoteNote.updated_at || new Date().toISOString();
+          if (fm.modified != null && remoteNote.updated_at) {
+            fm.modified = remoteNote.updated_at;
+          }
         });
         created++;
       }
@@ -1808,6 +1829,15 @@ class GardenFeature {
       const resolvedSlug =
         fmSlugBefore != null ? String(fmSlugBefore).replace(/^\/+|\/+$/g, "") : basenameSlug;
       const slug = resolvedSlug === "" ? "~root" : resolvedSlug;
+
+      // T29: Détecter created_at et updated_at depuis le frontmatter ou file.stat sans forcer l'écriture
+      const createdAt =
+        fmBefore.created ||
+        (file.stat?.ctime ? new Date(file.stat.ctime).toISOString() : new Date().toISOString());
+      const modifiedAt =
+        fmBefore.modified ||
+        (file.stat?.mtime ? new Date(file.stat.mtime).toISOString() : new Date().toISOString());
+
       const response = await fetchWithRetry(
         `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
         {
@@ -1820,6 +1850,8 @@ class GardenFeature {
             title: file.basename,
             content,
             slug,
+            created_at: createdAt,
+            updated_at: modifiedAt,
           }),
         },
       );
@@ -1853,10 +1885,10 @@ class GardenFeature {
         if (data && data.nano_id) {
           fm["garden-short"] = `https://stnd.gd/${data.nano_id}`;
         }
-        if (!fm.created) {
-          fm.created = new Date(file.stat?.ctime || Date.now()).toISOString();
+        // T29: Ne plus injecter de clés temporelles de force si l'utilisateur ne les utilise pas
+        if (fm.modified != null) {
+          fm.modified = new Date().toISOString();
         }
-        fm.modified = new Date().toISOString();
       });
 
       return true;
@@ -2130,6 +2162,43 @@ class GardenFeature {
         () => resolve(null),
       ).open();
     });
+  }
+
+  async getNoteStats(file) {
+    if (!this.plugin.settings.apiKey || this.isPathExcluded(file.path)) {
+      return null;
+    }
+    try {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+      const fmSlug = fm.permalink ?? fm.slug;
+      const basenameSlug = slugify(file.basename);
+      const resolved =
+        fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
+      const slug = resolved === "" ? "~root" : resolved;
+
+      const response = await fetchWithRetry(
+        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": this.plugin.settings.apiKey },
+        },
+      );
+
+      if (response.status === 200) {
+        const data = await response.json();
+        return {
+          views: data.views || 0,
+          citations: Array.isArray(data.citations) ? data.citations : [],
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          online: true,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("[Standard] Error fetching note stats:", err);
+      return null;
+    }
   }
 
   async askGardenAI() {

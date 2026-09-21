@@ -90,15 +90,27 @@ const DEFAULT_SETTINGS = {
   apiUrl: "https://standard.garden/api",
   openAfterPublish: false,
   publishStatusLocation: "titlebar", // Location of the publish status action: titlebar, statusbar, ribbon, hidden
-  autoSyncStartup: true,
+  publishIndicatorStyle: "garden", // Bottom view indicator: garden (animated organic gradient), subtle (minimal accent line), hidden (disabled)
+  autoSync: false, // Automatic background synchronization (disabled by default to protect local drafts)
+  autoSyncStartup: false,
   syncDirection: "2way",
   excludedFolders: "Utopie",
   enableMycelium: false,
   mycelium: {
     enableGhostLinks: false,
-    enableGraftingCommand: true,
-    enableCompostFooter: true
+    enableLinkingCommand: true,
+    enableCompostFooter: false,
   }
+};
+
+const DOCS_URLS = {
+  plugin: "https://stnd.build/manual/system/obsidian-plugin",
+  sync: "https://stnd.build/manual/system/obsidian-plugin#synchronisation",
+  tokens: "https://stnd.build/manual/system/obsidian-design-tokens",
+  cssHooks: "https://stnd.build/manual/system/css-and-rendering-hooks",
+  typography: "https://stnd.build/manual/standard/typography",
+  frontmatter: "https://stnd.build/manual/standard/frontmatter",
+  syntax: "https://stnd.build/manual/standard/syntax",
 };
 
 // ─── Settings UI Helpers ─────────────────────────────────────────────────────
@@ -226,4 +238,5 @@ module.exports = {
   isAttachmentFile,
   getMimeType,
   descWithLinks,
+  DOCS_URLS,
 };

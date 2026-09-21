@@ -1,6 +1,8 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { StandardDirectiveSuggest } = require("./suggest.js");
+const { FeedCardRenderer } = require("../feed/index.js");
 
 // ─── Video Helpers ───────────────────────────────────────────────
 function extractYouTubeId(url) {
@@ -48,6 +50,9 @@ class SyntaxPreviewFeature {
     this.plugin.registerMarkdownPostProcessor((el, ctx) => {
       this.processSyntaxDirectives(el, ctx);
     });
+    this.plugin.registerEditorSuggest(
+      new StandardDirectiveSuggest(this.app, this.plugin),
+    );
   }
 
   async unload() {}
@@ -119,14 +124,14 @@ class SyntaxPreviewFeature {
       }
 
       // Dynamic feeds and lists of notes
-      const feedMatch = text.match(/^::(feed|list)\s+(#[^\s]+)/i);
+      const feedMatch = text.match(/^::(feed|list)(?:\s+([^\n]+))?$/i);
       if (feedMatch) {
         const type = feedMatch[1].toLowerCase();
-        const tag = feedMatch[2];
+        const tag = (feedMatch[2] || "").trim();
         const container = document.createElement("div");
         container.className = `dynamic-feed-container feed-type-${type}`;
-        
-        this.renderFeedOrList(container, type, tag);
+
+        this.renderFeedOrList(container, type, tag, ctx);
         p.replaceWith(container);
         return;
       }
@@ -203,96 +208,8 @@ class SyntaxPreviewFeature {
     }
   }
 
-  renderFeedOrList(container, type, tag) {
-    const cleanTag = tag.replace(/^#/, "").trim();
-    const files = this.app.vault.getMarkdownFiles();
-    const matches = [];
-
-    const publishKey = (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
-
-    for (const file of files) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm = cache?.frontmatter || {};
-      const fileTags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === "string" ? [fm.tags] : []);
-      const allTags = [...fileTags, ...(cache?.tags || []).map(t => t.tag)];
-      const hasTag = allTags.some(t => String(t).toLowerCase().replace(/^#/, "") === cleanTag.toLowerCase());
-
-      if (hasTag) {
-        // Must be marked for publishing to show in the feed (same behavior as standard.garden)
-        if (fm[publishKey] === true) {
-          matches.push({
-            file,
-            title: fm.title || file.basename,
-            mtime: file.stat.mtime,
-            excerpt: fm.excerpt || "",
-            visibility: fm.visibility || "public"
-          });
-        }
-      }
-    }
-
-    // Sort from newest to oldest (mtime DESC)
-    matches.sort((a, b) => b.mtime - a.mtime);
-
-    if (matches.length === 0) {
-      const emptyMsg = container.createEl("p", { 
-        text: `No public notes found for ${tag}`, 
-        cls: "feed-empty" 
-      });
-      emptyMsg.style.opacity = "0.6";
-      emptyMsg.style.fontStyle = "italic";
-      return;
-    }
-
-    if (type === "list") {
-      const ul = container.createEl("ul", { cls: "feed-list" });
-      matches.forEach((m) => {
-        const li = ul.createEl("li");
-        const a = li.createEl("a", { 
-          text: m.title, 
-          cls: "internal-link stnd-feed-link" 
-        });
-        a.style.cursor = "pointer";
-        a.addEventListener("click", (e) => {
-          e.preventDefault();
-          this.app.workspace.getLeaf().openFile(m.file);
-        });
-      });
-    } else {
-      // flat feed view
-      const grid = container.createDiv({ cls: "feed-articles" });
-      grid.style.cssText = "display: flex; flex-direction: column; gap: 1.5rem; margin: 1.5rem 0;";
-
-      matches.forEach((m) => {
-        const article = grid.createDiv({ cls: "feed-article" });
-        article.style.cssText = "padding: 0.5rem 0; cursor: pointer;";
-        article.addEventListener("click", () => this.app.workspace.getLeaf().openFile(m.file));
-
-        const title = article.createEl("h4", { 
-          text: m.title,
-          cls: "feed-title"
-        });
-        title.style.cssText = "margin: 0 0 0.25rem 0; font-size: 1.15em; font-weight: 600; color: var(--text-accent);";
-
-        const meta = article.createDiv({ cls: "feed-meta" });
-        meta.style.cssText = "font-size: var(--font-ui-smaller); opacity: 0.6; margin-bottom: 0.25rem;";
-        
-        const dateStr = new Date(m.mtime).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        });
-        meta.setText(dateStr);
-
-        if (m.excerpt) {
-          const excerpt = article.createEl("p", { 
-            text: m.excerpt,
-            cls: "feed-excerpt"
-          });
-          excerpt.style.cssText = "margin: 0.5rem 0 0 0; font-size: var(--font-ui-small); opacity: 0.8; line-height: 1.4;";
-        }
-      });
-    }
+  renderFeedOrList(container, type, tag, ctx = null) {
+    FeedCardRenderer.renderFeedOrList(this.app, container, type, tag, this.plugin, ctx);
   }
 
   splitInnerElements(elements) {

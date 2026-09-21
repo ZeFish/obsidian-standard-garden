@@ -1,7 +1,7 @@
 "use strict";
 
 const { PluginSettingTab, Setting, Notice } = require("obsidian");
-const { descWithLinks } = require("../../constants.js");
+const { descWithLinks, DOCS_URLS } = require("../../constants.js");
 
 class DesignSystemSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
@@ -16,18 +16,21 @@ class DesignSystemSettingTab extends PluginSettingTab {
     // ─── Design System Section ───────────────────────────────────────────
     containerEl.createEl("h2", { text: "Apparence" });
     const desc = containerEl.createEl("p", {
-      text: "The Standard Design System guarantees 1:1 typographic fidelity between your local editor and your online garden. Frontmatter tokens and curated typography are rendered directly in the workspace.",
+      text: "The Standard Design System guarantees 1:1 typographic fidelity between your local editor and your online garden. Frontmatter tokens and curated typography are rendered directly in the workspace. ",
       cls: "setting-item-description",
     });
     desc.createEl("a", {
-      text: "View Design System Manual",
-      href: "https://stnd.build/3-archives/obsidian-plugin#3-themes--design-system",
+      text: "View Design System Manual →",
+      href: DOCS_URLS.tokens,
     });
 
     new Setting(containerEl)
       .setName("Standard Design System")
       .setDesc(
-        "Apply classical typography, fluid vertical rhythm, callouts, and harmonious color palettes across notes."
+        descWithLinks(
+          "Apply classical typography, fluid vertical rhythm, callouts, and harmonious color palettes across notes. §",
+          [{ text: "Learn more →", href: DOCS_URLS.typography }]
+        )
       )
       .addToggle((toggle) =>
         toggle
@@ -36,13 +39,18 @@ class DesignSystemSettingTab extends PluginSettingTab {
             this.plugin.settings.enableDesignSystem = value;
             await this.plugin.saveSettings();
             this.plugin.design.updateBodyClasses();
-          }),
+          })
       );
 
     const THEMES = require("../../themes.generated.js");
     new Setting(containerEl)
       .setName("Default Theme")
-      .setDesc("Select the default theme for notes that do not specify a theme in their frontmatter.")
+      .setDesc(
+        descWithLinks(
+          "Select the default theme for notes that do not specify a theme in their frontmatter. §",
+          [{ text: "Browse themes →", href: DOCS_URLS.tokens }]
+        )
+      )
       .addDropdown((dropdown) => {
         dropdown.addOption("", "None (Default)");
         Object.keys(THEMES).forEach((themeName) => {
@@ -57,9 +65,9 @@ class DesignSystemSettingTab extends PluginSettingTab {
           });
       });
 
-    // Cache and hooks settings hidden for now
-    /*
-    const cacheSetting = new Setting(containerEl)
+    // ─── Advanced settings (revealed via Alt / ⌥ Option key) ───────────────────
+    new Setting(containerEl)
+      .setClass("stnd-advanced-setting")
       .setName("Clear theme cache")
       .setDesc("Forces the plugin to re-scan and reload all theme stylesheets defined in your vault.")
       .addButton((btn) =>
@@ -68,21 +76,23 @@ class DesignSystemSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
           await this.plugin.design.updateBodyClasses();
           new Notice("Theme cache cleared");
-        }),
+        })
       );
 
-    const hooksSetting = new Setting(containerEl)
+    new Setting(containerEl)
+      .setClass("stnd-advanced-setting")
       .setName("CSS Hooks Reference")
-      .setDesc(descWithLinks(
-        "The plugin continuously reflects active workspace states (such as .stnd-adapter, .stnd-published) onto the workspace. §",
-        [{ text: "Read CSS hooks documentation", href: "https://stnd.build/2-system/css-hooks" }]
-      ))
+      .setDesc(
+        descWithLinks(
+          "The plugin continuously reflects active workspace states (such as .stnd-adapter, .stnd-published) onto the workspace. §",
+          [{ text: "Read CSS hooks documentation →", href: DOCS_URLS.cssHooks }]
+        )
+      )
       .addButton((btn) =>
         btn.setButtonText("View CSS Hooks").onClick(() => {
-          window.open("https://stnd.build/2-system/css-hooks", "_blank");
-        }),
+          window.open(DOCS_URLS.cssHooks, "_blank");
+        })
       );
-    */
   }
 }
 

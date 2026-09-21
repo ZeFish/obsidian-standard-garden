@@ -43,12 +43,17 @@ class PublishStatusFeature {
   }
 
   cleanupAll() {
-    // 1. Nettoyer les boutons de titre
+    // 1. Nettoyer les boutons de titre et les indicateurs en bas de note
     this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
       const el = leaf.view && leaf.view._stndPublishAction;
       if (el) {
         el.remove();
         delete leaf.view._stndPublishAction;
+      }
+      const indicator = leaf.view && leaf.view._stndBottomIndicator;
+      if (indicator) {
+        indicator.remove();
+        delete leaf.view._stndBottomIndicator;
       }
     });
 
@@ -138,19 +143,20 @@ class PublishStatusFeature {
   refreshAll() {
     const hasKey = !!this.plugin.settings.apiKey;
     const location = this.plugin.settings.publishStatusLocation || "titlebar";
+    const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
 
-    if (!hasKey || location === "hidden") {
+    if (!hasKey && indicatorStyle === "hidden") {
       this.cleanupAll();
       return;
     }
 
     const activeFile = this.app.workspace.getActiveFile();
-    if (activeFile) {
+    if (activeFile && hasKey) {
       this.triggerStatusCheck(activeFile);
     }
 
-    // Nettoyer les autres widgets inutilisés pour l'emplacement actuel
-    if (location !== "titlebar") {
+    // Nettoyer les widgets inutilisés pour l'emplacement actuel
+    if (location !== "titlebar" || !hasKey || location === "hidden") {
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         const el = leaf.view && leaf.view._stndPublishAction;
         if (el) {
@@ -160,38 +166,84 @@ class PublishStatusFeature {
       });
     }
 
-    if (location !== "statusbar" && this.statusBarEl) {
+    if ((location !== "statusbar" || !hasKey || location === "hidden") && this.statusBarEl) {
       this.statusBarEl.remove();
       this.statusBarEl = null;
     }
 
-    if (location !== "ribbon" && this.ribbonEl) {
+    if ((location !== "ribbon" || !hasKey || location === "hidden") && this.ribbonEl) {
       this.ribbonEl.remove();
       this.ribbonEl = null;
     }
 
     // Mettre à jour ou créer le widget de l'emplacement actif
-    if (location === "titlebar") {
-      this.app.workspace
-        .getLeavesOfType("markdown")
-        .forEach((leaf) => this.refreshLeaf(leaf));
-    } else if (location === "statusbar") {
-      this.refreshStatusBar();
-    } else if (location === "ribbon") {
-      this.refreshRibbon();
+    if (hasKey && location !== "hidden") {
+      if (location === "titlebar") {
+        this.app.workspace
+          .getLeavesOfType("markdown")
+          .forEach((leaf) => this.refreshLeaf(leaf));
+      } else if (location === "statusbar") {
+        this.refreshStatusBar();
+      } else if (location === "ribbon") {
+        this.refreshRibbon();
+      }
     }
+
+    // Mettre à jour l'indicateur visuel de bas de note pour chaque onglet markdown
+    this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
+      this.refreshBottomIndicator(leaf, indicatorStyle);
+    });
   }
 
   refreshForFile(file) {
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && activeFile.path === file.path) {
       this.refreshAll();
-    } else if (this.plugin.settings.publishStatusLocation === "titlebar") {
+    } else {
+      const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         if (leaf.view && leaf.view.file && leaf.view.file.path === file.path) {
-          this.refreshLeaf(leaf);
+          if (this.plugin.settings.publishStatusLocation === "titlebar") {
+            this.refreshLeaf(leaf);
+          }
+          this.refreshBottomIndicator(leaf, indicatorStyle);
         }
       });
+    }
+  }
+
+  refreshBottomIndicator(leaf, indicatorStyle, triggerAnimation = false) {
+    const view = leaf?.view;
+    if (!view || !view.containerEl || !view.file) return;
+
+    let indicator = view._stndBottomIndicator;
+    if (indicatorStyle === "hidden") {
+      if (indicator) {
+        indicator.remove();
+        delete view._stndBottomIndicator;
+      }
+      return;
+    }
+
+    const fm = this.app.metadataCache.getFileCache(view.file)?.frontmatter || null;
+    const key = this.stateKey(fm, view.file.path);
+
+    if (!indicator || !indicator.isConnected) {
+      indicator = document.createElement("div");
+      indicator.className = "stnd-bottom-indicator";
+      view.containerEl.appendChild(indicator);
+      view._stndBottomIndicator = indicator;
+    }
+
+    indicator.className = `stnd-bottom-indicator stnd-style-${indicatorStyle} stnd-state-${key}`;
+    const stateLabel = STATES[key]?.label || key;
+    indicator.setAttribute("title", `Garden: ${stateLabel}`);
+
+    if (triggerAnimation && indicatorStyle === "garden") {
+      indicator.classList.remove("stnd-growing");
+      // Force reflow pour relancer l'animation
+      void indicator.offsetWidth;
+      indicator.classList.add("stnd-growing");
     }
   }
 
@@ -298,6 +350,11 @@ class PublishStatusFeature {
             ? `Standard : "${file.basename}" publié.`
             : `Standard : Échec de la publication de "${file.basename}".`,
         );
+        if (ok) {
+          const leaf = view.leaf || { view };
+          const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
+          this.refreshBottomIndicator(leaf, indicatorStyle, true);
+        }
         if (ok && garden.plugin.settings.openAfterPublish) {
           garden.viewLiveVersion(file);
         }
@@ -390,7 +447,15 @@ class PublishStatusFeature {
       i
         .setTitle("Synchroniser toutes les notes")
         .setIcon("folder-sync")
-        .onClick(() => garden.syncAllPublished()),
+        .onClick(async () => {
+          await garden.syncAllPublished();
+          const activeView = this.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
+          if (activeView) {
+            const leaf = activeView.leaf || { view: activeView };
+            const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
+            this.refreshBottomIndicator(leaf, indicatorStyle, true);
+          }
+        }),
     );
     menu.showAtMouseEvent(evt);
   }

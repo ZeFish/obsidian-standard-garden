@@ -1,0 +1,82 @@
+/* Suggest popup styling for :: directive suggestions */
+.suggestion-item.stnd-suggest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: var(--radius-s, 4px);
+  transition: background-color 100ms ease;
+}
+
+.stnd-suggest-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.stnd-suggest-name {
+  font-weight: 600;
+  font-family: var(--font-monospace, monospace);
+  font-size: var(--font-ui-small, 0.9em);
+  color: var(--text-accent, #6366f1);
+}
+
+.stnd-suggest-badge {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  background: var(--background-modifier-border, rgba(125, 125, 125, 0.2));
+  color: var(--text-muted);
+}
+
+.stnd-suggest-badge.badge-flux {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--interactive-accent, #6366f1);
+}
+
+.stnd-suggest-badge.badge-bloc {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.stnd-suggest-badge.badge-mise-en-page {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.stnd-suggest-badge.badge-smart {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.stnd-suggest-badge.badge-media {
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.stnd-suggest-badge.badge-alerte {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.stnd-suggest-syntax {
+  margin-left: auto;
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.75em;
+  color: var(--text-muted);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.stnd-suggest-desc {
+  font-size: var(--font-ui-smaller, 0.8em);
+  color: var(--text-muted);
+  line-height: 1.35;
+}
