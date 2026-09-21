@@ -972,6 +972,14 @@ body.stnd-adapter.theme-dark .is-translucent:not(.is-fullscreen) {
     --nav-collapse-icon-color: color-mix(in oklch, var(--color-foreground) 30%, transparent);
     --nav-collapse-icon-color-collapsed: color-mix(in oklch, var(--color-foreground) 30%, transparent);
 }
+
+.workspace-tabs .workspace-leaf,body.stnd-adapter .workspace-leaf-content[data-type=file-properties] {background: var(--background-secondary) !important ;}
+
+
+
+
+
+
 body.stnd-adapter.theme-light .diff-line.mod-left,
 body.stnd-adapter.theme-dark .diff-line.mod-left {
     background-color: color-mix(in oklch, var(--background-modifier-error) 20%, transparent);
@@ -1084,6 +1092,10 @@ body.stnd-adapter.theme-dark .canvas:not(.is-connecting) .canvas-edges g:hover p
     stroke: color-mix(in oklch, var(--canvas-color) 10%, transparent);
 }
 
+
+body.stnd-adapter:not(.sidebar-color) .mod-right-split {
+background-color: var(--background-secondary);
+}
 /* ─── Obsidian --code-* variables (consumed by Templater + CM5 themes) ─── */
 /* Templater's styles.css references these with hardcoded fallbacks.         */
 /* We define them here so they stay in sync with the OKLCH color system.     */
@@ -1365,9 +1377,9 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     border-radius: var(--radius-m);
     border: 0;
     padding: 0.25rlh;
-    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-primary));
+    background-color: color-mix(in srgb, var(--color-callout) 6%, var(--background-primary));
     box-shadow: var(--shadow-raised), var(--shadow-ring);
-    margin-block: 1rlh;
+    margin-block: 2rlh;
 }
 
 .stnd-adapter .callout .callout-title {
@@ -1384,11 +1396,11 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 }
 
 .stnd-adapter .callout .callout-content {
-    background-color: color-mix(in srgb, var(--color-callout) 10%, var(--background-secondary));
+    background-color: color-mix(in srgb, var(--color-callout) 2%, var(--background-secondary));
     box-shadow: var(--shadow-inset), var(--shadow-ring);
     border-radius: var(--radius-m);
-    padding: 0.75rlh;
-    font-size: var(--font-small);
+    padding: 1rlh 0.75rlh;
+    font-size: var(--size-sm);
     color: var(--text-normal);
     margin-left: 0;
 }
