@@ -461,7 +461,7 @@ const ghostLinksPlugin = ViewPlugin.fromClass(
               Decoration.mark({
                 class: "mycelium-ghost-link",
                 attributes: {
-                  title: `🌱 Alt+Click to link to ${sug.file.basename}`,
+                  title: `🌱 Click to open ${sug.file.basename} · Alt+Click to link`,
                   "data-target": sug.file.path,
                   "data-term": term,
                   "data-basename": sug.file.basename,
@@ -519,7 +519,12 @@ const ghostLinksPlugin = ViewPlugin.fromClass(
           return true;
         }
 
-        return false;
+        // Desktop: plain click just navigates to the mentioned note,
+        // it never edits the current file (that's what Alt+Click is for).
+        e.preventDefault();
+        e.stopPropagation();
+        app.workspace.getLeaf(e.ctrlKey || e.metaKey).openFile(file);
+        return true;
       },
     },
   }
@@ -549,6 +554,89 @@ class LinkingModal extends SuggestModal {
 
   async onChooseSuggestion(suggestion, evt) {
     await createMentionLink(this.app, this.activeFile, suggestion);
+  }
+}
+
+// ─── Reading View: Inline Ghost Links ─────────────────────────────────────────
+// DOM equivalent of the CM6 ghostLinksPlugin above, for Reading View where
+// there is no CodeMirror instance to attach decorations to.
+
+function applyGhostLinksToTextNode(node, sortedSuggestions) {
+  const text = node.nodeValue;
+  const matches = [];
+
+  for (const sug of sortedSuggestions) {
+    const regex = new RegExp(`\\b${escapeRegex(sug.term)}\\b`, "gi");
+    let m;
+    while ((m = regex.exec(text)) !== null) {
+      const start = m.index;
+      const end = start + m[0].length;
+      const overlaps = matches.some((r) => start < r.end && end > r.start);
+      if (!overlaps) matches.push({ start, end, sug, text: m[0] });
+    }
+  }
+  if (!matches.length) return;
+
+  matches.sort((a, b) => a.start - b.start);
+
+  const frag = document.createDocumentFragment();
+  let cursor = 0;
+  for (const m of matches) {
+    if (m.start > cursor) {
+      frag.appendChild(document.createTextNode(text.slice(cursor, m.start)));
+    }
+    const span = document.createElement("span");
+    span.className = "mycelium-ghost-link";
+    span.textContent = m.text;
+    span.setAttribute("title", `🌱 Click to open ${m.sug.file.basename}`);
+    span.setAttribute("data-target", m.sug.file.path);
+    span.setAttribute("data-term", m.sug.term);
+    span.setAttribute("data-basename", m.sug.file.basename);
+    frag.appendChild(span);
+    cursor = m.end;
+  }
+  if (cursor < text.length) {
+    frag.appendChild(document.createTextNode(text.slice(cursor)));
+  }
+
+  node.parentNode.replaceChild(frag, node);
+}
+
+function applyReadingGhostLinks(root, suggestions) {
+  const sortedSuggestions = [...suggestions]
+    .filter((s) => s.term && s.term.length >= 2)
+    .sort((a, b) => (b.term?.length || 0) - (a.term?.length || 0));
+  if (!sortedSuggestions.length) return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const val = node.nodeValue;
+      if (!val || !val.trim()) return NodeFilter.FILTER_REJECT;
+      let p = node.parentElement;
+      while (p) {
+        const tag = p.tagName;
+        if (tag === "A" || tag === "CODE" || tag === "PRE" || tag === "BUTTON") {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (
+          p.classList?.contains("mycelium-ghost-link") ||
+          p.classList?.contains("mycelium-compost-footer")
+        ) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (p === root) break;
+        p = p.parentElement;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  const textNodes = [];
+  let n;
+  while ((n = walker.nextNode())) textNodes.push(n);
+
+  for (const node of textNodes) {
+    applyGhostLinksToTextNode(node, sortedSuggestions);
   }
 }
 
@@ -583,12 +671,17 @@ class MyceliumFeature {
 
     ghostLinksRevision++;
 
-    // Notify CodeMirror views to re-render decorations
+    // Notify CodeMirror views (editor/live preview) and Reading View to
+    // re-render their decorations/postprocessors with the fresh cache.
     this.app.workspace.iterateAllLeaves((leaf) => {
-      if (leaf.view instanceof MarkdownView && leaf.view.editor?.cm) {
+      if (!(leaf.view instanceof MarkdownView)) return;
+      if (leaf.view.editor?.cm) {
         try {
           leaf.view.editor.cm.dispatch({});
         } catch (e) {}
+      }
+      if (leaf.view.previewMode) {
+        leaf.view.previewMode.rerender(true);
       }
     });
   }
@@ -646,81 +739,142 @@ class MyceliumFeature {
       });
     }
 
-    this.plugin.registerMarkdownPostProcessor(async (el, ctx) => {
-      // 1. If disabled, clean up any compost footers that might be in the DOM
-      if (!this.settings.enableCompostFooter) {
-        const footers = el.querySelectorAll(".mycelium-compost-footer");
-        footers.forEach((f) => f.remove());
-        return;
-      }
+    // Synchronous on purpose: it reuses the same suggestions cache the ghost
+    // links feature already maintains. An earlier async version re-scanned
+    // the vault itself and lost the race against Reading View's own re-render
+    // (triggered when the cache refreshes), leaving the footer detached from
+    // the live DOM.
+    this.plugin.registerMarkdownPostProcessor((el, ctx) => {
+      try {
+        // 1. If disabled, clean up any compost footers that might be in the DOM
+        if (!this.settings.enableCompostFooter) {
+          const footers = el.querySelectorAll(".mycelium-compost-footer");
+          footers.forEach((f) => f.remove());
+          return;
+        }
 
-      const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
-      if (!file) return;
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.path !== ctx.sourcePath) return;
 
-      // 2. Only inject on the LAST block of the document containing text
-      const sectionInfo = ctx.getSectionInfo(el);
-      if (!sectionInfo) return;
+        // 2. Only inject on the LAST block of the document containing text
+        const sectionInfo = ctx.getSectionInfo(el);
+        if (!sectionInfo) return;
 
-      const lines = sectionInfo.text.split("\n");
-      let lastNonEmptyIndex = lines.length - 1;
-      while (lastNonEmptyIndex >= 0 && !lines[lastNonEmptyIndex].trim()) {
-        lastNonEmptyIndex--;
-      }
+        const lines = sectionInfo.text.split("\n");
+        let lastNonEmptyIndex = lines.length - 1;
+        while (lastNonEmptyIndex >= 0 && !lines[lastNonEmptyIndex].trim()) {
+          lastNonEmptyIndex--;
+        }
 
-      if (sectionInfo.lineEnd < lastNonEmptyIndex) {
-        return;
-      }
+        if (sectionInfo.lineEnd < lastNonEmptyIndex) {
+          return;
+        }
 
-      // 3. Clean up any previous duplicate footers in this document view
-      const containerParent =
-        el.closest(".markdown-preview-section") ||
-        el.closest(".markdown-rendered") ||
-        el.parentElement;
+        const suggestions = window.stndMyceliumCache || [];
 
-      if (containerParent) {
-        const existingList = containerParent.querySelectorAll(
-          ".mycelium-compost-footer"
-        );
-        existingList.forEach((n) => n.remove());
-      }
+        // 3. Clean up any previous duplicate footers in this document view
+        const containerParent =
+          el.closest(".markdown-preview-section") ||
+          el.closest(".markdown-rendered") ||
+          el.parentElement;
 
-      // 4. Create single footer right after this last block
-      const container = document.createElement("div");
-      container.className = "mycelium-compost-footer";
-      el.insertAdjacentElement("afterend", container);
+        if (containerParent) {
+          const existingList = containerParent.querySelectorAll(
+            ".mycelium-compost-footer"
+          );
+          existingList.forEach((n) => n.remove());
+        }
 
-      const suggestions = await findOutgoingUnlinkedMentions(
-        this.app,
-        file,
-        this.plugin
-      );
+        if (suggestions.length === 0) return;
 
-      if (suggestions && suggestions.length > 0) {
-        container.empty();
+        // 4. Append the footer INSIDE the last block, not as its sibling.
+        // Reading View's renderer owns and reconciles the direct children of
+        // the preview sizer on every render pass, and prunes any sibling node
+        // it doesn't recognize as one of its own sections. A node nested
+        // inside a managed section survives that reconciliation.
+        const container = document.createElement("div");
+        container.className = "mycelium-compost-footer";
+        el.appendChild(container);
+
+        container.createEl("hr", { cls: "mycelium-footer-hr" });
+
         container.createEl("h4", {
-          text: "🌱 Mycélium (Mentions potentielles)",
+          text: "Mycelium finding",
           cls: "mycelium-footer-title",
         });
-        const btnContainer = container.createEl("div", {
-          cls: "mycelium-footer-buttons",
+        const grid = container.createEl("div", {
+          cls: "mycelium-footer-grid",
         });
 
+        // Reuse the exact same span/attributes as inline ghost links, so the
+        // single delegated click handler (click = open, Alt+Click = link)
+        // covers these too, with no per-item listener needed.
         for (const sug of suggestions) {
-          const btn = btnContainer.createEl("button", {
-            text: `+ ${sug.file.basename}`,
-            cls: "mycelium-footer-btn",
+          const cell = grid.createEl("div", { cls: "mycelium-footer-item" });
+          cell.createEl("span", {
+            text: sug.file.basename,
+            cls: "mycelium-ghost-link",
+            attr: {
+              title: `🌱 Click to open ${sug.file.basename} · Alt+Click to link`,
+              "data-target": sug.file.path,
+              "data-term": sug.term,
+              "data-basename": sug.file.basename,
+            },
           });
-          btn.onclick = async () => {
-            await createMentionLink(this.app, file, sug);
-            btn.remove();
-            if (btnContainer.children.length === 0) {
-              container.remove();
-            }
-          };
         }
-      } else {
-        container.remove();
+      } catch (e) {
+        console.error("[Standard] Mycelium compost footer failed to render", e);
       }
+    });
+
+    // ─── Reading View: inline ghost links (mirrors the CM6 editor decoration) ──
+    this.plugin.registerMarkdownPostProcessor((el, ctx) => {
+      try {
+        if (!this.settings.enableGhostLinks) return;
+
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.path !== ctx.sourcePath) return;
+
+        const suggestions = window.stndMyceliumCache || [];
+        if (!suggestions.length) return;
+
+        applyReadingGhostLinks(el, suggestions);
+      } catch (e) {
+        console.error("[Standard] Mycelium reading-view ghost links failed", e);
+      }
+    });
+
+    this.plugin.registerDomEvent(document, "click", (evt) => {
+      const target = evt.target?.closest?.(".mycelium-ghost-link");
+      if (!target) return;
+      // The CM6 extension already handles clicks inside the editor; only
+      // handle reading-view spans here to avoid double-firing.
+      if (!target.closest(".markdown-reading-view") && !target.closest(".markdown-preview-view")) {
+        return;
+      }
+
+      const targetPath = target.getAttribute("data-target");
+      if (!targetPath) return;
+
+      const file = this.app.vault.getAbstractFileByPath(targetPath);
+      if (!file) return;
+
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      // Same convention as the editor: Alt+Click links the mention into the
+      // current note, a plain click just navigates to it (reading view only
+      // edits the file on explicit intent, never as a side effect of reading).
+      if (evt.altKey) {
+        const term = target.getAttribute("data-term");
+        const activeFile = this.app.workspace.getActiveFile();
+        if (term && activeFile) {
+          createMentionLink(this.app, activeFile, { file, term });
+        }
+        return;
+      }
+
+      this.app.workspace.getLeaf(evt.ctrlKey || evt.metaKey).openFile(file);
     });
   }
 }

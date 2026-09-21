@@ -65,9 +65,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       if (this._writing) return;
       const active = this.plugin.app.workspace.getActiveFile();
       if (active && file === active) {
-        if (this.activeTab === "mycelium" || this.activeTab === "links") {
-          this.linksData = null;
-        }
+        this.linksData = null;
         this.render();
       }
     };
@@ -143,73 +141,47 @@ class StandardGardenView extends obsidian_1.ItemView {
       });
     }
 
-    // ── Barre d'onglets (Tabs) ──
-    const tabsEl = container.createEl("div", { cls: "stnd-panel-tabs" });
-    
-    const noteTabBtn = tabsEl.createEl("button", {
-      cls: "stnd-panel-tab" + (this.activeTab === "note" ? " is-active" : ""),
-      text: "Note",
-    });
-    noteTabBtn.addEventListener("click", () => {
-      this.activeTab = "note";
-      this.render();
-    });
+    // Garden (note) and Mycelium now render together as a single view — no
+    // tab bar needed. Audit is disabled here for now (candidate for moving
+    // into the chisel plugin later); _renderAuditTab is kept intact below,
+    // just unreached, so re-enabling it is a one-line uncomment.
+    //
+    // const tabsEl = container.createEl("div", { cls: "stnd-panel-tabs" });
+    // const auditTabBtn = tabsEl.createEl("button", {
+    //   cls: "stnd-panel-tab" + (this.activeTab === "audit" ? " is-active" : ""),
+    //   text: "Audit",
+    // });
+    // auditTabBtn.addEventListener("click", () => {
+    //   this.activeTab = "audit";
+    //   this.render();
+    // });
 
-    const myceliumTabBtn = tabsEl.createEl("button", {
-      cls:
-        "stnd-panel-tab" +
-        (this.activeTab === "mycelium" || this.activeTab === "links"
-          ? " is-active"
-          : ""),
-      text: "Mycelium",
-    });
-    myceliumTabBtn.addEventListener("click", () => {
-      this.activeTab = "mycelium";
-      this.linksData = null;
-      this.render();
-      this.refreshLinksData();
-    });
+    const file = this.plugin.app.workspace.getActiveFile();
 
-    const auditTabBtn = tabsEl.createEl("button", {
-      cls: "stnd-panel-tab" + (this.activeTab === "audit" ? " is-active" : ""),
-      text: "Audit",
-    });
-    auditTabBtn.addEventListener("click", () => {
-      this.activeTab = "audit";
-      this.render();
-    });
-
-    // Rendu en fonction de l'onglet actif
-    if (this.activeTab === "note") {
-      const file = this.plugin.app.workspace.getActiveFile();
-
-      if (!file) {
-        const empty = container.createEl("div", { cls: "stnd-panel-empty" });
-        empty.createEl("p", { text: "Aucune note ouverte.", cls: "stnd-panel-muted" });
-        return;
-      }
-
-      this._lastRenderedFile = file;
-      const meta = this.plugin.app.metadataCache.getFileCache(file);
-      const fm = meta?.frontmatter || {};
-
-      // ── File Info ────────────────────────────────────────────────────────
-      this._renderFileInfo(container, file, fm);
-
-      // ── AI Generate ──────────────────────────────────────────────────────
-      this._renderAIGenerate(container, file, fm);
-
-      // ── Token Groups ────────────────────────────────────────────────────
-      this._renderTokenGroups(container, file, fm);
-    } else if (this.activeTab === "mycelium" || this.activeTab === "links") {
-      const activeFile = this.plugin.app.workspace.getActiveFile();
-      if (activeFile && (!this.linksData || this.linksData.file !== activeFile) && !this.isLoadingLinks) {
-        this.refreshLinksData();
-      }
-      this._renderLinksTab(container);
-    } else if (this.activeTab === "audit") {
-      this._renderAuditTab(container);
+    if (!file) {
+      const empty = container.createEl("div", { cls: "stnd-panel-empty" });
+      empty.createEl("p", { text: "Aucune note ouverte.", cls: "stnd-panel-muted" });
+      return;
     }
+
+    this._lastRenderedFile = file;
+    const meta = this.plugin.app.metadataCache.getFileCache(file);
+    const fm = meta?.frontmatter || {};
+
+    // ── Garden: File Info / AI Generate / Token Groups ──────────────────
+    this._renderFileInfo(container, file, fm);
+    this._renderAIGenerate(container, file, fm);
+    this._renderTokenGroups(container, file, fm);
+
+    // ── Mycelium & Links ─────────────────────────────────────────────────
+    if ((!this.linksData || this.linksData.file !== file) && !this.isLoadingLinks) {
+      this.refreshLinksData();
+    }
+    this._renderLinksTab(container);
+
+    // if (this.activeTab === "audit") {
+    //   this._renderAuditTab(container);
+    // }
   }
 
   // ── File Info Section ─────────────────────────────────────────────────
@@ -1028,6 +1000,12 @@ class StandardGardenView extends obsidian_1.ItemView {
         this.plugin,
       );
 
+      // Keep the ghost-link editor cache in sync so decorations never lag
+      // behind what this panel just found.
+      if (typeof window.stndRefreshMycelium === "function") {
+        window.stndRefreshMycelium();
+      }
+
       this.linksData = {
         incoming,
         unlinked,
@@ -1126,9 +1104,12 @@ class StandardGardenView extends obsidian_1.ItemView {
         mySettings.enableCompostFooter = enabled;
         window.stndMyceliumSettings = mySettings;
         await this.plugin.saveSettings();
-        const view = this.plugin.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
-        if (view?.previewMode) {
-          view.previewMode.rerender(true);
+        // Not getActiveViewOfType(MarkdownView): the panel itself is the
+        // active view while its own toggle is being clicked, so that lookup
+        // returns null and the open note never re-renders. Refresh every
+        // open leaf instead, same as the Ghost links toggle above.
+        if (typeof window.stndRefreshMycelium === "function") {
+          window.stndRefreshMycelium();
         }
         new obsidian_1.Notice(
           enabled ? "Compost footer enabled." : "Compost footer hidden.",
@@ -1179,18 +1160,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       }
     }
 
-    // Section 1 : Mentions liées (Backlinks)
-    this._renderAuditSection(
-      linksWrap,
-      "Linked mentions (Backlinks)",
-      linkedMentions,
-      "link",
-      (el) => this._renderLinkedMentionsList(el, linkedMentions, blockedTag),
-      null,
-      linkedMentions.length > 0,
-    );
-
-    // Section 2 : Mentions non liées (Mycélium)
+    // Section 1 : Mentions non liées (Mycélium)
     this._renderAuditSection(
       linksWrap,
       "Unlinked mentions (Mycelium)",
@@ -1199,6 +1169,17 @@ class StandardGardenView extends obsidian_1.ItemView {
       (el) => this._renderUnlinkedMentionsList(el, unlinkedMentions, activeFile, blockedTag),
       null,
       unlinkedMentions.length > 0,
+    );
+
+    // Section 2 : Mentions liées (Backlinks)
+    this._renderAuditSection(
+      linksWrap,
+      "Linked mentions (Backlinks)",
+      linkedMentions,
+      "link",
+      (el) => this._renderLinkedMentionsList(el, linkedMentions, blockedTag),
+      null,
+      linkedMentions.length > 0,
     );
 
     // Section 3 : Exclusions actives
@@ -1215,10 +1196,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
   _renderLinkedMentionsList(parent, items, blockedTag) {
     items.forEach((item) => {
-      const card = parent.createEl("div", { cls: "stnd-audit-card" });
+      const card = parent.createEl("div", { cls: "stnd-audit-card stnd-audit-card-row" });
 
-      const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
-      const noteLink = sourceRow.createEl("a", {
+      const titleWrap = card.createEl("div", { cls: "stnd-audit-card-title-wrap" });
+      const noteLink = titleWrap.createEl("a", {
         cls: "stnd-audit-note-link",
         text: item.basename,
       });
@@ -1230,7 +1211,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       const hideBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-panel-btn-secondary stnd-audit-btn-compact",
-        text: "Hide",
+        attr: { title: "Hide" },
       });
       obsidian_1.setIcon(hideBtn.createEl("span", { cls: "btn-icon" }), "eye-off");
 
@@ -1244,10 +1225,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
   _renderUnlinkedMentionsList(parent, items, activeFile, blockedTag) {
     items.forEach((item) => {
-      const card = parent.createEl("div", { cls: "stnd-audit-card" });
+      const card = parent.createEl("div", { cls: "stnd-audit-card stnd-audit-card-row" });
 
-      const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
-      const noteLink = sourceRow.createEl("a", {
+      const titleWrap = card.createEl("div", { cls: "stnd-audit-card-title-wrap" });
+      const noteLink = titleWrap.createEl("a", {
         cls: "stnd-audit-note-link",
         text: item.file.basename,
       });
@@ -1256,19 +1237,17 @@ class StandardGardenView extends obsidian_1.ItemView {
       });
 
       if (item.term) {
-        const termBadge = sourceRow.createEl("span", {
-          cls: "stnd-panel-meta",
-          text: `mention: "${item.term}"`,
+        titleWrap.createEl("span", {
+          cls: "stnd-panel-meta stnd-audit-card-term",
+          text: `"${item.term}"`,
         });
-        termBadge.style.marginLeft = "6px";
-        termBadge.style.fontSize = "11px";
       }
 
       const actionsRow = card.createEl("div", { cls: "stnd-audit-card-actions" });
 
       const linkBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-audit-btn-compact",
-        text: "Link",
+        attr: { title: "Link" },
       });
       obsidian_1.setIcon(linkBtn.createEl("span", { cls: "btn-icon" }), "link");
 
@@ -1279,7 +1258,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       const hideBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-panel-btn-secondary stnd-audit-btn-compact",
-        text: "Hide",
+        attr: { title: "Hide" },
       });
       obsidian_1.setIcon(hideBtn.createEl("span", { cls: "btn-icon" }), "eye-off");
 
@@ -1293,10 +1272,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
   _renderExcludedMentionsList(parent, items, blockedTag) {
     items.forEach((item) => {
-      const card = parent.createEl("div", { cls: "stnd-audit-card" });
+      const card = parent.createEl("div", { cls: "stnd-audit-card stnd-audit-card-row" });
 
-      const sourceRow = card.createEl("div", { cls: "stnd-audit-card-source-row" });
-      const noteLink = sourceRow.createEl("a", {
+      const titleWrap = card.createEl("div", { cls: "stnd-audit-card-title-wrap" });
+      const noteLink = titleWrap.createEl("a", {
         cls: "stnd-audit-note-link",
         text: item.basename,
       });
@@ -1308,7 +1287,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
       const restoreBtn = actionsRow.createEl("button", {
         cls: "stnd-panel-btn stnd-audit-btn-compact",
-        text: "Restore",
+        attr: { title: "Restore" },
       });
       obsidian_1.setIcon(restoreBtn.createEl("span", { cls: "btn-icon" }), "undo");
 

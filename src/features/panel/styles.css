@@ -408,7 +408,7 @@
 /* ─── Barre d'onglets (Tabs Panel) ───────────────────────────────── */
 .stnd-panel-tabs {
   display: flex;
-  background: var(--background-secondary-alt);
+  background: var(--background-secondary);
   border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
 }
@@ -438,7 +438,16 @@
   color: var(--text-accent);
   border-bottom-color: var(--interactive-accent);
   font-weight: var(--font-semibold);
-  background: transparent;
+  background: var(--background-secondary-alt);
+}
+/*
+body.stnd-adapter .workspace-leaf-content {
+    box-shadow: 0 0 0 var(--tab-outline-width) var(--tab-outline-color);
+}
+*/
+
+body.stnd-adapter .workspace-tab-header-container {
+ border:0;
 }
 
 /* ─── Conteneur d'Audit ────────────────────────────────────────── */
@@ -582,7 +591,6 @@
 
 .stnd-audit-section-content {
   padding: var(--size-4-2) 0;
-  background: var(--background-secondary-alt);
 }
 
 .stnd-audit-empty-success {
@@ -624,6 +632,24 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
 }
 
+/* Compact single-line variant: title + actions share one row instead of
+   stacking, so a one-line entry doesn't carry a whole second row of chrome. */
+.stnd-audit-card-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.stnd-audit-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .stnd-audit-card-source-row {
   display: flex;
   align-items: center;
@@ -637,6 +663,17 @@
   text-decoration: none;
   cursor: pointer;
   font-size: var(--font-ui-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stnd-audit-card-term {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .stnd-audit-note-link:hover {
@@ -663,18 +700,20 @@
 
 .stnd-audit-card-actions {
   display: flex;
-  gap: var(--size-4-2);
-  margin-top: var(--size-4-1);
+  gap: var(--size-4-1);
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
+/* Icon-only now (title attribute carries the label as a tooltip) — square
+   instead of the old text-plus-icon pill. */
 .stnd-audit-btn-compact {
   height: 22px;
-  padding: 0 var(--size-4-2);
-  font-size: 11px;
+  width: 22px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 }
 
 .stnd-audit-btn-compact .btn-icon {

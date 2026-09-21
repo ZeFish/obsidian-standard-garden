@@ -17,47 +17,39 @@
 }
 
 /* --- Compost Footer (Reading View) --- */
-.mycelium-compost-footer {
-  margin-top: 36px;
-  margin-bottom: 24px;
-  padding-top: 18px;
+/* No margin of its own — the hr below already carries the 4rlh top gap. */
+
+/* Higher selector specificity than Obsidian's own `.markdown-rendered hr`
+   rule, which otherwise wins the cascade and swallows our margin. */
+.mycelium-compost-footer hr.mycelium-footer-hr {
+  margin: 4rlh 0;
+  border: none;
   border-top: 1px solid var(--background-modifier-border);
 }
 
+/* Nested inside the last `el-*` block, so none of the framework's own
+   `[class^="el-"]` vertical-rhythm rules reach these — the rhythm below is
+   supplied by hand, using the same rlh unit the rest of the framework uses. */
 .mycelium-footer-title {
-  margin: 0 0 12px 0;
-  font-size: 0.78rem;
+  margin: 0 0 1rlh 0 !important;
+  font-size: var(--font-ui-smaller, 0.78rem);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.06em;
+  line-height: var(--line-height-normal);
   color: var(--text-muted);
 }
 
-.mycelium-footer-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.mycelium-footer-grid {
+  display: grid;
+  /* Up to 3 columns, fewer as the note pane narrows — reacts to the
+     container's own width rather than a fixed column count. */
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  row-gap: 0.5rlh;
+  column-gap: 1.5rlh;
 }
 
-.mycelium-footer-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-normal);
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.mycelium-footer-btn:hover {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent, #ffffff);
-  border-color: var(--interactive-accent);
-  transform: translateY(-1px);
+.mycelium-footer-item {
+  text-align: left;
+  font-size: var(--font-ui-small, 0.85rem);
+  line-height: var(--line-height-normal);
 }
