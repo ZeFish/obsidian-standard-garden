@@ -297,7 +297,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     }
   }
 
-  done({ synced, pulled, created, unpublished, skipped, failed, totalRemoteNotes, stats }) {
+  done({ synced, pulled, created, unpublished, skipped, failed, notesOnline, stats }) {
     this.finished = true;
     if (!this.barEl) return;
     const secs = Math.round((Date.now() - this.startTime) / 1000);
@@ -317,10 +317,16 @@ class SyncProgressModal extends obsidian_1.Modal {
     });
     summaryHeader.style.cssText = "margin: 0 0 0.5em 0;";
 
-    const totalOnline = totalRemoteNotes != null ? totalRemoteNotes : (synced + skipped);
-    const missing = failed || 0;
-    const imagesInfo = stats && (stats.imagesChecked > 0)
-      ? ` + ${stats.imagesReused + stats.imagesUploaded} image(s) en ligne (${stats.imagesReused} dédupliquée(s))`
+    const finalOnlineNotes = notesOnline != null ? notesOnline : (synced + skipped);
+    const imagesReused = stats?.imagesReused || 0;
+    const imagesUploaded = stats?.imagesUploaded || 0;
+    const imagesFailed = stats?.imagesFailed || 0;
+    const imagesOnline = imagesReused + imagesUploaded;
+    const missingNotes = failed || 0;
+    const totalMissing = missingNotes + imagesFailed;
+
+    const imagesInfo = (stats && stats.imagesChecked > 0)
+      ? ` + ${imagesOnline} image(s) en ligne${imagesReused > 0 ? ` (${imagesReused} dédupliquée(s))` : ""}`
       : "";
 
     const summaryCard = this.reconciliationEl.createDiv({
@@ -328,9 +334,19 @@ class SyncProgressModal extends obsidian_1.Modal {
     });
     summaryCard.style.cssText =
       "padding: 10px 14px; border-radius: 8px; background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); margin-bottom: 12px; font-weight: 500; font-size: var(--font-ui-small);";
-    summaryCard.setText(
-      `✓ ${totalOnline} note(s)${imagesInfo}, ${missing} manquante${missing > 1 ? "s" : ""}.`,
-    );
+
+    if (totalMissing === 0) {
+      summaryCard.setText(
+        `✓ ${finalOnlineNotes} note(s)${imagesInfo}, 0 manquante.`,
+      );
+    } else {
+      const missingDetails = [];
+      if (missingNotes > 0) missingDetails.push(`${missingNotes} note(s) manquante(s)`);
+      if (imagesFailed > 0) missingDetails.push(`${imagesFailed} image(s) non téléversée(s)`);
+      summaryCard.setText(
+        `⚠ ${finalOnlineNotes} note(s)${imagesInfo}, ${missingDetails.join(", ")}.`,
+      );
+    }
 
     const ul = this.reconciliationEl.createEl("ul");
     ul.style.cssText = "list-style-type: none; padding-left: 0; margin: 0;";
@@ -354,6 +370,9 @@ class SyncProgressModal extends obsidian_1.Modal {
     addList(this.unpublishedNotes, "Dé-publiée(s) localement (passée en brouillon)", "color: var(--text-warning);", "-");
     addList(this.skippedNotes, "Déjà à jour (identiques)", "color: var(--text-muted);", "○");
     addList(this.failedNotes, "Échec(s) de synchronisation", "color: var(--text-error);", "✗");
+    if (stats?.failedImages?.length > 0) {
+      addList(stats.failedImages, "Image(s) non téléversée(s)", "color: var(--text-error);", "✗");
+    }
 
     this.actionBtn.disabled = false;
     this.actionBtn.setText("Fermer");
@@ -566,6 +585,16 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
   }
 }
 
+async function sleep(ms, modal = null) {
+  if (ms <= 0) return;
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    if (modal && modal.cancelled) break;
+    const remaining = ms - (Date.now() - start);
+    await new Promise((resolve) => setTimeout(resolve, Math.min(50, remaining)));
+  }
+}
+
 // ─── Garden ───────────────────────────────────────────────────────────────────
 // Standard Garden publish + AI-token client. Talks to the standard.garden API:
 // verifies the API key, publishes/unpublishes notes (uploading embedded images
@@ -576,6 +605,9 @@ class GardenFeature {
     this.app = app;
     this.plugin = plugin;
     this.syncIntervalTimer = null;
+    this.attachmentCache = new Map(); // path -> { mtime, size, contentHash, cdnUrl }
+    this.lastAttachmentUploadTime = 0;
+    this.lastPublishTime = 0;
   }
 
   isPathExcluded(filePath) {
@@ -911,19 +943,13 @@ class GardenFeature {
         imagesReused: 0,
         imagesUploaded: 0,
         imagesFailed: 0,
+        failedImages: [],
       };
+      const sessionVerifiedAttachments = new Set();
 
       for (const task of syncTasks) {
         if (modal.cancelled) break;
         modal.update({ index: i, current: task.name, synced, pulled, created, unpublished, skipped, failed });
-
-        // Throttle 1s between notes in bulk sync
-        if (i > 0) {
-          // Chaque note coûte deux requêtes au quota partagé `publish:` (un GET
-          // de statut puis un PUT), plafonné à 60/min. Une seconde d'attente en
-          // demandait donc 120 et saturait le quota vers la trentième note.
-          await new Promise((resolve) => setTimeout(resolve, 2100));
-        }
 
         if (modal.cancelled) break;
 
@@ -939,8 +965,13 @@ class GardenFeature {
                 if (this.plugin.settings.syncDirection === "1way") {
                   // In 1-way mode, local wins: republish to remote
                   const raw = await this.app.vault.read(file);
-                  const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
+                  const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
+                  // Throttle : espacement minimum de 1100ms entre requêtes d'écriture (60/min)
+                  const elapsed = Date.now() - this.lastPublishTime;
+                  if (elapsed < 1100) await sleep(1100 - elapsed, modal);
+                  if (modal.cancelled) break;
                   const result = await this.publishNote(file, true, finalContent);
+                  this.lastPublishTime = Date.now();
                   if (result) {
                     synced++;
                     modal.recordResult("synced", file.basename);
@@ -964,8 +995,12 @@ class GardenFeature {
               } else {
                 // New local note, push it!
                 const raw = await this.app.vault.read(file);
-                const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
+                const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
+                const elapsed = Date.now() - this.lastPublishTime;
+                if (elapsed < 1100) await sleep(1100 - elapsed, modal);
+                if (modal.cancelled) break;
                 const result = await this.publishNote(file, true, finalContent);
+                this.lastPublishTime = Date.now();
                 if (result) {
                   synced++;
                   modal.recordResult("synced", file.basename);
@@ -977,7 +1012,7 @@ class GardenFeature {
             } else {
               // Exists on both sides, compare content
               const raw = await this.app.vault.read(file);
-              const finalContent = await this.uploadContentImages(raw, file, true, syncStats);
+              const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
 
               // Compute local hash
               const hashBuffer = await crypto.subtle.digest(
@@ -994,7 +1029,11 @@ class GardenFeature {
                 // Different content
                 if (this.plugin.settings.syncDirection === "1way") {
                   // In 1-way mode, local always wins: push local content to remote
+                  const elapsed = Date.now() - this.lastPublishTime;
+                  if (elapsed < 1100) await sleep(1100 - elapsed, modal);
+                  if (modal.cancelled) break;
                   const result = await this.publishNote(file, true, finalContent);
+                  this.lastPublishTime = Date.now();
                   if (result) {
                     synced++;
                     modal.recordResult("synced", file.basename);
@@ -1014,7 +1053,11 @@ class GardenFeature {
                     modal.recordResult("pulled", file.basename);
                   } else {
                     // Push! Update remote
+                    const elapsed = Date.now() - this.lastPublishTime;
+                    if (elapsed < 1100) await sleep(1100 - elapsed, modal);
+                    if (modal.cancelled) break;
                     const result = await this.publishNote(file, true, finalContent);
+                    this.lastPublishTime = Date.now();
                     if (result) {
                       synced++;
                       modal.recordResult("synced", file.basename);
@@ -1063,7 +1106,11 @@ class GardenFeature {
             } else {
               // Local draft wins: Keep draft locally, unpublish remotely
               const targetSlug = task.remoteNote?.slug || task.slug;
+              const elapsed = Date.now() - this.lastPublishTime;
+              if (elapsed < 1100) await sleep(1100 - elapsed, modal);
+              if (modal.cancelled) break;
               const ok = await this.unpublishNote(file, targetSlug);
+              this.lastPublishTime = Date.now();
               if (ok) {
                 unpublished++;
                 modal.recordResult("unpublished", file.basename);
@@ -1121,6 +1168,10 @@ class GardenFeature {
         modal.update({ index: i, current: task.name, synced, pulled, created, unpublished, skipped, failed });
       }
 
+      // Notes réellement en ligne après la synchronisation :
+      // base distante + nouvelles publiées − dépubliées.
+      const notesOnline = remoteNotes.length + synced - unpublished;
+
       modal.done({
         synced,
         pulled,
@@ -1128,7 +1179,7 @@ class GardenFeature {
         unpublished,
         skipped,
         failed,
-        totalRemoteNotes: remoteNotes.length,
+        notesOnline,
         stats: syncStats,
       });
 
@@ -1605,7 +1656,7 @@ class GardenFeature {
     return result;
   }
 
-  async uploadContentImages(content, sourceFile, isBulk = false, stats = null) {
+  async uploadContentImages(content, sourceFile, isBulk = false, stats = null, modal = null, sessionVerified = null) {
     if (!this.plugin.settings.apiKey) return content;
 
     // Résoudre d'abord les transclusions de notes (![[Note]] / ![[Note#Section]])
@@ -1615,24 +1666,39 @@ class GardenFeature {
     const uploaded = new Map();
 
     const uploadVaultFile = async (vaultFile) => {
+      if (modal && modal.cancelled) return null;
       if (uploaded.has(vaultFile.path)) return uploaded.get(vaultFile.path);
 
-      if (isBulk) {
-        // Wait 2 seconds between image uploads/checks to avoid rate limits
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-
       try {
-        const binary = await this.app.vault.readBinary(vaultFile);
-
-        // Calculer le hash SHA-256 du contenu
-        const hashBuffer = await crypto.subtle.digest("SHA-256", binary);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const contentHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
+        const mtime = vaultFile.stat?.mtime || 0;
+        const size = vaultFile.stat?.size || 0;
         const ext = vaultFile.name.split(".").pop()?.toLowerCase() || "bin";
 
-        // Vérification préalable : voir si le serveur a déjà cette pièce jointe (déduplication)
+        let contentHash = "";
+        let cdnUrl = "";
+        const cached = this.attachmentCache?.get(vaultFile.path);
+
+        if (cached && cached.mtime === mtime && cached.size === size && cached.contentHash) {
+          contentHash = cached.contentHash;
+          cdnUrl = cached.cdnUrl;
+        } else {
+          const binary = await this.app.vault.readBinary(vaultFile);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", binary);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          contentHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        }
+
+        // Fast path : si ce hash a déjà été vérifié ou téléversé dans cette session
+        if (sessionVerified && sessionVerified.has(contentHash) && cdnUrl) {
+          uploaded.set(vaultFile.path, cdnUrl);
+          if (stats) {
+            stats.imagesChecked = (stats.imagesChecked || 0) + 1;
+            stats.imagesReused = (stats.imagesReused || 0) + 1;
+          }
+          return cdnUrl;
+        }
+
+        // Vérification d'existence distante (le GET R2 est rapide et ne consomme aucun quota d'upload)
         const checkUrl = `${this.plugin.settings.apiUrl}/publish/attachment?hash=${contentHash}&ext=${ext}`;
         const checkRes = await fetchWithRetry(checkUrl, {
           method: "GET",
@@ -1640,13 +1706,15 @@ class GardenFeature {
         });
 
         if (checkRes.status >= 200 && checkRes.status < 300) {
-          // `fetchWithRetry` expose `json` comme une fonction, pas comme la
-          // propriété de requestUrl. Sans les parenthèses on récupérait la
-          // fonction elle-même : `exists` valait toujours undefined et la
-          // déduplication ne s'est jamais déclenchée.
           const checkData = await checkRes.json();
           if (checkData?.exists && checkData.url) {
-            const cdnUrl = new URL(checkData.url, this.plugin.settings.apiUrl).href;
+            cdnUrl = new URL(checkData.url, this.plugin.settings.apiUrl).href;
+            if (this.attachmentCache) {
+              this.attachmentCache.set(vaultFile.path, { mtime, size, contentHash, cdnUrl });
+            }
+            if (sessionVerified) {
+              sessionVerified.add(contentHash);
+            }
             uploaded.set(vaultFile.path, cdnUrl);
             if (stats) {
               stats.imagesChecked = (stats.imagesChecked || 0) + 1;
@@ -1656,7 +1724,17 @@ class GardenFeature {
           }
         }
 
-        // Sinon, procéder à l'envoi
+        // Fichier non présent sur le CDN : téléversement POST requis.
+        // Respect du quota d'upload de pièces jointes (30/min = 2000ms entre POST).
+        if (isBulk) {
+          const elapsed = Date.now() - this.lastAttachmentUploadTime;
+          if (elapsed < 2000) {
+            await sleep(2000 - elapsed, modal);
+          }
+          if (modal && modal.cancelled) return null;
+        }
+
+        const binary = await this.app.vault.readBinary(vaultFile);
         const boundary = "----ObsidianBoundary" + Math.random().toString(36).substring(2);
         const pre = [
           `--${boundary}`,
@@ -1687,24 +1765,29 @@ class GardenFeature {
             body: bodyBytes.buffer,
           },
         );
+        this.lastAttachmentUploadTime = Date.now();
 
         if (res.status < 200 || res.status >= 300) {
+          let errDetail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            if (errJson?.error) errDetail = errJson.error;
+          } catch {}
           console.warn(
-            `Standard: Failed to upload ${vaultFile.name}`,
+            `Standard: Failed to upload ${vaultFile.name}: ${errDetail}`,
             res.status,
           );
           if (stats) {
             stats.imagesChecked = (stats.imagesChecked || 0) + 1;
             stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+            if (stats.failedImages) {
+              stats.failedImages.push({ name: vaultFile.name, detail: errDetail });
+            }
           }
           return null;
         }
 
         const data = await res.json();
-        // Un 2xx sans `url` n'est pas un succès : `new URL(undefined, base)`
-        // résout silencieusement vers `<base>/undefined` et publie une image
-        // morte sans que rien ne le signale. On le traite comme un échec, ce
-        // qui laisse le lien d'origine intact plutôt que de le corrompre.
         if (!data?.url) {
           console.warn(
             `Standard: ${vaultFile.name} accepté par le serveur sans URL en retour`,
@@ -1713,10 +1796,19 @@ class GardenFeature {
           if (stats) {
             stats.imagesChecked = (stats.imagesChecked || 0) + 1;
             stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+            if (stats.failedImages) {
+              stats.failedImages.push({ name: vaultFile.name, detail: "Réponse serveur sans URL" });
+            }
           }
           return null;
         }
-        const cdnUrl = new URL(data.url, this.plugin.settings.apiUrl).href;
+        cdnUrl = new URL(data.url, this.plugin.settings.apiUrl).href;
+        if (this.attachmentCache) {
+          this.attachmentCache.set(vaultFile.path, { mtime, size, contentHash, cdnUrl });
+        }
+        if (sessionVerified) {
+          sessionVerified.add(contentHash);
+        }
         uploaded.set(vaultFile.path, cdnUrl);
         if (stats) {
           stats.imagesChecked = (stats.imagesChecked || 0) + 1;
@@ -1728,6 +1820,9 @@ class GardenFeature {
         if (stats) {
           stats.imagesChecked = (stats.imagesChecked || 0) + 1;
           stats.imagesFailed = (stats.imagesFailed || 0) + 1;
+          if (stats.failedImages) {
+            stats.failedImages.push({ name: vaultFile.name, detail: err.message || String(err) });
+          }
         }
         return null;
       }
@@ -1756,11 +1851,11 @@ class GardenFeature {
         : vaultFile.basename;
 
       if (isImageFile(linktext)) {
-        result = result.replace(match[0], `![${label}](${cdnUrl})`);
+        result = result.replaceAll(match[0], `![${label}](${cdnUrl})`);
       } else if (isPdfFile(linktext)) {
         // Le rendu transforme ce lien en visionneuse ; on garde une syntaxe
         // markdown valide pour que la note reste lisible telle quelle.
-        result = result.replace(
+        result = result.replaceAll(
           match[0],
           `[${label}](${cdnUrl} "pdf-embed")`,
         );
@@ -1768,7 +1863,7 @@ class GardenFeature {
         // `?download=` porte le nom d'origine : la clé R2 étant un hachage,
         // sans lui le lecteur récupère un fichier nommé « a3f9… ».
         const dl = `${cdnUrl}?download=${encodeURIComponent(vaultFile.name)}`;
-        result = result.replace(match[0], `[${label}](${dl})`);
+        result = result.replaceAll(match[0], `[${label}](${dl})`);
       }
     }
 
@@ -1790,7 +1885,7 @@ class GardenFeature {
 
       const label = inner.includes("|") ? inner.split("|")[1] : vaultFile.name;
       const dl = `${cdnUrl}?download=${encodeURIComponent(vaultFile.name)}`;
-      result = result.replace(match[0], `${match[1]}[${label}](${dl})`);
+      result = result.replaceAll(match[0], `${match[1]}[${label}](${dl})`);
     }
 
     const mdImageRe = /!\[([^\]]*)\]\(([^)]+)\)/g;
@@ -1808,7 +1903,7 @@ class GardenFeature {
       const cdnUrl = await uploadVaultFile(vaultFile);
       if (!cdnUrl) continue;
 
-      result = result.replace(match[0], `![${match[1]}](${cdnUrl})`);
+      result = result.replaceAll(match[0], `![${match[1]}](${cdnUrl})`);
     }
 
     return result;
