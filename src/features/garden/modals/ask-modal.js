@@ -106,13 +106,7 @@ class StndAskModal extends obsidian_1.Modal {
       </svg>
     `;
 
-    askBtn.addEventListener("click", async () => {
-      const question = textarea.value.trim();
-      if (!question) {
-        new obsidian_1.Notice("Please enter a question.");
-        return;
-      }
-
+    const executeQuery = async (question, scope = "garden") => {
       const apiKey = this.plugin.settings.apiKey;
       if (!apiKey) {
         new obsidian_1.Notice("Please connect your standard.garden account in Settings first.");
@@ -123,15 +117,22 @@ class StndAskModal extends obsidian_1.Modal {
         return;
       }
 
+      // Nettoyer les éventuels boutons/invitations précédents
+      resultContainer.querySelectorAll(".stnd-modal-mycelium-prompt").forEach((el) => el.remove());
+
       // Désactiver le bouton et la saisie
       askBtn.disabled = true;
       textarea.disabled = true;
-      askBtn.text = "Hyphe is searching...";
+      askBtn.text = scope === "mycelium" ? "Searching Mycelium..." : "Hyphe is searching...";
 
       // Afficher le statut de chargement
       resultContainer.style.display = "block";
       resultText.empty();
-      resultText.setText("Hyphe is searching your published notes and generating an answer...");
+      resultText.setText(
+        scope === "mycelium"
+          ? "Hyphe is exploring the public Mycelium and weaving an answer..."
+          : "Hyphe is searching your published notes and generating an answer..."
+      );
       resultText.style.fontStyle = "italic";
 
       try {
@@ -142,7 +143,7 @@ class StndAskModal extends obsidian_1.Modal {
             "Content-Type": "application/json",
             "x-api-key": apiKey,
           },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, scope }),
           throw: false,
         });
 
@@ -186,6 +187,43 @@ class StndAskModal extends obsidian_1.Modal {
               }
             });
           });
+
+          // Si des notes publiques connexes existent dans le Mycélium, proposer d'explorer
+          if (data.mycelium_hints?.count > 0 && data.scope !== "mycelium") {
+            const count = data.mycelium_hints.count;
+            const authors = data.mycelium_hints.authors?.length
+              ? ` (${data.mycelium_hints.authors.join(", ")})`
+              : "";
+
+            const hintBox = resultContainer.createEl("div", {
+              cls: "stnd-modal-mycelium-prompt",
+            });
+            hintBox.style.marginTop = "14px";
+            hintBox.style.paddingTop = "10px";
+            hintBox.style.borderTop = "1px dashed var(--background-modifier-border)";
+            hintBox.style.display = "flex";
+            hintBox.style.alignItems = "center";
+            hintBox.style.justifyContent = "space-between";
+            hintBox.style.gap = "8px";
+
+            const label = hintBox.createEl("span", {
+              text: `🍄 Le Mycélium public a ${count} note${count > 1 ? "s" : ""} connexe${count > 1 ? "s" : ""}${authors}`,
+            });
+            label.style.fontSize = "11px";
+            label.style.color = "var(--text-muted)";
+
+            const exploreBtn = hintBox.createEl("button", {
+              cls: "mod-cta",
+              text: "Explorer le Mycélium →",
+            });
+            exploreBtn.style.fontSize = "11px";
+            exploreBtn.style.padding = "3px 8px";
+            exploreBtn.style.cursor = "pointer";
+
+            exploreBtn.addEventListener("click", () => {
+              executeQuery(question, "mycelium");
+            });
+          }
         } else {
           resultText.setText("No response was returned by Hyphe.");
         }
@@ -198,6 +236,15 @@ class StndAskModal extends obsidian_1.Modal {
         textarea.disabled = false;
         askBtn.text = "Ask Hyphe";
       }
+    };
+
+    askBtn.addEventListener("click", () => {
+      const question = textarea.value.trim();
+      if (!question) {
+        new obsidian_1.Notice("Please enter a question.");
+        return;
+      }
+      executeQuery(question, "garden");
     });
   }
 
