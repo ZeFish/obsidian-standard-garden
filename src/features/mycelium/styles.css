@@ -44,8 +44,7 @@
   /* Up to 3 columns, fewer as the note pane narrows — reacts to the
      container's own width rather than a fixed column count. */
   grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  row-gap: 0.5rlh;
-  column-gap: 1.5rlh;
+  gap: 0.5rlh 1.5rlh;
 }
 
 .mycelium-footer-item {

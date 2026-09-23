@@ -7,13 +7,13 @@
     "screenshot": "obsidian dev:screenshot"
   },
   "dependencies": {
-    "@stnd/styles": "^0.10.2",
-    "@stnd/themes": "^0.8.1",
-    "prismjs": "^1.30.0"
+    "@stnd/styles": "0.10.2",
+    "@stnd/themes": "0.8.1",
+    "prismjs": "1.30.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1",
-    "js-yaml": "^4.3.0",
-    "sass": "^1.101.0"
+    "esbuild": "0.28.1",
+    "sass": "1.101.0",
+    "yaml": "2.9.0"
   }
 }

@@ -12,7 +12,7 @@ const srcDir = path.join(__dirname, "src");
 // rather than concatenated into styles.css. Only the active theme's block is
 // injected into the DOM at runtime (core/design-system), so the style engine
 // never parses 33 unused [data-theme] blocks at load.
-const yaml = require("js-yaml");
+const yaml = require("yaml");
 const sass = require("sass");
 
 let mapWebSelectorsToObsidian = (css) => css;
@@ -43,7 +43,7 @@ if (fs.existsSync(themesDir)) {
     const scssPath = path.join(themesDir, dir, `${dir}.scss`);
 
     try {
-      const doc = yaml.load(fs.readFileSync(tokensPath, "utf8"));
+      const doc = yaml.parse(fs.readFileSync(tokensPath, "utf8"));
       const tokens = doc.tokens || {};
       const decls = Object.entries(tokens)
         .map(([k, v]) => `  --${k}: ${v};`)
@@ -199,7 +199,15 @@ esbuild
         combinedCss += "/* --- @stnd/styles (Obsidian Core) --- */\n";
         combinedCss += fs.readFileSync(standardCssPath, "utf8") + "\n\n";
     } else {
-        console.warn("Warning: @stnd/styles/dist/obsidian.css not found. Did you run pnpm install or build @stnd/styles?");
+        const scssFallback = path.join(__dirname, "node_modules", "@stnd", "styles", "obsidian.scss");
+        if (fs.existsSync(scssFallback)) {
+          const sass = require("sass");
+          const compiled = sass.compile(scssFallback, { loadPaths: [path.dirname(scssFallback)] });
+          combinedCss += "/* --- @stnd/styles (Obsidian Core) --- */\n";
+          combinedCss += compiled.css + "\n\n";
+        } else {
+          console.warn("Warning: @stnd/styles/dist/obsidian.css not found. Did you run pnpm install or build @stnd/styles?");
+        }
     }
 
     const featuresDir = path.join(srcDir, "features");

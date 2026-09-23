@@ -601,7 +601,6 @@ body.stnd-note-published.stnd-note-private
 .stnd-adapter .markdown-reading-view ol > li,
 .stnd-adapter .markdown-reading-view ul > li,
 .stnd-adapter .mod-cm6 .HyperMD-list-line.cm-line {
-    line-height: max(var(--line-height-normal) * 0.75, var(--line-height-tight));
     line-height: var(--line-height-normal);
 }
 
