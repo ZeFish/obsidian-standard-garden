@@ -96,6 +96,7 @@ const DEFAULT_SETTINGS = {
   syncDirection: "2way",
   excludedFolders: "Utopie",
   enableMycelium: false,
+  panelOpenedOnInstall: false,
   mycelium: {
     enableGhostLinks: false,
     enableLinkingCommand: true,
