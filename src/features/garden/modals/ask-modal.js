@@ -20,9 +20,24 @@ class StndAskModal extends obsidian_1.Modal {
     });
 
     contentEl.createEl("p", {
-      text: "Ask Hyphe a question about your notes. Hyphe will search across your digital garden to answer.",
+      text: "Ask Hyphe a question about your digital garden. Hyphe runs in the cloud on standard.garden and searches only across your published notes.",
       cls: "stnd-modal-detail",
     });
+
+    const privacyNotice = contentEl.createEl("div", {
+      cls: "stnd-ask-cloud-notice",
+    });
+    privacyNotice.setText("🌐 Online AI · Only searches notes published to standard.garden. Local drafts remain strictly private.");
+    privacyNotice.style.fontSize = "11px";
+    privacyNotice.style.color = "var(--text-muted)";
+    privacyNotice.style.marginBottom = "14px";
+    privacyNotice.style.display = "inline-flex";
+    privacyNotice.style.alignItems = "center";
+    privacyNotice.style.gap = "6px";
+    privacyNotice.style.padding = "4px 8px";
+    privacyNotice.style.borderRadius = "4px";
+    privacyNotice.style.background = "var(--background-secondary)";
+    privacyNotice.style.border = "1px solid var(--background-modifier-border)";
 
     // Zone de texte pour la question
     const textarea = contentEl.createEl("textarea", {
@@ -98,6 +113,16 @@ class StndAskModal extends obsidian_1.Modal {
         return;
       }
 
+      const apiKey = this.plugin.settings.apiKey;
+      if (!apiKey) {
+        new obsidian_1.Notice("Please connect your standard.garden account in Settings first.");
+        resultContainer.style.display = "block";
+        resultText.empty();
+        resultText.style.fontStyle = "normal";
+        resultText.setText("Please connect your standard.garden account in Settings first to query Hyphe.");
+        return;
+      }
+
       // Désactiver le bouton et la saisie
       askBtn.disabled = true;
       textarea.disabled = true;
@@ -106,11 +131,10 @@ class StndAskModal extends obsidian_1.Modal {
       // Afficher le statut de chargement
       resultContainer.style.display = "block";
       resultText.empty();
-      resultText.setText("Hyphe is searching your notes and generating an answer...");
+      resultText.setText("Hyphe is searching your published notes and generating an answer...");
       resultText.style.fontStyle = "italic";
 
       try {
-        const apiKey = this.plugin.settings.apiKey;
         const response = await obsidian_1.requestUrl({
           url: `${this.plugin.settings.apiUrl}/ai/ask`,
           method: "POST",

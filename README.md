@@ -14,8 +14,7 @@ Standard Garden bridges your local Obsidian vault with our curated design system
 
 - **The Gatehouse**: Publish your polished notes directly to the web with a single click. Your thoughts remain entirely local until you decide they are ready to bloom.
 - **Woodcuts (Design System)**: Instantly change the aesthetic and mood of individual notes. Cultivate different atmospheres depending on what you are writing.
-- **The Mycelium Engine**: A quiet companion that uncovers hidden connections and unlinked mentions naturally as you write, encouraging you to weave your ideas together.
-- **Ask Hyphe (Semantic Intelligence)**: Ask questions directly to Hyphe against your note garden. The system embeds your query, retrieves semantically similar notes from your vault via Cloudflare Vectorize, and generates an answer grounded only in your own knowledge.
+- **Ask Hyphe (Semantic Intelligence)**: Ask questions directly to Hyphe against your published notes. Hyphe runs in the cloud on `standard.garden` and retrieves semantically similar notes from your published digital garden via Cloudflare Vectorize, generating answers grounded only in your published knowledge. Unpublished local notes and offline drafts are strictly private and never sent or indexed.
 - **Seedbeds**: Automate the organization of your vault. When a seedling (note) is planted in a specific folder, its metadata is automatically structured.
 - **Smart Snippets**: Manage CSS snippets effortlessly to customize the grain of your vault without restarting.
 - **E-ink / Boox Support**: Optimize Obsidian for E-ink screens (like Onyx Boox) with custom high-contrast CSS (animations/transitions disabled) and physical button navigation mapping.
@@ -29,6 +28,7 @@ Obsidian is a local-first application, and Garden respects that philosophy.
   - **What is sent**: Only the notes you explicitly mark with `publish: true` in their frontmatter, along with any locally embedded images they contain.
   - **Where it is sent**: Data is transmitted securely to the `standard.garden` API.
   - **Control**: You can unpublish a note at any time via the command palette, which removes it from the remote server immediately. Authentication is handled effortlessly via secure tokens.
+- **Ask Hyphe (Cloud Assistant)**: When you query Hyphe, your prompt is sent securely to the `standard.garden` AI service. Hyphe operates in the cloud and only searches notes that have been explicitly published to your garden (`publish: true`). It has zero access to your unpublished local vault notes or offline drafts.
 
 ## 🛠️ Architecture
 
@@ -105,7 +105,7 @@ Toutes les actions du jardin sont directement accessibles depuis la palette de c
 | **Standard Garden: Tend the garden (Sync all notes)** | Lance une synchronisation complète du coffre avec le jardin. |
 | **Standard Garden: Harvest seeds (Download new notes from garden)** | Télécharge les notes créées en ligne absentes de votre coffre local. |
 | **Standard Garden: Prune garden (Clean up unpublished notes)** | Nettoie les notes en ligne dont le fichier local a été supprimé ou dé-publié. |
-| **Standard Garden: Ask Hyphe** | Ouvre le modal de recherche et d'interaction avec l'IA Hyphe. |
+| **Standard Garden: Ask Hyphe** | Ouvre le modal pour interroger l'IA Hyphe (recherche en ligne parmi vos notes publiées sur standard.garden). |
 | **Standard Garden: Set note theme** | Ouvre un sélecteur flou pour choisir l'un des 27 thèmes du design system. |
 | **Standard Garden: Reset note styling (Clear design tokens)** | Nettoie les propriétés de tokens CSS de la note pour revenir aux styles par défaut. |
 | **Standard Garden: Tend the Mycelium (Link mentions)** | Analyse et propose des liens sémantiques entre concepts non liés. |
