@@ -123,7 +123,11 @@ class StndAskModal extends obsidian_1.Modal {
         });
 
         if (response.status < 200 || response.status >= 300) {
-          const errText = response.text;
+          let errText = response.text;
+          try {
+            const parsed = JSON.parse(response.text || "{}");
+            if (parsed.error) errText = parsed.error;
+          } catch {}
           throw new Error(errText || `Server error (${response.status})`);
         }
 
