@@ -462,6 +462,12 @@ body.stnd-note-published.stnd-note-private
 
 
 }
+
+
+.stnd-adapter .sidebar-toggle-button,
+.stnd-adapter .workspace-tabs.mod-top {
+  --tab-container-background: none;
+}
 .stnd-adapter .vertical-tab-header-group-title,
 .stnd-adapter .setting-item-heading .setting-item-name {
     font-family: var(--font-header);
