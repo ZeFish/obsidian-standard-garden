@@ -83,6 +83,33 @@ garden-mycelium: true                # participate in the semantic network
 ---
 ```
 
+## ⌨️ Commandes Obsidian (Command Palette)
+
+Toutes les actions du jardin sont directement accessibles depuis la palette de commande (`Cmd + P` / `Ctrl + P`) :
+
+| Commande | Action |
+| :--- | :--- |
+| **Standard Garden: Open Garden panel** | Ouvre le volet latéral Garden. |
+| **Standard Garden: Open settings** | Ouvre l'onglet de réglages Standard Garden. |
+| **Standard Garden: Plant seed (Publish current note)** | Publie ou met à jour la note active dans votre jardin en ligne. |
+| **Standard Garden: Uproot seed (Remove from garden)** | Dé-publie la note active du jardin. |
+| **Standard Garden: View live version** | Ouvre la version publique de la note dans le navigateur. |
+| **Standard Garden: Copy live URL to clipboard** | Copie l'URL publique de la note dans le presse-papiers. |
+| **Standard Garden: Copy short URL (garden-short) to clipboard** | Copie le lien court de partage (`stnd.gd/...`). |
+| **Standard Garden: Share note (Open share dialog)** | Ouvre la boîte de dialogue de partage (liens Markdown, code iframe, URL directe). |
+| **Standard Garden: Check garden publication status** | Vérifie si la note locale est synchronisée, modifiée ou dépassée par rapport au serveur. |
+| **Standard Garden: Set visibility: Public** | Définit `visibility: public` sur la note. |
+| **Standard Garden: Set visibility: Unlisted** | Définit `visibility: unlisted` sur la note. |
+| **Standard Garden: Set visibility: Private** | Définit `visibility: private` sur la note. |
+| **Standard Garden: Cycle visibility (Public / Unlisted / Private)** | Alterne séquentiellement la visibilité de la note. |
+| **Standard Garden: Tend the garden (Sync all notes)** | Lance une synchronisation complète du coffre avec le jardin. |
+| **Standard Garden: Harvest seeds (Download new notes from garden)** | Télécharge les notes créées en ligne absentes de votre coffre local. |
+| **Standard Garden: Prune garden (Clean up unpublished notes)** | Nettoie les notes en ligne dont le fichier local a été supprimé ou dé-publié. |
+| **Standard Garden: Ask Hyphe** | Ouvre le modal de recherche et d'interaction avec l'IA Hyphe. |
+| **Standard Garden: Set note theme** | Ouvre un sélecteur flou pour choisir l'un des 27 thèmes du design system. |
+| **Standard Garden: Reset note styling (Clear design tokens)** | Nettoie les propriétés de tokens CSS de la note pour revenir aux styles par défaut. |
+| **Standard Garden: Tend the Mycelium (Link mentions)** | Analyse et propose des liens sémantiques entre concepts non liés. |
+
 ## 🔮 Future AI Directions / Development Ideas
 
 Here are additional AI integration ideas made possible by the Cloudflare Workers AI + Vectorize stack:

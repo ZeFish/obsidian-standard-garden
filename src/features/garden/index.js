@@ -11,6 +11,7 @@ const {
 } = require("../../constants");
 const { StndConfirmModal } = require("./modals/confirm-modal");
 const { StndAskModal } = require("./modals/ask-modal");
+const { StndShareModal } = require("./modals/share-modal");
 
 
 // Slugifie un nom de fichier pour l'URL publique.
@@ -1503,6 +1504,69 @@ class GardenFeature {
     } else {
       this._openExternal(url);
     }
+  }
+
+  copyLiveUrl(file) {
+    const activeFile = file || this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new obsidian_1.Notice("Standard : Aucune note active.");
+      return;
+    }
+    const url = this.getLiveUrl(activeFile);
+    navigator.clipboard.writeText(url);
+    new obsidian_1.Notice("Standard : URL publique copiée dans le presse-papiers.");
+  }
+
+  copyShortUrl(file) {
+    const activeFile = file || this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new obsidian_1.Notice("Standard : Aucune note active.");
+      return;
+    }
+    const fm = this.app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
+    const short = fm["garden-short"] ?? fm.garden_short ?? fm.short_url;
+    if (short) {
+      navigator.clipboard.writeText(String(short).trim());
+      new obsidian_1.Notice("Standard : URL courte copiée dans le presse-papiers.");
+    } else {
+      this.copyLiveUrl(activeFile);
+    }
+  }
+
+  shareCurrentNote(file) {
+    const activeFile = file || this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new obsidian_1.Notice("Standard : Aucune note active.");
+      return;
+    }
+    const liveUrl = this.getLiveUrl(activeFile);
+    new StndShareModal(this.app, activeFile.basename, liveUrl).open();
+  }
+
+  async setNoteVisibility(visibility, file) {
+    const activeFile = file || this.app.workspace.getActiveFile();
+    if (!activeFile || activeFile.extension !== "md") {
+      new obsidian_1.Notice("Standard : Ouvrez une note Markdown.");
+      return;
+    }
+    await this.app.fileManager.processFrontMatter(activeFile, (fm) => {
+      fm.visibility = visibility;
+    });
+    new obsidian_1.Notice(`Standard : Visibilité définie sur "${visibility}".`);
+  }
+
+  async cycleNoteVisibility(file) {
+    const activeFile = file || this.app.workspace.getActiveFile();
+    if (!activeFile || activeFile.extension !== "md") {
+      new obsidian_1.Notice("Standard : Ouvrez une note Markdown.");
+      return;
+    }
+    const cache = this.app.metadataCache.getFileCache(activeFile);
+    const current = String(cache?.frontmatter?.visibility || "public").toLowerCase().trim();
+    const order = ["public", "unlisted", "private"];
+    const currentIndex = order.indexOf(current);
+    const next = order[(currentIndex + 1) % order.length];
+    await this.setNoteVisibility(next, activeFile);
   }
 
   /**
