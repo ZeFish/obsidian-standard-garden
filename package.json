@@ -7,8 +7,8 @@
     "screenshot": "obsidian dev:screenshot"
   },
   "dependencies": {
-    "@stnd/styles": "workspace:*",
-    "@stnd/themes": "workspace:*",
+    "@stnd/styles": "^0.10.2",
+    "@stnd/themes": "^0.8.1",
     "prismjs": "^1.30.0"
   },
   "devDependencies": {

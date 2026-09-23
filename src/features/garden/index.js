@@ -1448,7 +1448,7 @@ class GardenFeature {
       for (const file of files) {
         const cache = this.app.metadataCache.getFileCache(file);
         const fm = cache?.frontmatter || {};
-        const rawDomain = fm.garden_domain ?? fm.domain;
+        const rawDomain = fm["garden-domain"];
         if (fm.permalink === "/" && rawDomain) {
           return String(rawDomain)
             .trim()
@@ -1457,7 +1457,7 @@ class GardenFeature {
         }
       }
     } catch (e) {
-      console.error("Standard: Error scanning for garden_domain:", e);
+      console.error("Standard: Error scanning for garden-domain:", e);
     }
     return null;
   }
