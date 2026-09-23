@@ -168,8 +168,9 @@ class StandardGardenView extends obsidian_1.ItemView {
     const meta = this.plugin.app.metadataCache.getFileCache(file);
     const fm = meta?.frontmatter || {};
 
-    // ── Garden: File Info / AI Generate / Token Groups ──────────────────
+    // ── Garden: File Info / Profile Settings / AI Generate / Token Groups ──
     this._renderFileInfo(container, file, fm);
+    this._renderGardenSettings(container, file, fm);
     this._renderAIGenerate(container, file, fm);
     this._renderTokenGroups(container, file, fm);
 
@@ -327,6 +328,28 @@ class StandardGardenView extends obsidian_1.ItemView {
         });
       }
 
+      // ── Visibility Selector ───────────────────────────────────────────
+      const visRow = section.createEl("div", { cls: "stnd-panel-vis-row" });
+      visRow.style.cssText =
+        "display: flex; align-items: center; justify-content: space-between; margin-top: var(--size-4-2); font-size: var(--font-ui-smaller);";
+      visRow.createEl("span", { text: "Visibility", cls: "stnd-panel-meta" });
+
+      const visSelect = visRow.createEl("select", {
+        cls: "dropdown stnd-panel-select",
+      });
+      visSelect.createEl("option", { value: "public", text: "Public (feed & search)" });
+      visSelect.createEl("option", { value: "unlisted", text: "Unlisted (link only)" });
+      visSelect.createEl("option", { value: "private", text: "Private (owner only)" });
+
+      const currentVis = String(fm.visibility || "public").toLowerCase().trim();
+      visSelect.value = ["public", "unlisted", "private"].includes(currentVis)
+        ? currentVis
+        : "public";
+
+      visSelect.addEventListener("change", () => {
+        this._setFrontmatter(file, "visibility", visSelect.value);
+      });
+
       // ── Stats & Citations ─────────────────────────────────────────────
       if (isConfirmedOnline) {
         const statsBox = section.createEl("div", { cls: "stnd-panel-stats-box" });
@@ -439,6 +462,68 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
   }
 
+  // ── Garden Root Note Settings ──────────────────────────────────────────
+
+  _renderGardenSettings(container, file, fm) {
+    const isRoot = fm.permalink === "/";
+    if (!isRoot) return;
+
+    const section = container.createEl("div", { cls: "stnd-panel-section stnd-panel-garden-profile" });
+    const header = section.createEl("div", { cls: "stnd-panel-section-header" });
+    header.style.cssText =
+      "font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--size-4-2);";
+    header.createEl("span", { text: "Garden Profile Settings" });
+
+    const fields = [
+      {
+        key: "garden-display-name",
+        label: "Display name",
+        type: "text",
+        placeholder: this.plugin?.settings?.apiUsername || "Gardener",
+      },
+      {
+        key: "garden-domain",
+        label: "Custom domain",
+        type: "text",
+        placeholder: "notes.example.com",
+      },
+      {
+        key: "garden-brand",
+        label: "Brand logo",
+        type: "text",
+        placeholder: "URL or false to hide",
+      },
+      {
+        key: "garden-favicon",
+        label: "Favicon",
+        type: "text",
+        placeholder: "https://.../favicon.png",
+      },
+      {
+        key: "garden-avatar",
+        label: "Avatar",
+        type: "text",
+        placeholder: "URL or image path",
+      },
+      {
+        key: "garden-launcher",
+        label: "Command Launcher",
+        type: "toggle",
+        default: true,
+      },
+      {
+        key: "garden-mycelium",
+        label: "Mycelium Network",
+        type: "toggle",
+        default: true,
+      },
+    ];
+
+    for (const field of fields) {
+      this._renderField(section, file, fm, field);
+    }
+  }
+
   // ── AI Generate ───────────────────────────────────────────────────────
 
   _renderAIGenerate(container, file, fm) {
@@ -475,9 +560,11 @@ class StandardGardenView extends obsidian_1.ItemView {
             await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
               for (const key of Object.keys(fm)) {
                 if (
-                  KNOWN_TOKENS.has(key) ||
-                  key.startsWith("stnd-") ||
-                  key.startsWith("stnd_")
+                  !key.startsWith("garden-") &&
+                  !key.startsWith("garden_") &&
+                  (KNOWN_TOKENS.has(key) ||
+                    key.startsWith("stnd-") ||
+                    key.startsWith("stnd_"))
                 ) {
                   delete fm[key];
                   removed++;
@@ -718,13 +805,17 @@ class StandardGardenView extends obsidian_1.ItemView {
         break;
       }
       case "toggle": {
+        const isEnabled =
+          current !== undefined
+            ? Boolean(current && current !== "false")
+            : (field.default ?? false);
         const toggle = row.createEl("div", {
-          cls: "checkbox-container" + (current ? " is-enabled" : ""),
+          cls: "checkbox-container" + (isEnabled ? " is-enabled" : ""),
         });
         toggle.addEventListener("click", () => {
           const next = !toggle.hasClass("is-enabled");
           toggle.toggleClass("is-enabled", next);
-          this._setFrontmatter(file, field.key, next || null);
+          this._setFrontmatter(file, field.key, next);
         });
         break;
       }

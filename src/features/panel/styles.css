@@ -405,6 +405,100 @@
   background: var(--background-modifier-hover);
 }
 
+/* ─── Hyphe Ask Modal & Horizon Grass ───────────────────────────── */
+.stnd-ask-modal {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 2.2rem !important;
+}
+
+.stnd-ask-modal::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 5rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    120% 100% at 50% 100%,
+    color-mix(in srgb, var(--interactive-accent, #10b981) 12%, transparent),
+    transparent 70%
+  );
+}
+
+.stnd-ask-modal .stnd-modal-btns {
+  position: relative;
+  z-index: 2;
+}
+
+.stnd-ask-modal .stnd-modal-result-container {
+  position: relative;
+  z-index: 2;
+}
+
+.stnd-ask-modal .stnd-modal-result-text a {
+  color: var(--interactive-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 500;
+}
+
+.stnd-ask-horizon {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38px;
+  pointer-events: none;
+  color: var(--interactive-accent, #10b981);
+  opacity: 0.22;
+  z-index: 1;
+}
+
+.stnd-ask-horizon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stnd-ask-horizon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: stnd-modal-sway 7s ease-in-out infinite alternate;
+}
+
+.stnd-ask-horizon path:nth-child(2n) {
+  animation-duration: 9s;
+  animation-delay: -3s;
+}
+
+.stnd-ask-horizon path:nth-child(3n) {
+  animation-duration: 11s;
+  animation-delay: -5s;
+}
+
+.stnd-ask-horizon path:nth-child(5n) {
+  animation-duration: 8s;
+  animation-delay: -1.5s;
+}
+
+@keyframes stnd-modal-sway {
+  from {
+    transform: rotate(-1.4deg);
+  }
+  to {
+    transform: rotate(1.6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stnd-ask-horizon path {
+    animation: none;
+  }
+}
+
 /* ─── Barre d'onglets (Tabs Panel) ───────────────────────────────── */
 .stnd-panel-tabs {
   display: flex;

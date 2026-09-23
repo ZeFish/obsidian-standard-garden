@@ -228,9 +228,32 @@ function getMimeType(name) {
   return map[ext] || "application/octet-stream";
 }
 
+// ─── Garden Frontmatter Keys ──────────────────────────────────────────────────
+const GARDEN_FRONTMATTER_KEYS = new Set([
+  "garden-domain",
+  "garden-brand",
+  "garden-favicon",
+  "garden-launcher",
+  "garden-mycelium",
+  "garden-avatar",
+  "garden-display-name",
+  "garden-url",
+  "garden-short",
+]);
+
+const STRUCTURAL_KEYS = new Set([
+  "garden-domain",
+  "garden-brand",
+  "garden-favicon",
+  "garden-launcher",
+  "garden-mycelium",
+]);
+
 module.exports = {
   KNOWN_TOKENS,
   FONT_TOKENS,
+  GARDEN_FRONTMATTER_KEYS,
+  STRUCTURAL_KEYS,
   DEFAULT_SETTINGS,
   isPublishIntent,
   isImageFile,

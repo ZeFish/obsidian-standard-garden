@@ -1448,7 +1448,7 @@ class GardenFeature {
       for (const file of files) {
         const cache = this.app.metadataCache.getFileCache(file);
         const fm = cache?.frontmatter || {};
-        const rawDomain = fm["garden-domain"];
+        const rawDomain = fm["garden-domain"] ?? fm.garden_domain ?? fm.domain;
         if (fm.permalink === "/" && rawDomain) {
           return String(rawDomain)
             .trim()
@@ -1464,6 +1464,9 @@ class GardenFeature {
 
   getLiveUrl(file) {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+    if (fm["garden-url"]) {
+      return String(fm["garden-url"]).trim();
+    }
     const fmSlug = fm.permalink ?? fm.slug;
     const basenameSlug = slugify(file.basename);
     const resolved =

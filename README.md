@@ -53,15 +53,33 @@ The body class `.stnd-adapter` activates the adapter. When disabled, the plugin 
 2. Place them inside your vault at `.obsidian/plugins/standard-garden/`.
 3. Reload Obsidian and enable the plugin.
 
-## 📖 Usage
+## 📖 Usage & Frontmatter
 
-Use the frontmatter of any note to control its appearance and publishing status:
+### Standard Note Frontmatter
+Control publishing and visibility directly from note frontmatter or the Garden panel:
 
 ```yaml
 ---
-theme: booky
-cssclasses: [my-custom-class]
+theme: humanist
 publish: true
+visibility: public # public | unlisted | private
+permalink: my-note-slug
+---
+```
+
+### Garden Profile Note (`permalink: /`)
+The root note of your garden (`permalink: "/"`) acts as your garden homepage and defines garden-wide settings:
+
+```yaml
+---
+permalink: /
+garden-domain: notes.example.com
+garden-brand: https://example.com/logo.svg   # or false to hide logo/brand
+garden-favicon: https://example.com/icon.png
+garden-avatar: https://example.com/avatar.png
+garden-display-name: Francis
+garden-launcher: true                # command palette for visitors
+garden-mycelium: true                # participate in the semantic network
 ---
 ```
 
