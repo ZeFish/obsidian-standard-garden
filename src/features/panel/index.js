@@ -29,6 +29,45 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.isLoadingLinks = false;
     this.noteStatsCache = new Map();
     this.isLoadingStats = false;
+    this.inquiryCache = new Map();
+  }
+
+  async triggerHypheInquiry(file) {
+    if (!file) return;
+    const existing = this.inquiryCache.get(file.path) || {};
+    this.inquiryCache.set(file.path, { ...existing, isLoading: true, error: null });
+    this.render();
+
+    try {
+      const content = await this.plugin.app.vault.read(file);
+      const questions = await this.plugin.garden.askHypheInquiry(file, content);
+      this.inquiryCache.set(file.path, {
+        questions: questions || [],
+        isLoading: false,
+        error: null,
+      });
+    } catch (err) {
+      this.inquiryCache.set(file.path, {
+        questions: [],
+        isLoading: false,
+        error: err.message || "Failed to generate inquiry",
+      });
+    } finally {
+      this.render();
+    }
+  }
+
+  async appendInquiryToNote(file, question) {
+    if (!file || !question) return;
+    try {
+      await this.plugin.app.vault.process(file, (content) => {
+        const callout = `\n\n> [!quote] 🦉 Hyphe's Inquiry\n> ${question}\n\n`;
+        return content.trimEnd() + callout;
+      });
+      new obsidian_1.Notice("Inquiry added to note.");
+    } catch (err) {
+      new obsidian_1.Notice(`Error adding inquiry: ${err.message}`);
+    }
   }
 
   async loadNoteStats(file) {
@@ -385,78 +424,6 @@ class StandardGardenView extends obsidian_1.ItemView {
             text: `Updated ${formatted}`,
             cls: "stnd-panel-meta",
           });
-        }
-
-        // Citations List
-        const citations = cachedStats?.citations || [];
-        const citationsSection = statsBox.createEl("div", { cls: "stnd-panel-citations" });
-        citationsSection.style.cssText = "margin-top: var(--size-4-2);";
-
-        const citationsHeader = citationsSection.createEl("div", {
-          cls: "stnd-panel-citations-header",
-        });
-        citationsHeader.style.cssText =
-          "display: flex; align-items: center; justify-content: space-between; font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--size-4-1);";
-        citationsHeader.createEl("span", {
-          text: `Citations (${citations.length})`,
-        });
-
-        if (citations.length > 0) {
-          const citationsList = citationsSection.createEl("div", {
-            cls: "stnd-panel-citations-list",
-          });
-          citationsList.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
-
-          for (const cit of citations) {
-            const citCard = citationsList.createEl("div", {
-              cls: "stnd-panel-citation-card",
-            });
-            citCard.style.cssText =
-              "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: var(--radius-s); background: var(--background-modifier-hover); cursor: pointer; transition: background 0.15s ease;";
-
-            citCard.addEventListener("mouseenter", () => {
-              citCard.style.background = "var(--background-modifier-active-hover)";
-            });
-            citCard.addEventListener("mouseleave", () => {
-              citCard.style.background = "var(--background-modifier-hover)";
-            });
-
-            const citInfo = citCard.createEl("div", { cls: "stnd-panel-citation-info" });
-            citInfo.style.cssText =
-              "display: flex; flex-direction: column; min-width: 0; overflow: hidden;";
-            const citTitle = citInfo.createEl("span", {
-              text: cit.title || cit.slug,
-              cls: "stnd-panel-citation-title",
-            });
-            citTitle.style.cssText =
-              "font-size: var(--font-ui-smaller); font-weight: var(--font-medium); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
-
-            const citAuthor = citInfo.createEl("span", {
-              text: `@${cit.username}`,
-              cls: "stnd-panel-citation-author",
-            });
-            citAuthor.style.cssText = "font-size: 11px; color: var(--text-faint);";
-
-            const extIcon = citCard.createEl("span", {
-              cls: "stnd-panel-citation-icon",
-            });
-            extIcon.style.cssText =
-              "color: var(--text-faint); display: flex; align-items: center; flex-shrink: 0; margin-left: 6px;";
-            obsidian_1.setIcon(extIcon, "external-link");
-
-            citCard.addEventListener("click", () => {
-              if (cit.url) {
-                window.open(cit.url, "_blank");
-              }
-            });
-          }
-        } else if (!this.isLoadingStats) {
-          const emptyCit = citationsSection.createEl("div", {
-            cls: "stnd-panel-citations-empty",
-          });
-          emptyCit.style.cssText =
-            "font-size: var(--font-ui-smaller); color: var(--text-faint); font-style: italic;";
-          emptyCit.createEl("span", { text: "No citations yet" });
         }
       }
     }
@@ -1110,6 +1077,210 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
   }
 
+  _renderHypheInquiries(container, activeFile) {
+    const card = container.createEl("div", { cls: "stnd-resonances-card stnd-inquiries-card" });
+
+    const header = card.createEl("div", { cls: "stnd-inquiries-header" });
+    const title = header.createEl("span", { cls: "stnd-inquiries-title" });
+    title.setText("🦉 Hyphe's Inquiries");
+
+    const cached = this.inquiryCache.get(activeFile.path);
+
+    const askBtn = header.createEl("button", {
+      cls: "stnd-inquiries-btn mod-cta",
+      text: cached?.questions?.length ? "Re-inquire" : "Inquire",
+    });
+    if (cached?.isLoading) {
+      askBtn.disabled = true;
+      askBtn.setText("Reflecting...");
+    }
+
+    askBtn.addEventListener("click", async () => {
+      await this.triggerHypheInquiry(activeFile);
+    });
+
+    if (cached?.isLoading) {
+      const loading = card.createEl("div", { cls: "stnd-inquiry-loading" });
+      loading.style.cssText =
+        "font-size: var(--font-ui-smaller); color: var(--text-muted); font-style: italic; padding: 6px 0;";
+      loading.setText("Hyphe is reading your note and framing questions...");
+      return;
+    }
+
+    if (cached?.error) {
+      const errEl = card.createEl("div", { cls: "stnd-inquiry-error" });
+      errEl.style.cssText = "font-size: 11px; color: var(--color-red); margin-top: 4px;";
+      errEl.setText(`Error: ${cached.error}`);
+      return;
+    }
+
+    if (cached?.questions?.length > 0) {
+      const list = card.createEl("div", { cls: "stnd-inquiries-list" });
+      for (const q of cached.questions) {
+        const box = list.createEl("div", { cls: "stnd-inquiry-box" });
+        const qText = box.createEl("span", { cls: "stnd-inquiry-text" });
+        qText.setText(q);
+
+        const addBtn = box.createEl("button", {
+          cls: "stnd-inquiry-action-btn",
+          text: "+ Add to note",
+        });
+        addBtn.addEventListener("click", async () => {
+          await this.appendInquiryToNote(activeFile, q);
+        });
+      }
+    } else {
+      const placeholder = card.createEl("p", {
+        cls: "stnd-inquiry-placeholder",
+        text: "Ask Hyphe for Socratic questions to challenge your assumptions and uncover unexamined angles.",
+      });
+      placeholder.style.cssText =
+        "font-size: 11px; color: var(--text-faint); margin: 4px 0 0 0; line-height: 1.4;";
+    }
+  }
+
+  _renderPublicResonances(container, activeFile) {
+    const meta = this.plugin.app.metadataCache.getFileCache(activeFile);
+    const fm = meta?.frontmatter || {};
+    const isConfirmedOnline =
+      !!fm["garden-url"] ||
+      !!fm.url_public ||
+      fm.published === true ||
+      fm.published === "true";
+
+    const card = container.createEl("div", { cls: "stnd-resonances-card stnd-network-card" });
+
+    const header = card.createEl("div", { cls: "stnd-inquiries-header" });
+    const title = header.createEl("span", { cls: "stnd-inquiries-title" });
+    title.setText("🌐 Network Resonances");
+
+    if (!isConfirmedOnline) {
+      const draftNote = card.createEl("p");
+      draftNote.style.cssText =
+        "font-size: 11px; color: var(--text-faint); margin: 0; line-height: 1.4;";
+      draftNote.setText(
+        "Publish this note to reveal public citations, readership metrics, and semantic connections across standard.garden.",
+      );
+      return;
+    }
+
+    const cachedStats = this.noteStatsCache.get(activeFile.path);
+    if (!cachedStats && !this.isLoadingStats) {
+      this.loadNoteStats(activeFile);
+    }
+
+    // Stats row
+    const statsRow = card.createEl("div", { cls: "stnd-network-stats" });
+    const viewsCount = cachedStats ? cachedStats.views : (this.isLoadingStats ? "..." : 0);
+    const citationsCount = cachedStats?.citations?.length || 0;
+
+    statsRow.createEl("span", {
+      text: `👁️ ${viewsCount} ${viewsCount === 1 ? "view" : "views"} · 🔗 ${citationsCount} ${citationsCount === 1 ? "citation" : "citations"}`,
+    });
+
+    if (cachedStats?.updated_at) {
+      const date = new Date(cachedStats.updated_at);
+      statsRow.createEl("span", {
+        text: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        cls: "stnd-panel-meta",
+      });
+    }
+
+    // Citations list
+    const citations = cachedStats?.citations || [];
+    if (citations.length > 0) {
+      card.createEl("div", {
+        cls: "stnd-network-subheading",
+        text: `Citations & Mentions (${citations.length})`,
+      });
+
+      const list = card.createEl("div");
+      list.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
+
+      for (const cit of citations) {
+        const item = list.createEl("div", { cls: "stnd-panel-citation-card" });
+        item.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: var(--radius-s); background: var(--background-primary); cursor: pointer; border: 1px solid var(--background-modifier-border);";
+
+        const info = item.createEl("div");
+        info.style.cssText = "display: flex; flex-direction: column; min-width: 0;";
+
+        const citTitle = info.createEl("span", {
+          text: cit.title || cit.slug,
+          cls: "stnd-panel-citation-title",
+        });
+        citTitle.style.cssText =
+          "font-size: var(--font-ui-smaller); font-weight: var(--font-medium); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+
+        const citAuthor = info.createEl("span", {
+          text: `@${cit.username}`,
+          cls: "stnd-panel-citation-author",
+        });
+        citAuthor.style.cssText = "font-size: 10px; color: var(--text-faint);";
+
+        item.addEventListener("click", () => {
+          const local =
+            this.plugin.garden?.bySlug?.get(cit.slug) ||
+            this.plugin.garden?.byTitleSlug?.get(cit.slug) ||
+            this.plugin.garden?.byBasenameSlug?.get(cit.slug);
+          if (local) {
+            this.plugin.app.workspace.getLeaf(false).openFile(local);
+          } else if (cit.url) {
+            window.open(cit.url, "_blank");
+          }
+        });
+      }
+    }
+
+    // Related notes list
+    const related = cachedStats?.related || [];
+    if (related.length > 0) {
+      card.createEl("div", {
+        cls: "stnd-network-subheading",
+        text: `Related Notes (${related.length})`,
+      });
+
+      const list = card.createEl("div");
+      list.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
+
+      for (const rel of related) {
+        const item = list.createEl("div", { cls: "stnd-panel-citation-card" });
+        item.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: var(--radius-s); background: var(--background-primary); cursor: pointer; border: 1px solid var(--background-modifier-border);";
+
+        const info = item.createEl("div");
+        info.style.cssText = "display: flex; flex-direction: column; min-width: 0;";
+
+        const relTitle = info.createEl("span", {
+          text: rel.title || rel.slug,
+          cls: "stnd-panel-citation-title",
+        });
+        relTitle.style.cssText =
+          "font-size: var(--font-ui-smaller); font-weight: var(--font-medium); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+
+        if (rel.username) {
+          const relAuthor = info.createEl("span", {
+            text: `@${rel.username}`,
+            cls: "stnd-panel-citation-author",
+          });
+          relAuthor.style.cssText = "font-size: 10px; color: var(--text-faint);";
+        }
+
+        item.addEventListener("click", () => {
+          const local =
+            this.plugin.garden?.bySlug?.get(rel.slug) ||
+            this.plugin.garden?.byTitleSlug?.get(rel.slug) ||
+            this.plugin.garden?.byBasenameSlug?.get(rel.slug);
+          if (local) {
+            this.plugin.app.workspace.getLeaf(false).openFile(local);
+          } else if (rel.url) {
+            window.open(rel.url, "_blank");
+          }
+        });
+      }
+    }
+  }
+
   _renderLinksTab(container) {
     const activeFile = this.plugin.app.workspace.getActiveFile();
     if (!activeFile) {
@@ -1121,14 +1292,36 @@ class StandardGardenView extends obsidian_1.ItemView {
     const linksWrap = container.createEl("div", { cls: "stnd-audit-container" });
 
     const headerRow = linksWrap.createEl("div", { cls: "stnd-audit-header-row" });
-    headerRow.createEl("h3", { text: "Mycelium & Links", cls: "stnd-audit-title" });
+    const titleCol = headerRow.createEl("div", { cls: "stnd-resonances-title-col" });
+    titleCol.createEl("h3", { text: "Resonances", cls: "stnd-audit-title" });
+    titleCol.createEl("span", {
+      text: "Connections, inspiration & inquiries",
+      cls: "stnd-resonances-subtitle",
+    });
 
     const refreshBtn = headerRow.createEl("button", {
       cls: "stnd-audit-refresh-btn" + (this.isLoadingLinks ? " is-loading" : ""),
-      title: "Refresh mentions",
+      title: "Refresh resonances",
     });
     obsidian_1.setIcon(refreshBtn, "refresh-cw");
-    refreshBtn.addEventListener("click", () => this.refreshLinksData());
+    refreshBtn.addEventListener("click", () => {
+      this.noteStatsCache.delete(activeFile.path);
+      this.loadNoteStats(activeFile);
+      this.refreshLinksData();
+    });
+
+    // 1. Hyphe's Inquiries Card
+    this._renderHypheInquiries(linksWrap, activeFile);
+
+    // 2. Network Resonances Card (Citations & Related)
+    this._renderPublicResonances(linksWrap, activeFile);
+
+    // 3. Vault Connections Section
+    const vaultHeader = linksWrap.createEl("div", {
+      cls: "stnd-network-subheading",
+      text: "Vault Connections",
+    });
+    vaultHeader.style.cssText = "margin-top: 14px; margin-bottom: 8px;";
 
     // ── Quick Preferences (Ghost links & Compost footer toggles) ──
     const prefsCard = linksWrap.createEl("div", { cls: "stnd-panel-mycelium-prefs" });

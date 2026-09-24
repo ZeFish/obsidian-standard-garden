@@ -995,3 +995,106 @@ body.stnd-adapter .workspace-tab-header-container {
 .stnd-audit-banner-btn:hover {
   opacity: 0.9;
 }
+
+/* ─── Resonances (Inquiries, Network Echoes, Citations) ────────────── */
+.stnd-resonances-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stnd-resonances-subtitle {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.stnd-resonances-card {
+  margin: 0 0 var(--size-4-3) 0;
+  padding: 10px 12px;
+  background: var(--background-secondary);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.stnd-inquiries-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.stnd-inquiries-title {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stnd-inquiries-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.stnd-inquiry-box {
+  background: var(--background-primary);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  padding: 8px 10px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stnd-inquiry-text {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-normal);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.stnd-inquiry-action-btn {
+  align-self: flex-start;
+  font-size: 10.5px;
+  padding: 2px 6px;
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.stnd-inquiry-action-btn:hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.stnd-network-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+}
+
+.stnd-network-subheading {
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 8px 0 4px 0;
+}
+

@@ -2351,6 +2351,7 @@ class GardenFeature {
         return {
           views: data.views || 0,
           citations: Array.isArray(data.citations) ? data.citations : [],
+          related: Array.isArray(data.related) ? data.related : [],
           created_at: data.created_at,
           updated_at: data.updated_at,
           online: true,
@@ -2360,6 +2361,40 @@ class GardenFeature {
     } catch (err) {
       console.error("[Standard] Error fetching note stats:", err);
       return null;
+    }
+  }
+
+  async askHypheInquiry(file, content) {
+    if (!this.checkApiKeyAndShowModal()) {
+      return null;
+    }
+    try {
+      const title = file ? file.basename : "Untitled";
+      const response = await obsidian_1.requestUrl({
+        url: `${this.plugin.settings.apiUrl}/ai/inquire`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": this.plugin.settings.apiKey,
+        },
+        body: JSON.stringify({ title, content }),
+        throw: false,
+      });
+
+      if (response.status === 200) {
+        const data = response.json;
+        return Array.isArray(data.questions) ? data.questions : [];
+      } else {
+        let errText = response.text;
+        try {
+          const parsed = JSON.parse(response.text || "{}");
+          if (parsed.error) errText = parsed.error;
+        } catch {}
+        throw new Error(errText || `Server error (${response.status})`);
+      }
+    } catch (err) {
+      console.error("[Standard] Error calling askHypheInquiry:", err);
+      throw err;
     }
   }
 
