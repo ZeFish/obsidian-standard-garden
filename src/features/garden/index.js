@@ -1092,10 +1092,10 @@ class GardenFeature {
               // Remote edit wins: Pull remote change and mark publish: true
               await this.app.vault.modify(file, remoteNote.content);
               await this.app.fileManager.processFrontMatter(file, (fm) => {
-                // Ne pas écraser une date : `publish: 2026-08-07` est une intention
-                // de publication valide *et* la clé de tri du jardin. La remplacer
-                // par `true` à chaque publication détruirait l\'ordre voulu.
-                if (!isPublishIntent(fm)) fm.status = "public";
+                // Do not overwrite a date: `publish: 2026-08-07` is valid intent
+                // and the garden sort key.
+                if (!isPublishIntent(fm)) fm.publish = true;
+                if ("status" in fm) delete fm.status;
                 fm["garden-url"] = this.getLiveUrl(file);
                 if (remoteNote.nano_id) {
                   fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
@@ -1144,10 +1144,10 @@ class GardenFeature {
 
             const file = await this.app.vault.create(finalPath, remoteNote.content);
             await this.app.fileManager.processFrontMatter(file, (fm) => {
-              // Ne pas écraser une date : `publish: 2026-08-07` est une intention
-              // de publication valide *et* la clé de tri du jardin. La remplacer
-              // par `true` à chaque publication détruirait l\'ordre voulu.
-              if (!isPublishIntent(fm)) fm.status = "public";
+              // Do not overwrite a date: `publish: 2026-08-07` is valid intent
+              // and the garden sort key.
+              if (!isPublishIntent(fm)) fm.publish = true;
+              if ("status" in fm) delete fm.status;
               fm["garden-url"] = this.getLiveUrl(file);
               fm.permalink = remoteNote.slug;
               if (remoteNote.nano_id) {
@@ -1238,7 +1238,8 @@ class GardenFeature {
       // on synchronise simplement les métadonnées (garden-url, garden-short, permalink) sans créer de doublon.
       for (const { remoteNote, file } of remoteMatchedLocal) {
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          if (!isPublishIntent(fm)) fm.status = "public";
+          if (!isPublishIntent(fm)) fm.publish = true;
+          if ("status" in fm) delete fm.status;
           if (!fm["garden-url"]) fm["garden-url"] = this.getLiveUrl(file);
           if (!fm.permalink && remoteNote.slug && remoteNote.slug !== slugify(file.basename)) {
             fm.permalink = remoteNote.slug;
@@ -1280,10 +1281,10 @@ class GardenFeature {
 
         const file = await this.app.vault.create(finalPath, remoteNote.content);
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          // Ne pas écraser une date : `publish: 2026-08-07` est une intention
-          // de publication valide *et* la clé de tri du jardin. La remplacer
-          // par `true` à chaque publication détruirait l'ordre voulu.
-          if (!isPublishIntent(fm)) fm.status = "public";
+          // Do not overwrite a date: `publish: 2026-08-07` is valid intent
+          // and the garden sort key.
+          if (!isPublishIntent(fm)) fm.publish = true;
+          if ("status" in fm) delete fm.status;
           fm["garden-url"] = this.getLiveUrl(file);
           fm.permalink = remoteNote.slug;
           if (remoteNote.nano_id) {
@@ -2111,17 +2112,12 @@ class GardenFeature {
       if (file) {
         this.noteStatsCache.delete(file.path);
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          if (fm.status === "public" || fm.status === "published") {
-            fm.status = "draft";
-          }
-          if (fm.publish !== undefined) {
-            fm.publish = false;
-          }
+          fm.publish = false;
+          if ("status" in fm) delete fm.status;
           delete fm.published;
           delete fm.url_public;
           delete fm["garden-url"];
-          // Le lien court est écrit aux mêmes endroits que `garden-url` ; le
-          // laisser derrière produit une adresse stnd.gd qui répond 404.
+          // Remove garden-short as well to avoid 404 links
           delete fm["garden-short"];
         });
       }
@@ -2177,10 +2173,10 @@ class GardenFeature {
     const fm = meta?.frontmatter || {};
 
     const doPublish = async () => {
-      // Marquer status: public pour que la note soit publiée
       await this.app.fileManager.processFrontMatter(file, (fm) => {
-        // Ne pas écraser une intention valide existante
-        if (!isPublishIntent(fm)) fm.status = "public";
+        // Do not overwrite a date: `publish: 2026-08-07` is valid intent
+        if (!isPublishIntent(fm)) fm.publish = true;
+        if ("status" in fm) delete fm.status;
       });
       const ok = await this.publishNote(file);
       return ok;
@@ -2189,8 +2185,8 @@ class GardenFeature {
     // Guardrails — gather any reason this note might surprise you, then ask
     // once before planting it anyway.
     const warnings = [];
-    if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
-      warnings.push(`• status: draft — it asked to stay a draft`);
+    if (fm.publish === false || fm.publish === "false" || fm.status === "draft") {
+      warnings.push(`• publish: false — it was marked not to publish`);
     }
     if (String(fm.visibility || "").toLowerCase() === "private") {
       warnings.push(`• visibility: private — visitors won't see it`);

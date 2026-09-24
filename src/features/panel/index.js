@@ -264,6 +264,7 @@ class StandardGardenView extends obsidian_1.ItemView {
   _showNoteActionMenu(file, fm, evt, opts = {}) {
     const {
       isConfirmedOnline,
+      isDesynced,
       isOutdated,
       isModifiedLocally,
       remoteContent,
@@ -306,7 +307,30 @@ class StandardGardenView extends obsidian_1.ItemView {
       }
     };
 
-    if (isConfirmedOnline) {
+    if (isDesynced) {
+      menu.addItem((i) =>
+        i
+          .setTitle("Remove from Garden (delete online note)")
+          .setIcon("trash-2")
+          .setWarning(true)
+          .onClick(async () => {
+            await garden.deleteOnlineVersion(file);
+            this.render();
+          })
+      );
+      menu.addItem((i) =>
+        i
+          .setTitle("Republish (set publish: true)")
+          .setIcon("upload-cloud")
+          .onClick(async () => {
+            await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
+              fm.publish = true;
+              if ("status" in fm) delete fm.status;
+            });
+            await doPublish();
+          })
+      );
+    } else if (isConfirmedOnline) {
       if (isOutdated) {
         menu.addItem((i) =>
           i
@@ -474,7 +498,15 @@ class StandardGardenView extends obsidian_1.ItemView {
       statusLeft.style.cssText = "display: flex; align-items: center; gap: 4px;";
 
       let badge;
-      if (isConfirmedOnline) {
+      const isDesynced = !isPublished && isConfirmedOnline;
+
+      if (isDesynced) {
+        badge = statusLeft.createEl("span", {
+          text: "Unpublished (Online)",
+          cls: "stnd-panel-badge stnd-panel-badge-desynced is-clickable",
+        });
+        badge.title = "Unpublished locally, but note is still live online — click for actions";
+      } else if (isConfirmedOnline) {
         if (isOutdated) {
           badge = statusLeft.createEl("span", {
             text: "Outdated",
@@ -500,12 +532,6 @@ class StandardGardenView extends obsidian_1.ItemView {
           cls: "stnd-panel-badge stnd-panel-badge-pending is-clickable",
         });
         badge.title = "Queued for publication — click for actions";
-      } else if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
-        badge = statusLeft.createEl("span", {
-          text: "Draft",
-          cls: "stnd-panel-badge stnd-panel-badge-excluded is-clickable",
-        });
-        badge.title = "Draft note — click for actions";
       } else {
         badge = statusLeft.createEl("span", {
           text: "Local",
@@ -517,6 +543,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       badge.addEventListener("click", (evt) => {
         this._showNoteActionMenu(file, fm, evt, {
           isConfirmedOnline,
+          isDesynced,
           isOutdated,
           isModifiedLocally,
           remoteContent,
@@ -621,7 +648,7 @@ class StandardGardenView extends obsidian_1.ItemView {
         forcePublishBtn.addEventListener("click", () => publishAction(forcePublishBtn));
       } else {
         const publishBtn = actions.createEl("button", {
-          text: isConfirmedOnline ? "Update" : "Publish",
+          text: isDesynced ? "Republish" : (isConfirmedOnline ? "Update" : "Publish"),
           cls: "stnd-panel-btn",
         });
         publishBtn.addEventListener("click", () => publishAction(publishBtn));
@@ -668,6 +695,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       moreBtn.addEventListener("click", (evt) => {
         this._showNoteActionMenu(file, fm, evt, {
           isConfirmedOnline,
+          isDesynced,
           isOutdated,
           isModifiedLocally,
           remoteContent,

@@ -15,13 +15,17 @@ const {
 // Location is configurable: titlebar (default), statusbar, ribbon, or hidden.
 
 const STATES = {
-  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Unpublished (local)" },
-  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "Pending publication" },
-  public:      { icon: "globe",              color: "var(--stnd-status-synced)",   label: "Public" },
-  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-unlisted)", label: "Unlisted" },
-  private:     { icon: "lock",               color: "var(--stnd-status-private)",  label: "Private" },
-  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Update available online" },
-  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Unpublished local changes" },
+  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Local" },
+  local:       { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Local" },
+  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "Queued" },
+  synced:      { icon: "check-circle",       color: "var(--stnd-status-synced)",   label: "Synced" },
+  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Modified" },
+  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Outdated" },
+  desynced:    { icon: "alert-circle",       color: "var(--stnd-status-desynced)", label: "Unpublished (online)" },
+  // Backward compatibility aliases
+  public:      { icon: "globe",              color: "var(--stnd-status-synced)",   label: "Synced" },
+  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-synced)",   label: "Synced (unlisted)" },
+  private:     { icon: "lock",               color: "var(--stnd-status-synced)",   label: "Synced (private)" },
 };
 
 class PublishStatusFeature {
@@ -99,20 +103,29 @@ class PublishStatusFeature {
   }
 
   // ── State ────────────────────────────────────────────────────────────────────
-  // Distinguishes INTENT (`status: public`) from REALITY (the plugin stamps
-  // `garden_url` only on confirmed publish — its presence IS "actually live").
+  // Sync state evaluates the synchronization between the local vault and the remote Garden.
+  // Visibility (public/unlisted/private) is an orthogonal attribute.
   stateKey(frontmatter, path, file) {
     const fm = frontmatter || {};
     const wantsPublish = isPublishIntent(fm);
-    if (!wantsPublish) return "unpublished";
     const isConfirmedOnline =
       !!fm["garden-url"] ||
       !!fm.url_public ||
       fm.published === true ||
       fm.published === "true";
+
+    // Critical safety alert: Note is unpublished locally (publish: false or omitted),
+    // but was previously published and remains live online!
+    if (!wantsPublish) {
+      if (isConfirmedOnline) {
+        return "desynced";
+      }
+      return "unpublished";
+    }
+
     if (!isConfirmedOnline) return "pending";
 
-    // 1. Si on a un statut en cache indiquant une désynchronisation, on l'affiche en priorité
+    // 1. Cached status check (remote out of sync)
     if (path && this.noteStatuses) {
       const cached = this.noteStatuses.get(path);
       if (cached && (cached.status === "outdated" || cached.status === "changed")) {
@@ -133,10 +146,37 @@ class PublishStatusFeature {
       }
     }
 
-    const vis = String(fm.visibility || "").toLowerCase().trim();
-    if (vis === "private") return "private";
-    if (vis === "unlisted") return "unlisted";
-    return "public";
+    return "synced";
+  }
+
+  getStateInfo(frontmatter, path, file) {
+    const fm = frontmatter || {};
+    const key = this.stateKey(fm, path, file);
+    const base = STATES[key] || STATES.unpublished;
+    const state = Object.assign({}, base);
+    const vis = String(fm.visibility || "public").toLowerCase().trim();
+
+    if (key === "synced") {
+      if (vis === "private") {
+        state.icon = "lock";
+        state.label = "Synced (private)";
+      } else if (vis === "unlisted") {
+        state.icon = "eye-off";
+        state.label = "Synced (unlisted)";
+      } else {
+        state.icon = "globe";
+        state.label = "Synced (public)";
+      }
+    } else if (key === "changed") {
+      state.label = vis === "private" ? "Modified (private)" : (vis === "unlisted" ? "Modified (unlisted)" : "Modified");
+    } else if (key === "outdated") {
+      state.label = "Outdated";
+    } else if (key === "desynced") {
+      state.icon = "alert-circle";
+      state.color = "var(--stnd-status-desynced)";
+      state.label = "Unpublished locally (still online)";
+    }
+    return { key, state, visibility: vis };
   }
 
   // ── Async Status Check ───────────────────────────────────────────────────────
@@ -156,8 +196,18 @@ class PublishStatusFeature {
         fm.published === true ||
         fm.published === "true";
 
-      if (!wantsPublish || !hasGardenUrl) {
+      if (!hasGardenUrl && !wantsPublish) {
         this.noteStatuses.delete(file.path);
+        return;
+      }
+
+      if (!wantsPublish && hasGardenUrl) {
+        // Desynced: unpublished locally, but still has garden-url
+        this.noteStatuses.set(file.path, {
+          status: "desynced",
+          timestamp: Date.now(),
+        });
+        this.renderCurrentWidgets();
         return;
       }
 
@@ -312,7 +362,7 @@ class PublishStatusFeature {
     }
 
     const fm = getNoteFrontmatter(this.app, view.file);
-    const key = this.stateKey(fm, view.file.path, view.file);
+    const { key, state } = this.getStateInfo(fm, view.file.path, view.file);
 
     if (!indicator || !indicator.isConnected || !view.containerEl.contains(indicator)) {
       const existing = view.containerEl.querySelector(".stnd-bottom-indicator");
@@ -331,7 +381,7 @@ class PublishStatusFeature {
     }
 
     indicator.className = `stnd-bottom-indicator stnd-style-${indicatorStyle} stnd-state-${key}`;
-    const stateLabel = STATES[key]?.label || key;
+    const stateLabel = state?.label || key;
     indicator.setAttribute("title", `Garden: ${stateLabel}`);
 
     if (triggerAnimation && indicatorStyle === "garden") {
@@ -347,8 +397,7 @@ class PublishStatusFeature {
     if (!view || typeof view.addAction !== "function" || !view.file) return;
 
     const fm = getNoteFrontmatter(this.app, view.file);
-    const key = this.stateKey(fm, view.file.path, view.file);
-    const state = STATES[key];
+    const { key, state } = this.getStateInfo(fm, view.file.path, view.file);
 
     let el = view._stndPublishAction;
     if (!el || !el.isConnected || !view.containerEl.contains(el)) {
@@ -375,8 +424,7 @@ class PublishStatusFeature {
     }
 
     const fm = getNoteFrontmatter(this.app, activeFile);
-    const key = this.stateKey(fm, activeFile.path, activeFile);
-    const state = STATES[key];
+    const { key, state } = this.getStateInfo(fm, activeFile.path, activeFile);
 
     if (!this.statusBarEl) {
       this.statusBarEl = this.plugin.addStatusBarItem();
@@ -410,8 +458,7 @@ class PublishStatusFeature {
     }
 
     const fm = getNoteFrontmatter(this.app, activeFile);
-    const key = this.stateKey(fm, activeFile.path, activeFile);
-    const state = STATES[key];
+    const { key, state } = this.getStateInfo(fm, activeFile.path, activeFile);
 
     if (!this.ribbonEl) {
       this.ribbonEl = this.plugin.addRibbonIcon(state.icon, "Garden Status", (evt) => {
@@ -461,7 +508,33 @@ class PublishStatusFeature {
       this.refreshAll();
     };
 
-    if (key === "unpublished" || key === "pending") {
+    if (key === "desynced") {
+      menu.addItem((i) =>
+        i
+          .setTitle("Remove from Garden (delete online note)")
+          .setIcon("trash-2")
+          .setWarning(true)
+          .onClick(async () => {
+            await garden.deleteOnlineVersion(file);
+            this.refreshAll();
+          }),
+      );
+      menu.addItem((i) =>
+        i
+          .setTitle("Republish (set publish: true)")
+          .setIcon("upload-cloud")
+          .onClick(async () => {
+            await this.app.fileManager.processFrontMatter(file, (fm) => {
+              fm.publish = true;
+              if ("status" in fm) delete fm.status;
+            });
+            await publish();
+          }),
+      );
+      menu.addItem((i) =>
+        i.setTitle("View live version").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
+      );
+    } else if (key === "unpublished" || key === "pending") {
       menu.addItem((i) =>
         i.setTitle("Publish to Garden").setIcon("upload-cloud").onClick(() => publish()),
       );

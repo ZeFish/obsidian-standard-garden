@@ -174,9 +174,9 @@
 .stnd-panel-badge-outdated {
   color: var(--stnd-status-outdated);
 }
-.stnd-panel-badge-excluded,
-.stnd-panel-badge-draft {
-  color: var(--color-red, #ef4444);
+.stnd-panel-badge-desynced {
+  color: var(--stnd-status-desynced);
+  font-weight: var(--font-semibold);
 }
 .stnd-panel-badge-local {
   color: var(--stnd-status-local);

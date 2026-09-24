@@ -149,23 +149,22 @@ function descWithLinks(text, links = []) {
   return frag;
 }
 
-// Détection native de l'intention de publication.
-// Supporte nativement `status: public` (ou `status: draft`) ainsi que `publish: true` ou date.
+// Publication intent detection.
+// In Standard Garden, publication is controlled strictly by `publish: true` or a date.
+// There is no `status` property in Garden. Legacy `status: public` is handled as read-only fallback.
 function isPublishIntent(value) {
   if (value == null) return false;
 
-  // Si un objet frontmatter complet est passé
+  // If a full frontmatter object is passed
   if (typeof value === "object" && !(value instanceof Date)) {
+    if (value.publish !== undefined) {
+      return isPublishIntent(value.publish);
+    }
+    // Deprecated read-only fallback for legacy vaults
     if (typeof value.status === "string") {
       const s = value.status.trim().toLowerCase();
       if (s === "public" || s === "published") return true;
       if (s === "draft" || s === "private" || s === "internal" || s === "archived") return false;
-    }
-    if (value.publish !== undefined) {
-      return isPublishIntent(value.publish);
-    }
-    if (value["garden-url"] || value.url_public) {
-      return true;
     }
     return false;
   }
@@ -175,8 +174,11 @@ function isPublishIntent(value) {
   if (value instanceof Date) return !isNaN(value.getTime());
   if (typeof value === "string") {
     const trimmed = value.trim().toLowerCase();
-    if (trimmed === "public" || trimmed === "published" || trimmed === "true") return true;
-    if (trimmed === "draft" || trimmed === "private" || trimmed === "archived" || trimmed === "false") return false;
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    // Legacy string values
+    if (trimmed === "public" || trimmed === "published") return true;
+    if (trimmed === "draft" || trimmed === "private" || trimmed === "archived") return false;
     return !isNaN(new Date(value).getTime());
   }
   return false;
