@@ -15,7 +15,13 @@ Standard Garden bridges your local Obsidian vault with our curated design system
 - **1. Garden (Publishing Engine):** Instant note lifecycle status (*Local Draft*, *Public*, *Unlisted*, *Private*), prominent 1-click **Publish / Sync**, live note URL copy, and browser preview.
 - **2. Roots (Privacy & Lifecycles):** Granular visibility controls (Public, Unlisted, Private), Compost expiration timers for ephemeral drafts, and vault-wide default preferences.
 - **3. Mycelium (Network & AI):** Interconnected cross-vault backlinks, semantic echoes, and direct consultation with **🦉 Hyphe (AI Thinker)**.
-- **4. Design (Aesthetic Atelier):** 34 curated classical temperaments (Humanist, Forest, Academic, Technical, Editorial...) with typography, rhythm, and styling tokens—without touching CSS.
+- **4. Design (Aesthetic Atelier):** Curated classical temperaments (Humanist, Construct, Blueprint, Chronicle, Treatise, Exhibit...) with live display mirroring in Obsidian—what you see in your editor is exactly what readers see online.
+
+## 🎨 Live Visual Mirroring: Obsidian as Your Visual Canvas
+
+Standard Garden eliminates the gap between local note-taking and web publication:
+- **Typographic Mirroring:** Whenever you change the temperament in frontmatter (`theme: humanist`, `theme: blueprint`, `theme: editorial`, `theme: academic`, `theme: international`, `theme: gallery`...) or pick a theme in the Design panel, Obsidian dynamically adopts the authentic fonts (*EB Garamond*, *Söhne*, *Newsreader*, *Instrument Sans*, *MonoLisa*) and typographic hierarchy.
+- **Architectural WYSIWYG:** What you compose locally in Obsidian is rendered with the exact same margins, line heights, and atmospheric grace as on [standard.garden](https://standard.garden).
 
 ## 🔒 Privacy & Double Guardrail
 
