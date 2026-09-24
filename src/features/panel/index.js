@@ -166,7 +166,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     container.style.touchAction = "pan-y";
     container.style.webkitOverflowScrolling = "touch";
 
-    // Global header: left = product name, right = connected username (if any)
+    // Global header: left = product name, right = connected username (if any) + sync all button
     const headerEl = container.createEl("div", {
       cls: "stnd-panel-global-header",
     });
@@ -174,14 +174,37 @@ class StandardGardenView extends obsidian_1.ItemView {
       cls: "stnd-panel-global-title",
       text: "Garden",
     });
+
+    const headerRight = headerEl.createEl("div", {
+      cls: "stnd-panel-global-header-right",
+    });
+
+    if (this.plugin?.settings?.apiKey) {
+      const syncBtn = headerRight.createEl("button", {
+        cls: "stnd-panel-header-btn",
+        attr: {
+          "aria-label": "Sync all published notes with Garden",
+          title: "Sync all published notes with Garden",
+        },
+      });
+      obsidian_1.setIcon(syncBtn, "folder-sync");
+      syncBtn.addEventListener("click", async () => {
+        if (this.plugin.garden) {
+          await this.plugin.garden.syncAllPublished();
+          this.render();
+        }
+      });
+    }
+
     const username = this.plugin?.settings?.apiUsername || "";
-    const userEl = headerEl.createEl("div", {
+    const userEl = headerRight.createEl("div", {
       cls: "stnd-panel-global-username",
       text: username ? `@${username}` : "",
     });
 
     if (username) {
       userEl.style.cursor = "pointer";
+      userEl.title = `View @${username} on Standard Garden`;
       userEl.addEventListener("click", () => {
         window.open(`https://standard.garden/@${username}`, "_blank");
       });
@@ -213,7 +236,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     if (!file) {
       const empty = container.createEl("div", { cls: "stnd-panel-empty" });
-      empty.createEl("p", { text: "Aucune note ouverte.", cls: "stnd-panel-muted" });
+      empty.createEl("p", { text: "No active note.", cls: "stnd-panel-muted" });
       return;
     }
 
@@ -237,10 +260,178 @@ class StandardGardenView extends obsidian_1.ItemView {
     // }
   }
 
+  _showNoteActionMenu(file, fm, evt, opts = {}) {
+    const {
+      isConfirmedOnline,
+      isOutdated,
+      isModifiedLocally,
+      remoteContent,
+      liveUrl = isConfirmedOnline && this.plugin.garden ? this.plugin.garden.getLiveUrl(file) : null,
+    } = opts;
+
+    const garden = this.plugin.garden;
+    const menu = new obsidian_1.Menu();
+
+    const doPublish = async () => {
+      if (!garden || !garden.checkApiKeyAndShowModal()) return;
+      const ok = await garden.publishWithCheck(file);
+      if (ok === true) {
+        new obsidian_1.Notice(`Standard: "${file.basename}" published.`);
+        if (this.plugin.settings.openAfterPublish) garden.viewLiveVersion(file);
+        this.render();
+      } else if (ok === false) {
+        new obsidian_1.Notice(`Standard: Failed to publish "${file.basename}".`);
+        this.render();
+      }
+    };
+
+    const doPull = async () => {
+      let content = remoteContent;
+      if (!content && garden) {
+        const res = await garden.checkNoteStatus(file);
+        content = res?.remoteContent;
+      }
+      if (content) {
+        await this.plugin.app.vault.modify(file, content);
+        new obsidian_1.Notice("Standard: Local file updated with remote version.");
+        this.plugin.publishStatus?.noteStatuses?.set(file.path, {
+          status: "synced",
+          timestamp: Date.now(),
+        });
+        this.plugin.publishStatus?.refreshAll();
+        this.render();
+      } else {
+        new obsidian_1.Notice("Standard: Remote content not found.");
+      }
+    };
+
+    if (isConfirmedOnline) {
+      if (isOutdated) {
+        menu.addItem((i) =>
+          i
+            .setTitle("Pull remote changes (overwrite local)")
+            .setIcon("arrow-down-circle")
+            .onClick(() => doPull())
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle("Force publish local")
+            .setIcon("refresh-cw")
+            .onClick(() => doPublish())
+        );
+      } else if (isModifiedLocally) {
+        menu.addItem((i) =>
+          i
+            .setTitle("Publish local changes")
+            .setIcon("upload-cloud")
+            .onClick(() => doPublish())
+        );
+      } else {
+        menu.addItem((i) =>
+          i
+            .setTitle("Re-publish")
+            .setIcon("refresh-cw")
+            .onClick(() => doPublish())
+        );
+      }
+
+      if (liveUrl) {
+        menu.addItem((i) =>
+          i
+            .setTitle("View online")
+            .setIcon("external-link")
+            .onClick(() => garden.viewLiveVersion(file))
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle("Share note")
+            .setIcon("share-2")
+            .onClick(() => {
+              new StndShareModal(this.plugin.app, file.basename, liveUrl).open();
+            })
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle("Copy public link")
+            .setIcon("copy")
+            .onClick(() => {
+              navigator.clipboard.writeText(liveUrl);
+              new obsidian_1.Notice("Public URL copied to clipboard.");
+            })
+        );
+      }
+
+      menu.addSeparator();
+      menu.addItem((i) =>
+        i
+          .setTitle("Sync all notes")
+          .setIcon("folder-sync")
+          .onClick(async () => {
+            if (garden) {
+              await garden.syncAllPublished();
+              this.render();
+            }
+          })
+      );
+      menu.addSeparator();
+      menu.addItem((i) =>
+        i
+          .setTitle("Remove from Garden (unpublish)")
+          .setIcon("trash-2")
+          .setWarning(true)
+          .onClick(async () => {
+            const ok = await garden.deleteOnlineVersion(file);
+            if (ok === true) {
+              new obsidian_1.Notice(`Standard: "${file.basename}" removed from Garden.`);
+              this.render();
+            } else if (ok === false) {
+              new obsidian_1.Notice(`Standard: Failed to remove "${file.basename}".`);
+              this.render();
+            }
+          })
+      );
+    } else {
+      menu.addItem((i) =>
+        i
+          .setTitle("Publish to Garden")
+          .setIcon("upload-cloud")
+          .onClick(() => doPublish())
+      );
+      menu.addSeparator();
+      menu.addItem((i) =>
+        i
+          .setTitle("Sync all notes")
+          .setIcon("folder-sync")
+          .onClick(async () => {
+            if (garden) {
+              await garden.syncAllPublished();
+              this.render();
+            }
+          })
+      );
+    }
+
+    if (evt && evt.clientX != null && evt.clientY != null && evt.clientX > 0 && evt.clientY > 0) {
+      menu.showAtMouseEvent(evt);
+    } else {
+      const target = evt?.target?.closest ? (evt.target.closest("button") || evt.target.closest(".stnd-panel-badge")) : evt?.target;
+      const rect = target?.getBoundingClientRect?.();
+      if (rect) {
+        menu.showAtPosition({ x: Math.round(rect.left), y: Math.round(rect.bottom + 4) });
+      } else {
+        menu.showAtMouseEvent(evt);
+      }
+    }
+  }
+
   // ── File Info Section ─────────────────────────────────────────────────
 
   _renderFileInfo(container, file, fm) {
     const section = container.createEl("div", { cls: "stnd-panel-section" });
+
+    if (this.plugin.settings.apiKey && file && this.plugin.publishStatus) {
+      this.plugin.publishStatus.triggerStatusCheck(file);
+    }
 
     // Publish status + actions
     const isPublished = isPublishIntent(fm);
@@ -254,45 +445,69 @@ class StandardGardenView extends obsidian_1.ItemView {
     const statusRow = section.createEl("div", { cls: "stnd-panel-status-row" });
     statusRow.style.marginTop = "0"; // Pull it up since header is gone
 
-    if (this.plugin.settings.apiKey) {
-      if (isConfirmedOnline) {
-        const cachedStats = this.noteStatsCache.get(file.path);
-        const remoteTime = cachedStats?.updated_at
-          ? new Date(cachedStats.updated_at).getTime()
-          : 0;
-        const localTime = file.stat?.mtime || 0;
-        const isModifiedLocally =
-          remoteTime > 0 && localTime > remoteTime + 3000;
+    const statusInfo = this.plugin?.publishStatus?.noteStatuses?.get(file.path);
+    const isOutdated = statusInfo?.status === "outdated";
+    const remoteContent = statusInfo?.remoteContent;
 
-        if (isModifiedLocally) {
-          const badge = statusRow.createEl("span", {
+    const cachedStats = this.noteStatsCache.get(file.path);
+    const remoteTime = cachedStats?.updated_at
+      ? new Date(cachedStats.updated_at).getTime()
+      : 0;
+    const localTime = file.stat?.mtime || 0;
+    const isModifiedLocally =
+      (remoteTime > 0 && localTime > remoteTime + 3000) ||
+      statusInfo?.status === "changed";
+
+    if (this.plugin.settings.apiKey) {
+      let badge;
+      if (isConfirmedOnline) {
+        if (isOutdated) {
+          badge = statusRow.createEl("span", {
+            text: "Outdated",
+            cls: "stnd-panel-badge stnd-panel-badge-outdated is-clickable",
+          });
+          badge.title = "Update available online — click for actions";
+        } else if (isModifiedLocally) {
+          badge = statusRow.createEl("span", {
             text: "Modified",
-            cls: "stnd-panel-badge stnd-panel-badge-modified",
+            cls: "stnd-panel-badge stnd-panel-badge-modified is-clickable",
           });
-          badge.title = "Local edits not yet synced to Garden";
+          badge.title = "Local edits not yet synced to Garden — click for actions";
         } else {
-          const badge = statusRow.createEl("span", {
+          badge = statusRow.createEl("span", {
             text: "Synced",
-            cls: "stnd-panel-badge stnd-panel-badge-online",
+            cls: "stnd-panel-badge stnd-panel-badge-online is-clickable",
           });
-          badge.title = "Up to date with Garden";
+          badge.title = "Up to date with Garden — click for actions";
         }
       } else if (isPublished) {
-        statusRow.createEl("span", {
+        badge = statusRow.createEl("span", {
           text: "Queued",
-          cls: "stnd-panel-badge stnd-panel-badge-pending",
+          cls: "stnd-panel-badge stnd-panel-badge-pending is-clickable",
         });
+        badge.title = "Queued for publication — click for actions";
       } else if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
-        statusRow.createEl("span", {
+        badge = statusRow.createEl("span", {
           text: "Draft",
-          cls: "stnd-panel-badge stnd-panel-badge-excluded",
+          cls: "stnd-panel-badge stnd-panel-badge-excluded is-clickable",
         });
+        badge.title = "Draft note — click for actions";
       } else {
-        statusRow.createEl("span", {
+        badge = statusRow.createEl("span", {
           text: "Local",
-          cls: "stnd-panel-badge stnd-panel-badge-local",
+          cls: "stnd-panel-badge stnd-panel-badge-local is-clickable",
         });
+        badge.title = "Local note — click for actions";
       }
+
+      badge.addEventListener("click", (evt) => {
+        this._showNoteActionMenu(file, fm, evt, {
+          isConfirmedOnline,
+          isOutdated,
+          isModifiedLocally,
+          remoteContent,
+        });
+      });
     } else {
       const notice = statusRow.createEl("span", {
         text: "Add an API key in settings to plant seeds.",
@@ -304,43 +519,103 @@ class StandardGardenView extends obsidian_1.ItemView {
     if (this.plugin.settings.apiKey) {
       const actions = statusRow.createEl("div", { cls: "stnd-panel-actions" });
 
-      const publishBtn = actions.createEl("button", {
-        text: isConfirmedOnline ? "Update" : "Publish",
-        cls: "stnd-panel-btn",
-      });
-      publishBtn.addEventListener("click", async () => {
-        publishBtn.disabled = true;
-        publishBtn.textContent = "...";
+      const publishAction = async (btn) => {
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "...";
+        }
         const ok = await this.plugin.garden.publishWithCheck(file);
         if (ok === true) {
-          new obsidian_1.Notice(`Standard : "${file.basename}" publié.`);
+          new obsidian_1.Notice(`Standard: "${file.basename}" published.`);
           if (this.plugin.settings.openAfterPublish) {
             this.plugin.garden.viewLiveVersion(file);
           }
           this.render();
         } else if (ok === false) {
-          new obsidian_1.Notice(`Standard : Échec de la publication de "${file.basename}".`);
+          new obsidian_1.Notice(`Standard: Failed to publish "${file.basename}".`);
           this.render();
-        } else {
+        } else if (btn) {
           // null = user cancelled the confirmation — restore button
-          publishBtn.disabled = false;
-          publishBtn.textContent = isConfirmedOnline ? "Update" : "Publish";
+          btn.disabled = false;
+          btn.textContent = isOutdated ? "Force" : (isConfirmedOnline ? "Update" : "Publish");
         }
-      });
+      };
 
+      const pullAction = async (btn) => {
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "...";
+        }
+        try {
+          let content = remoteContent;
+          if (!content) {
+            const res = await this.plugin.garden.checkNoteStatus(file);
+            content = res?.remoteContent;
+          }
+          if (content) {
+            await this.plugin.app.vault.modify(file, content);
+            new obsidian_1.Notice("Standard: Local file updated with remote version.");
+            this.plugin.publishStatus?.noteStatuses?.set(file.path, {
+              status: "synced",
+              timestamp: Date.now(),
+            });
+            this.plugin.publishStatus?.refreshAll();
+            this.render();
+          } else {
+            new obsidian_1.Notice("Standard: Remote content not found.");
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = "Pull";
+            }
+          }
+        } catch (err) {
+          console.error("Standard: Error pulling remote content:", err);
+          new obsidian_1.Notice("Standard: Error updating local file.");
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Pull";
+          }
+        }
+      };
+
+      if (isOutdated) {
+        const pullBtn = actions.createEl("button", {
+          text: "Pull",
+          cls: "stnd-panel-btn",
+        });
+        pullBtn.title = "Pull remote version (overwrite local)";
+        pullBtn.addEventListener("click", () => pullAction(pullBtn));
+
+        const forcePublishBtn = actions.createEl("button", {
+          text: "Force",
+          cls: "stnd-panel-btn stnd-panel-btn-secondary",
+        });
+        forcePublishBtn.title = "Force publish local version";
+        forcePublishBtn.addEventListener("click", () => publishAction(forcePublishBtn));
+      } else {
+        const publishBtn = actions.createEl("button", {
+          text: isConfirmedOnline ? "Update" : "Publish",
+          cls: "stnd-panel-btn",
+        });
+        publishBtn.addEventListener("click", () => publishAction(publishBtn));
+      }
+
+      let liveUrl = null;
       if (isConfirmedOnline && this.plugin.settings.apiUsername) {
-        const liveUrl = this.plugin.garden.getLiveUrl(file);
+        liveUrl = this.plugin.garden.getLiveUrl(file);
 
         const viewBtn = actions.createEl("button", {
           text: "Open",
           cls: "stnd-panel-btn stnd-panel-btn-secondary",
         });
+        viewBtn.title = "View note online";
         viewBtn.addEventListener("click", () => this.plugin.garden.viewLiveVersion(file));
 
         const shareBtn = actions.createEl("button", {
           text: "Share",
           cls: "stnd-panel-btn stnd-panel-btn-secondary",
         });
+        shareBtn.title = "Share public link";
         shareBtn.addEventListener("click", () => {
           new StndShareModal(this.plugin.app, file.basename, liveUrl).open();
         });
@@ -349,11 +624,31 @@ class StandardGardenView extends obsidian_1.ItemView {
           text: "Copy",
           cls: "stnd-panel-btn stnd-panel-btn-secondary",
         });
+        copyBtn.title = "Copy public URL to clipboard";
         copyBtn.addEventListener("click", () => {
           navigator.clipboard.writeText(liveUrl);
           new obsidian_1.Notice("Public URL copied to clipboard.");
         });
       }
+
+      // More options button (...)
+      const moreBtn = actions.createEl("button", {
+        cls: "stnd-panel-btn stnd-panel-btn-secondary stnd-panel-btn-icon",
+      });
+      moreBtn.title = "More note actions";
+      moreBtn.setAttribute("aria-label", "More note actions");
+      obsidian_1.setIcon(moreBtn, "more-horizontal");
+      moreBtn.addEventListener("click", (evt) => {
+        this._showNoteActionMenu(file, fm, evt, {
+          isConfirmedOnline,
+          isOutdated,
+          isModifiedLocally,
+          remoteContent,
+          liveUrl,
+          publishAction,
+          pullAction,
+        });
+      });
 
       if (isConfirmedOnline) {
         const removeBtn = actions.createEl("button", {
@@ -365,12 +660,10 @@ class StandardGardenView extends obsidian_1.ItemView {
           removeBtn.textContent = "...";
           const ok = await this.plugin.garden.deleteOnlineVersion(file);
           if (ok === true) {
-            new obsidian_1.Notice(
-              `Standard : "${file.basename}" retiré du jardin.`,
-            );
+            new obsidian_1.Notice(`Standard: "${file.basename}" removed from Garden.`);
             this.render();
           } else if (ok === false) {
-            new obsidian_1.Notice(`Standard : Échec du retrait de "${file.basename}".`);
+            new obsidian_1.Notice(`Standard: Failed to remove "${file.basename}".`);
             this.render();
           } else {
             // null = user cancelled — restore button

@@ -15,13 +15,13 @@ const {
 // Location is configurable: titlebar (default), statusbar, ribbon, or hidden.
 
 const STATES = {
-  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Non publié (local)" },
-  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "À publier (pas encore en ligne)" },
+  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Unpublished (local)" },
+  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "Pending publication" },
   public:      { icon: "globe",              color: "var(--stnd-status-synced)",   label: "Public" },
-  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-unlisted)", label: "Non listé" },
-  private:     { icon: "lock",               color: "var(--stnd-status-private)",  label: "Privé" },
-  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Mise à jour disponible en ligne" },
-  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Modifications locales non publiées" },
+  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-unlisted)", label: "Unlisted" },
+  private:     { icon: "lock",               color: "var(--stnd-status-private)",  label: "Private" },
+  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Update available online" },
+  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Unpublished local changes" },
 };
 
 class PublishStatusFeature {
@@ -446,8 +446,8 @@ class PublishStatusFeature {
       if (ok !== null) {
         new obsidian_1.Notice(
           ok
-            ? `Standard : "${file.basename}" publié.`
-            : `Standard : Échec de la publication de "${file.basename}".`,
+            ? `Standard: "${file.basename}" published.`
+            : `Standard: Failed to publish "${file.basename}".`,
         );
         if (ok) {
           const leaf = view.leaf || { view };
@@ -463,39 +463,39 @@ class PublishStatusFeature {
 
     if (key === "unpublished" || key === "pending") {
       menu.addItem((i) =>
-        i.setTitle("Publier dans le jardin").setIcon("upload-cloud").onClick(() => publish()),
+        i.setTitle("Publish to Garden").setIcon("upload-cloud").onClick(() => publish()),
       );
     } else if (key === "outdated") {
       const cached = this.noteStatuses.get(file.path);
       const remoteContent = cached?.remoteContent || "";
       menu.addItem((i) =>
         i
-          .setTitle("Télécharger la mise à jour (écraser le fichier local)")
+          .setTitle("Pull remote changes (overwrite local)")
           .setIcon("arrow-down-circle")
           .onClick(async () => {
             if (remoteContent) {
               await this.app.vault.modify(file, remoteContent);
-              new obsidian_1.Notice(`Standard : Fichier local mis à jour avec la version en ligne.`);
+              new obsidian_1.Notice(`Standard: Local file updated with remote version.`);
               this.noteStatuses.set(file.path, {
                 status: "synced",
-                timestamp: Date.now()
+                timestamp: Date.now(),
               });
               this.refreshAll();
             } else {
-              new obsidian_1.Notice(`Standard : Contenu distant introuvable.`);
+              new obsidian_1.Notice(`Standard: Remote content not found.`);
             }
           }),
       );
       menu.addItem((i) =>
-        i.setTitle("Forcer la publication locale").setIcon("refresh-cw").onClick(() => publish()),
+        i.setTitle("Force publish local").setIcon("refresh-cw").onClick(() => publish()),
       );
       menu.addItem((i) =>
-        i.setTitle("Voir en ligne").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
+        i.setTitle("View online").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
       );
       menu.addSeparator();
       menu.addItem((i) =>
         i
-          .setTitle("Retirer du jardin (dé-publier)")
+          .setTitle("Remove from Garden (unpublish)")
           .setIcon("trash-2")
           .setWarning(true)
           .onClick(async () => {
@@ -505,15 +505,15 @@ class PublishStatusFeature {
       );
     } else if (key === "changed") {
       menu.addItem((i) =>
-        i.setTitle("Publier les modifications locales").setIcon("upload-cloud").onClick(() => publish()),
+        i.setTitle("Publish local changes").setIcon("upload-cloud").onClick(() => publish()),
       );
       menu.addItem((i) =>
-        i.setTitle("Voir en ligne").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
+        i.setTitle("View online").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
       );
       menu.addSeparator();
       menu.addItem((i) =>
         i
-          .setTitle("Retirer du jardin (dé-publier)")
+          .setTitle("Remove from Garden (unpublish)")
           .setIcon("trash-2")
           .setWarning(true)
           .onClick(async () => {
@@ -523,15 +523,15 @@ class PublishStatusFeature {
       );
     } else {
       menu.addItem((i) =>
-        i.setTitle("Voir en ligne").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
+        i.setTitle("View online").setIcon("external-link").onClick(() => garden.viewLiveVersion(file)),
       );
       menu.addItem((i) =>
-        i.setTitle("Re-publier").setIcon("refresh-cw").onClick(() => publish()),
+        i.setTitle("Re-publish").setIcon("refresh-cw").onClick(() => publish()),
       );
       menu.addSeparator();
       menu.addItem((i) =>
         i
-          .setTitle("Retirer du jardin (dé-publier)")
+          .setTitle("Remove from Garden (unpublish)")
           .setIcon("trash-2")
           .setWarning(true)
           .onClick(async () => {
@@ -544,7 +544,7 @@ class PublishStatusFeature {
     menu.addSeparator();
     menu.addItem((i) =>
       i
-        .setTitle("Synchroniser toutes les notes")
+        .setTitle("Sync all notes")
         .setIcon("folder-sync")
         .onClick(async () => {
           await garden.syncAllPublished();
