@@ -32,7 +32,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.noteStatsCache = plugin?.garden?.noteStatsCache || new Map();
     this.isLoadingStats = false;
     this.inquiryCache = new Map();
-    this._collapsedSections = new Set(["roots", "design"]);
+    this._collapsedSections = new Set(["design"]);
   }
 
   async triggerHypheInquiry(file) {
@@ -642,37 +642,52 @@ class StandardGardenView extends obsidian_1.ItemView {
         });
       });
 
-      const helpBtn = statusLeft.createEl("button", {
-        cls: "stnd-panel-header-btn",
-        attr: {
-          "aria-label": "Status & color guide",
-          title: "Status & color guide",
-        },
-      });
-      helpBtn.style.padding = "2px";
-      obsidian_1.setIcon(helpBtn, "help-circle");
-      helpBtn.addEventListener("click", () => {
-        new StndStatusGuideModal(this.plugin.app).open();
-      });
+      // Only show top guide button if online (draft notes have a prominent Guide button in the toolbar)
+      if (isConfirmedOnline) {
+        const helpBtn = statusLeft.createEl("button", {
+          cls: "stnd-panel-header-btn",
+          attr: {
+            "aria-label": "Status & color guide",
+            title: "Status & color guide",
+          },
+        });
+        helpBtn.style.padding = "2px";
+        obsidian_1.setIcon(helpBtn, "help-circle");
+        helpBtn.addEventListener("click", () => {
+          new StndStatusGuideModal(this.plugin.app).open();
+        });
+      }
 
       // Right side: Visibility selector
       const visSelect = statusRow.createEl("select", {
         cls: "dropdown stnd-panel-select stnd-panel-vis-select",
       });
       const optPub = visSelect.createEl("option", { value: "public", text: "Public" });
-      optPub.title = "Public (visible in feed & search)";
+      optPub.title = "Public — visible in your garden feed & search";
       const optUnl = visSelect.createEl("option", { value: "unlisted", text: "Unlisted" });
-      optUnl.title = "Unlisted (accessible via link only)";
+      optUnl.title = "Unlisted — hidden from feed/search, accessible only via link";
       const optPriv = visSelect.createEl("option", { value: "private", text: "Private" });
-      optPriv.title = "Private (visible to you only)";
+      optPriv.title = "Private — encrypted & accessible only to you when logged in";
 
       const currentVis = String(fm.visibility || "public").toLowerCase().trim();
       visSelect.value = ["public", "unlisted", "private"].includes(currentVis)
         ? currentVis
         : "public";
 
+      const updateVisTitle = () => {
+        const v = visSelect.value;
+        visSelect.title =
+          v === "private"
+            ? "Private — accessible to you only on standard.garden"
+            : v === "unlisted"
+            ? "Unlisted — accessible via direct link only"
+            : "Public — visible in your garden feed and search";
+      };
+      updateVisTitle();
+
       visSelect.addEventListener("change", () => {
         this._setFrontmatter(file, "visibility", visSelect.value);
+        updateVisTitle();
       });
     } else {
       const notice = statusRow.createEl("span", {
@@ -779,6 +794,11 @@ class StandardGardenView extends obsidian_1.ItemView {
 
         obsidian_1.setIcon(publishBtn.createSpan({ cls: "stnd-btn-icon" }), iconName);
         publishBtn.createSpan({ text: btnText });
+        const currentVis = String(fm.visibility || "public").toLowerCase().trim();
+        const visLabel = currentVis === "private" ? "privately" : currentVis === "unlisted" ? "as unlisted" : "publicly";
+        publishBtn.title = isConfirmedOnline
+          ? `Update note on standard.garden (${visLabel})`
+          : `Publish note to standard.garden (${visLabel} — visible to ${currentVis === "private" ? "you only" : currentVis === "unlisted" ? "link holders" : "everyone"})`;
         publishBtn.addEventListener("click", () => publishAction(publishBtn));
       }
 
@@ -1575,13 +1595,13 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     const header = card.createEl("div", { cls: "stnd-inquiries-header" });
     const title = header.createEl("span", { cls: "stnd-inquiries-title" });
-    title.setText("🦉 Hyphe's Inquiries");
+    title.setText("🦉 Hyphe (AI Thinker)");
 
     const cached = this.inquiryCache.get(activeFile.path);
 
     const askBtn = header.createEl("button", {
       cls: "stnd-inquiries-btn mod-cta",
-      text: cached?.questions?.length ? "Re-inquire" : "Inquire",
+      text: cached?.questions?.length ? "Ask again" : "Ask Hyphe",
     });
     if (cached?.isLoading) {
       askBtn.disabled = true;
@@ -1625,7 +1645,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     } else {
       const placeholder = card.createEl("p", {
         cls: "stnd-inquiry-placeholder",
-        text: "Ask Hyphe for Socratic questions to challenge your assumptions and uncover unexamined angles.",
+        text: "Ask Hyphe (AI) for Socratic questions to challenge your assumptions and uncover unexamined angles on this note.",
       });
       placeholder.style.cssText =
         "font-size: 11px; color: var(--text-faint); margin: 4px 0 0 0; line-height: 1.4;";
@@ -1791,6 +1811,15 @@ class StandardGardenView extends obsidian_1.ItemView {
     prefsCard.style.cssText =
       "display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--size-4-3) 0; padding: 10px 12px; background: var(--background-secondary); border-radius: var(--radius-m); border: 1px solid var(--background-modifier-border);";
 
+    const prefsHeader = prefsCard.createEl("div");
+    prefsHeader.style.cssText =
+      "display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--background-modifier-border); padding-bottom: 4px; margin-bottom: 2px;";
+    const prefsTitle = prefsHeader.createEl("span", {
+      text: "Vault-Wide Preferences",
+    });
+    prefsTitle.style.cssText =
+      "font-size: 10px; font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em;";
+
     const makeToggleRow = (label, desc, isEnabled, onToggle) => {
       const row = prefsCard.createEl("div");
       row.style.cssText =
@@ -1845,7 +1874,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     makeToggleRow(
       "Compost footer",
-      "Show suggested links at bottom of reading view",
+      "Show suggested note connections at bottom of reading view",
       !!mySettings.enableCompostFooter,
       async (enabled) => {
         mySettings.enableCompostFooter = enabled;
