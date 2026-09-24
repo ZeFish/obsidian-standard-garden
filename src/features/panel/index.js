@@ -476,6 +476,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       !!fm.url_public ||
       fm.published === true ||
       fm.published === "true";
+    const isDesynced = !isPublished && isConfirmedOnline;
 
     const statusRow = section.createEl("div", { cls: "stnd-panel-status-row" });
     statusRow.style.marginTop = "0"; // Pull it up since header is gone
@@ -498,8 +499,6 @@ class StandardGardenView extends obsidian_1.ItemView {
       statusLeft.style.cssText = "display: flex; align-items: center; gap: 4px;";
 
       let badge;
-      const isDesynced = !isPublished && isConfirmedOnline;
-
       if (isDesynced) {
         badge = statusLeft.createEl("span", {
           text: "Unpublished (Online)",
