@@ -139,16 +139,23 @@
 }
 
 .stnd-panel-badge-online {
-  color: var(--color-green);
+  color: var(--stnd-status-synced);
+}
+.stnd-panel-badge-modified {
+  color: var(--stnd-status-modified);
 }
 .stnd-panel-badge-pending {
-  color: var(--color-yellow);
+  color: var(--stnd-status-pending);
 }
-.stnd-panel-badge-excluded {
-  color: var(--color-red);
+.stnd-panel-badge-outdated {
+  color: var(--stnd-status-outdated);
+}
+.stnd-panel-badge-excluded,
+.stnd-panel-badge-draft {
+  color: var(--color-red, #ef4444);
 }
 .stnd-panel-badge-local {
-  color: var(--text-faint);
+  color: var(--stnd-status-local);
 }
 
 /* ─── Action buttons ─────────────────────────────────────────────── */

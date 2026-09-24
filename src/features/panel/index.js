@@ -267,7 +267,7 @@ class StandardGardenView extends obsidian_1.ItemView {
         if (isModifiedLocally) {
           const badge = statusRow.createEl("span", {
             text: "Modified",
-            cls: "stnd-panel-badge stnd-panel-badge-pending",
+            cls: "stnd-panel-badge stnd-panel-badge-modified",
           });
           badge.title = "Local edits not yet synced to Garden";
         } else {

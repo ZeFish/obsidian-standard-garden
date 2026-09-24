@@ -15,13 +15,13 @@ const {
 // Location is configurable: titlebar (default), statusbar, ribbon, or hidden.
 
 const STATES = {
-  unpublished: { icon: "cloud-off",          color: "var(--text-muted)",   label: "Non publié (local)" },
-  pending:     { icon: "upload-cloud",       color: "var(--color-orange)", label: "À publier (pas encore en ligne)" },
-  public:      { icon: "globe",              color: "var(--color-green)",  label: "Public" },
-  unlisted:    { icon: "eye-off",            color: "var(--color-yellow)", label: "Non listé" },
-  private:     { icon: "lock",               color: "var(--color-purple)", label: "Privé" },
-  outdated:    { icon: "arrow-down-circle",  color: "var(--color-orange)", label: "Mise à jour disponible en ligne" },
-  changed:     { icon: "upload-cloud",       color: "var(--color-blue)",   label: "Modifications locales non publiées" },
+  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Non publié (local)" },
+  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "À publier (pas encore en ligne)" },
+  public:      { icon: "globe",              color: "var(--stnd-status-synced)",   label: "Public" },
+  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-unlisted)", label: "Non listé" },
+  private:     { icon: "lock",               color: "var(--stnd-status-private)",  label: "Privé" },
+  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Mise à jour disponible en ligne" },
+  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Modifications locales non publiées" },
 };
 
 class PublishStatusFeature {

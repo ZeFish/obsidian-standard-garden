@@ -1,4 +1,61 @@
-/* ── Publish Status Bottom Indicator (T30) ───────────────────────────────── */
+/* ── Unified Garden Status Color Tokens ───────────────────────────────────── */
+& {
+  --stnd-status-synced: #059669;
+  --stnd-status-modified: #0284c7;
+  --stnd-status-pending: #d97706;
+  --stnd-status-outdated: #ea580c;
+  --stnd-status-private: #7c3aed;
+  --stnd-status-unlisted: #ca8a04;
+  --stnd-status-local: var(--text-muted, #6b7280);
+}
+
+&.theme-dark {
+  --stnd-status-synced: #34d399;
+  --stnd-status-modified: #38bdf8;
+  --stnd-status-pending: #fbbf24;
+  --stnd-status-outdated: #fb923c;
+  --stnd-status-private: #a78bfa;
+  --stnd-status-unlisted: #facc15;
+  --stnd-status-local: var(--text-muted, #9ca3af);
+}
+
+/* ── Titlebar Action & Ribbon Overrides ────────────────────────────────────── */
+.stnd-publish-status[data-stnd-state="changed"],
+.stnd-publish-status-ribbon[data-stnd-state="changed"] {
+  color: var(--stnd-status-modified) !important;
+}
+
+.stnd-publish-status[data-stnd-state="public"],
+.stnd-publish-status-ribbon[data-stnd-state="public"] {
+  color: var(--stnd-status-synced) !important;
+}
+
+.stnd-publish-status[data-stnd-state="pending"],
+.stnd-publish-status-ribbon[data-stnd-state="pending"] {
+  color: var(--stnd-status-pending) !important;
+}
+
+.stnd-publish-status[data-stnd-state="outdated"],
+.stnd-publish-status-ribbon[data-stnd-state="outdated"] {
+  color: var(--stnd-status-outdated) !important;
+}
+
+.stnd-publish-status[data-stnd-state="private"],
+.stnd-publish-status-ribbon[data-stnd-state="private"] {
+  color: var(--stnd-status-private) !important;
+}
+
+.stnd-publish-status[data-stnd-state="unlisted"],
+.stnd-publish-status-ribbon[data-stnd-state="unlisted"] {
+  color: var(--stnd-status-unlisted) !important;
+}
+
+.stnd-publish-status[data-stnd-state="unpublished"],
+.stnd-publish-status-ribbon[data-stnd-state="unpublished"] {
+  color: var(--stnd-status-local) !important;
+}
+
+/* ── Publish Status Bottom Indicator ──────────────────────────────────────── */
 
 .stnd-bottom-indicator {
   position: absolute;
@@ -16,31 +73,31 @@
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-public {
-  background: var(--color-green, #10b981);
+  background: var(--stnd-status-synced);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-changed {
-  background: var(--color-blue, #3b82f6);
+  background: var(--stnd-status-modified);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-outdated {
-  background: var(--color-orange, #f59e0b);
+  background: var(--stnd-status-outdated);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-pending {
-  background: var(--color-orange, #f59e0b);
+  background: var(--stnd-status-pending);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-private {
-  background: var(--color-purple, #8b5cf6);
+  background: var(--stnd-status-private);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-unlisted {
-  background: var(--color-yellow, #eab308);
+  background: var(--stnd-status-unlisted);
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-unpublished {
-  background: var(--text-faint, rgba(255, 255, 255, 0.2));
+  background: var(--stnd-status-local);
   opacity: 0.35;
 }
 
@@ -52,69 +109,79 @@
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-public {
   background: linear-gradient(
     90deg,
-    rgba(16, 185, 129, 0.15) 0%,
-    rgba(16, 185, 129, 0.85) 25%,
-    rgba(52, 211, 153, 1) 50%,
-    rgba(5, 150, 105, 0.85) 75%,
-    rgba(16, 185, 129, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-synced) 50%, transparent) 20%,
+    var(--stnd-status-synced) 50%,
+    color-mix(in srgb, var(--stnd-status-synced) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 10px rgba(16, 185, 129, 0.35);
-  border-top: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-synced) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-synced) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-changed {
   background: linear-gradient(
     90deg,
-    rgba(59, 130, 246, 0.15) 0%,
-    rgba(59, 130, 246, 0.85) 50%,
-    rgba(59, 130, 246, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-modified) 50%, transparent) 20%,
+    var(--stnd-status-modified) 50%,
+    color-mix(in srgb, var(--stnd-status-modified) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 8px rgba(59, 130, 246, 0.3);
-  border-top: 1px solid rgba(96, 165, 250, 0.4);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-modified) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-modified) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-outdated {
   background: linear-gradient(
     90deg,
-    rgba(245, 158, 11, 0.15) 0%,
-    rgba(245, 158, 11, 0.85) 50%,
-    rgba(245, 158, 11, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-outdated) 50%, transparent) 20%,
+    var(--stnd-status-outdated) 50%,
+    color-mix(in srgb, var(--stnd-status-outdated) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 8px rgba(245, 158, 11, 0.3);
-  border-top: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-outdated) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-outdated) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-pending {
   background: linear-gradient(
     90deg,
-    rgba(245, 158, 11, 0.15) 0%,
-    rgba(245, 158, 11, 0.85) 50%,
-    rgba(245, 158, 11, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-pending) 50%, transparent) 20%,
+    var(--stnd-status-pending) 50%,
+    color-mix(in srgb, var(--stnd-status-pending) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 8px rgba(245, 158, 11, 0.3);
-  border-top: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-pending) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-pending) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-private {
   background: linear-gradient(
     90deg,
-    rgba(139, 92, 246, 0.15) 0%,
-    rgba(139, 92, 246, 0.85) 50%,
-    rgba(139, 92, 246, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-private) 50%, transparent) 20%,
+    var(--stnd-status-private) 50%,
+    color-mix(in srgb, var(--stnd-status-private) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 8px rgba(139, 92, 246, 0.3);
-  border-top: 1px solid rgba(167, 139, 250, 0.4);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-private) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-private) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-unlisted {
   background: linear-gradient(
     90deg,
-    rgba(234, 179, 8, 0.15) 0%,
-    rgba(234, 179, 8, 0.85) 50%,
-    rgba(234, 179, 8, 0.15) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--stnd-status-unlisted) 50%, transparent) 20%,
+    var(--stnd-status-unlisted) 50%,
+    color-mix(in srgb, var(--stnd-status-unlisted) 50%, transparent) 80%,
+    transparent 100%
   );
-  box-shadow: 0 -2px 8px rgba(234, 179, 8, 0.3);
-  border-top: 1px solid rgba(250, 204, 21, 0.4);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--stnd-status-unlisted) 40%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stnd-status-unlisted) 50%, transparent);
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-unpublished {
@@ -122,10 +189,10 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--text-faint, rgba(255, 255, 255, 0.25)) 50%,
+    color-mix(in srgb, var(--stnd-status-local) 40%, transparent) 50%,
     transparent 100%
   );
-  opacity: 0.4;
+  opacity: 0.35;
   box-shadow: none;
   border-top: none;
 }
