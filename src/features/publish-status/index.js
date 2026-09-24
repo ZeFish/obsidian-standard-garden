@@ -10,11 +10,11 @@ const { isPublishIntent } = require("../../constants.js");
 // Location is configurable: titlebar (default), statusbar, ribbon, or hidden.
 
 const STATES = {
-  unpublished: { icon: "cloud-off",          color: "var(--text-faint)",  label: "Non publié" },
+  unpublished: { icon: "cloud-off",          color: "var(--text-muted)",   label: "Non publié (local)" },
   pending:     { icon: "upload-cloud",       color: "var(--color-orange)", label: "À publier (pas encore en ligne)" },
   public:      { icon: "globe",              color: "var(--color-green)",  label: "Public" },
   unlisted:    { icon: "eye-off",            color: "var(--color-yellow)", label: "Non listé" },
-  private:     { icon: "lock",               color: "var(--color-blue)",   label: "Privé" },
+  private:     { icon: "lock",               color: "var(--color-purple)", label: "Privé" },
   outdated:    { icon: "arrow-down-circle",  color: "var(--color-orange)", label: "Mise à jour disponible en ligne" },
   changed:     { icon: "upload-cloud",       color: "var(--color-blue)",   label: "Modifications locales non publiées" },
 };
@@ -30,10 +30,14 @@ class PublishStatusFeature {
 
   async load() {
     const refresh = () => this.refreshAll();
+    this.plugin.registerEvent(this.app.workspace.on("file-open", refresh));
     this.plugin.registerEvent(this.app.workspace.on("active-leaf-change", refresh));
     this.plugin.registerEvent(this.app.workspace.on("layout-change", refresh));
     this.plugin.registerEvent(
       this.app.metadataCache.on("changed", (file) => this.refreshForFile(file)),
+    );
+    this.plugin.registerEvent(
+      this.app.metadataCache.on("resolve", (file) => this.refreshForFile(file)),
     );
     this.app.workspace.onLayoutReady(refresh);
   }
@@ -228,11 +232,20 @@ class PublishStatusFeature {
     const fm = this.app.metadataCache.getFileCache(view.file)?.frontmatter || null;
     const key = this.stateKey(fm, view.file.path);
 
-    if (!indicator || !indicator.isConnected) {
-      indicator = document.createElement("div");
-      indicator.className = "stnd-bottom-indicator";
-      view.containerEl.appendChild(indicator);
+    if (!indicator || !indicator.isConnected || !view.containerEl.contains(indicator)) {
+      const existing = view.containerEl.querySelector(".stnd-bottom-indicator");
+      if (existing) {
+        indicator = existing;
+      } else {
+        indicator = document.createElement("div");
+        indicator.className = "stnd-bottom-indicator";
+        view.containerEl.appendChild(indicator);
+      }
       view._stndBottomIndicator = indicator;
+    }
+
+    if (view.containerEl.style.position !== "relative" && getComputedStyle(view.containerEl).position === "static") {
+      view.containerEl.style.position = "relative";
     }
 
     indicator.className = `stnd-bottom-indicator stnd-style-${indicatorStyle} stnd-state-${key}`;
@@ -257,9 +270,14 @@ class PublishStatusFeature {
     const state = STATES[key];
 
     let el = view._stndPublishAction;
-    if (!el || !el.isConnected) {
-      el = view.addAction(state.icon, "Garden Status", (evt) => this.onClick(view, evt));
-      el.addClass("stnd-publish-status");
+    if (!el || !el.isConnected || !view.containerEl.contains(el)) {
+      const existing = view.containerEl.querySelector(".stnd-publish-status");
+      if (existing) {
+        el = existing;
+      } else {
+        el = view.addAction(state.icon, "Garden Status", (evt) => this.onClick(view, evt));
+        el.addClass("stnd-publish-status");
+      }
       view._stndPublishAction = el;
     }
     obsidian_1.setIcon(el, state.icon);

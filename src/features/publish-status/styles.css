@@ -40,7 +40,8 @@
 }
 
 .stnd-bottom-indicator.stnd-style-subtle.stnd-state-unpublished {
-  display: none;
+  background: var(--text-faint, rgba(255, 255, 255, 0.2));
+  opacity: 0.35;
 }
 
 /* ── Style: Garden (Organic Gradient & Animated Growth) ── */
@@ -117,7 +118,16 @@
 }
 
 .stnd-bottom-indicator.stnd-style-garden.stnd-state-unpublished {
-  display: none;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--text-faint, rgba(255, 255, 255, 0.25)) 50%,
+    transparent 100%
+  );
+  opacity: 0.4;
+  box-shadow: none;
+  border-top: none;
 }
 
 /* ── Animation: Blooming / Grass Growth on Sync or Publish ── */

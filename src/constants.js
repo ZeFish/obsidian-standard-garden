@@ -164,6 +164,9 @@ function isPublishIntent(value) {
     if (value.publish !== undefined) {
       return isPublishIntent(value.publish);
     }
+    if (value["garden-url"] || value.url_public) {
+      return true;
+    }
     return false;
   }
 

@@ -103,22 +103,26 @@ class StandardGardenView extends obsidian_1.ItemView {
     this._onMetaChange = (file) => {
       if (this._writing) return;
       const active = this.plugin.app.workspace.getActiveFile();
-      if (active && file === active) {
+      if (active && file && (file === active || (file.path && active.path && file.path === active.path))) {
         this.linksData = null;
         this.render();
       }
     };
+    this.plugin.app.workspace.on("file-open", this._onFileChange);
     this.plugin.app.workspace.on("active-leaf-change", this._onFileChange);
     this.plugin.app.metadataCache.on("changed", this._onMetaChange);
+    this.plugin.app.metadataCache.on("resolve", this._onMetaChange);
     this.render();
   }
 
   async onClose() {
     if (this._onFileChange) {
+      this.plugin.app.workspace.off("file-open", this._onFileChange);
       this.plugin.app.workspace.off("active-leaf-change", this._onFileChange);
     }
     if (this._onMetaChange) {
       this.plugin.app.metadataCache.off("changed", this._onMetaChange);
+      this.plugin.app.metadataCache.off("resolve", this._onMetaChange);
     }
     for (const t of Object.values(this._debounceTimers)) clearTimeout(t);
   }
