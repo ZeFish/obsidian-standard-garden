@@ -12,6 +12,10 @@ const {
 const { StndConfirmModal } = require("./modals/confirm-modal");
 const { StndAskModal } = require("./modals/ask-modal");
 const { StndShareModal } = require("./modals/share-modal");
+const {
+  getNoteFrontmatter,
+  getNoteFrontmatterAsync,
+} = require("../../utils/frontmatter");
 
 
 // Slugifie un nom de fichier pour l'URL publique.
@@ -43,7 +47,7 @@ class LocalNoteIndex {
     this.byGardenUrl = new Map();
 
     for (const file of files) {
-      const fm = app.metadataCache.getFileCache(file)?.frontmatter || {};
+      const fm = getNoteFrontmatter(app, file);
 
       // 1. nano_id from garden-short: e.g. "https://stnd.gd/abc123" -> "abc123"
       if (fm["garden-short"]) {
@@ -607,6 +611,7 @@ class GardenFeature {
     this.plugin = plugin;
     this.syncIntervalTimer = null;
     this.attachmentCache = new Map(); // path -> { mtime, size, contentHash, cdnUrl }
+    this.noteStatsCache = new Map(); // path -> { views, citations, related, created_at, updated_at, online }
     this.lastAttachmentUploadTime = 0;
     this.lastPublishTime = 0;
   }
@@ -2066,7 +2071,7 @@ class GardenFeature {
       // Résoudre le slug : targetSlug > permalink > slug > basename
       let slug = targetSlug;
       if (!slug && file) {
-        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+        const fm = await getNoteFrontmatterAsync(this.app, file);
         const fmSlug = fm.permalink ?? fm.slug;
         const basenameSlug = slugify(file.basename);
         const resolved =
@@ -2104,6 +2109,7 @@ class GardenFeature {
 
       // Mettre à jour le frontmatter si le fichier local existe
       if (file) {
+        this.noteStatsCache.delete(file.path);
         await this.app.fileManager.processFrontMatter(file, (fm) => {
           if (fm.status === "public" || fm.status === "published") {
             fm.status = "draft";
@@ -2217,7 +2223,7 @@ class GardenFeature {
 
     try {
       // 1. Résoudre le slug de la note locale
-      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+      const fm = await getNoteFrontmatterAsync(this.app, file);
       const fmSlug = fm.permalink ?? fm.slug;
       const basenameSlug = slugify(file.basename);
       const resolved =
@@ -2248,6 +2254,15 @@ class GardenFeature {
       const remoteContent = remoteData.content || "";
       const remoteHash = remoteData.hash;
       const remoteMtime = remoteData.updated_at ? new Date(remoteData.updated_at).getTime() : 0;
+
+      this.noteStatsCache.set(file.path, {
+        views: remoteData.views || 0,
+        citations: Array.isArray(remoteData.citations) ? remoteData.citations : [],
+        related: Array.isArray(remoteData.related) ? remoteData.related : [],
+        created_at: remoteData.created_at,
+        updated_at: remoteData.updated_at,
+        online: true,
+      });
 
       // 3. Lire et normaliser le contenu local
       const localRawContent = await this.app.vault.read(file);
@@ -2331,7 +2346,7 @@ class GardenFeature {
       return null;
     }
     try {
-      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+      const fm = await getNoteFrontmatterAsync(this.app, file);
       const fmSlug = fm.permalink ?? fm.slug;
       const basenameSlug = slugify(file.basename);
       const resolved =
@@ -2348,7 +2363,7 @@ class GardenFeature {
 
       if (response.status === 200) {
         const data = await response.json();
-        return {
+        const stats = {
           views: data.views || 0,
           citations: Array.isArray(data.citations) ? data.citations : [],
           related: Array.isArray(data.related) ? data.related : [],
@@ -2356,6 +2371,8 @@ class GardenFeature {
           updated_at: data.updated_at,
           online: true,
         };
+        this.noteStatsCache.set(file.path, stats);
+        return stats;
       }
       return null;
     } catch (err) {

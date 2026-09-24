@@ -8,6 +8,7 @@ const {
   findOutgoingUnlinkedMentions,
   createMentionLink,
 } = require("../mycelium/index.js");
+const { getNoteFrontmatter } = require("../../utils/frontmatter");
 
 // ─── Side Panel View ──────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.searchingCandidates = {};
     this.linksData = null;
     this.isLoadingLinks = false;
-    this.noteStatsCache = new Map();
+    this.noteStatsCache = plugin?.garden?.noteStatsCache || new Map();
     this.isLoadingStats = false;
     this.inquiryCache = new Map();
   }
@@ -76,6 +77,9 @@ class StandardGardenView extends obsidian_1.ItemView {
     try {
       const stats = await this.plugin.garden.getNoteStats(file);
       if (stats) {
+        if (this.plugin.garden?.noteStatsCache) {
+          this.plugin.garden.noteStatsCache.set(file.path, stats);
+        }
         this.noteStatsCache.set(file.path, stats);
       }
     } catch (e) {
@@ -83,6 +87,9 @@ class StandardGardenView extends obsidian_1.ItemView {
     } finally {
       this.isLoadingStats = false;
       this.render();
+      if (this.plugin.publishStatus) {
+        this.plugin.publishStatus.refreshForFile(file);
+      }
     }
   }
 
@@ -211,8 +218,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
 
     this._lastRenderedFile = file;
-    const meta = this.plugin.app.metadataCache.getFileCache(file);
-    const fm = meta?.frontmatter || {};
+    const fm = getNoteFrontmatter(this.plugin.app, file);
 
     // ── Garden: File Info / Profile Settings / AI Generate / Token Groups ──
     this._renderFileInfo(container, file, fm);
@@ -1005,13 +1011,14 @@ class StandardGardenView extends obsidian_1.ItemView {
   }
 
   _getFileTags(file) {
+    const fm = getNoteFrontmatter(this.plugin.app, file);
     const cache = this.plugin.app.metadataCache.getFileCache(file);
     const tags = [];
     if (cache?.tags) {
       tags.push(...cache.tags.map((t) => t.tag.toLowerCase().replace(/^#/, "")));
     }
-    if (cache?.frontmatter?.tags) {
-      const ft = cache.frontmatter.tags;
+    if (fm?.tags) {
+      const ft = fm.tags;
       if (Array.isArray(ft)) {
         tags.push(...ft.map((t) => String(t).toLowerCase().replace(/^#/, "")));
       } else if (typeof ft === "string") {
@@ -1155,8 +1162,7 @@ class StandardGardenView extends obsidian_1.ItemView {
   }
 
   _renderPublicResonances(container, activeFile) {
-    const meta = this.plugin.app.metadataCache.getFileCache(activeFile);
-    const fm = meta?.frontmatter || {};
+    const fm = getNoteFrontmatter(this.plugin.app, activeFile);
     const isConfirmedOnline =
       !!fm["garden-url"] ||
       !!fm.url_public ||

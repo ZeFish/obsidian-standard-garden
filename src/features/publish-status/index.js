@@ -2,6 +2,11 @@
 
 const obsidian_1 = require("obsidian");
 const { isPublishIntent } = require("../../constants.js");
+const {
+  getNoteFrontmatter,
+  getNoteFrontmatterAsync,
+  invalidateFrontmatterCache,
+} = require("../../utils/frontmatter.js");
 
 // ─── Publish Status ───────────────────────────────────────────────────────────
 // A live "magic" status icon/button in Obsidian.
@@ -26,6 +31,7 @@ class PublishStatusFeature {
     this.statusBarEl = null;
     this.ribbonEl = null;
     this.noteStatuses = new Map(); // path -> { status, remoteContent, timestamp }
+    this.checkingFiles = new Set();
   }
 
   async load() {
@@ -34,10 +40,28 @@ class PublishStatusFeature {
     this.plugin.registerEvent(this.app.workspace.on("active-leaf-change", refresh));
     this.plugin.registerEvent(this.app.workspace.on("layout-change", refresh));
     this.plugin.registerEvent(
-      this.app.metadataCache.on("changed", (file) => this.refreshForFile(file)),
+      this.app.metadataCache.on("changed", (file) => {
+        invalidateFrontmatterCache(file.path);
+        this.refreshForFile(file);
+      }),
     );
     this.plugin.registerEvent(
-      this.app.metadataCache.on("resolve", (file) => this.refreshForFile(file)),
+      this.app.metadataCache.on("resolve", (file) => {
+        invalidateFrontmatterCache(file.path);
+        this.refreshForFile(file);
+      }),
+    );
+    this.plugin.registerEvent(
+      this.app.vault.on("modify", (file) => {
+        invalidateFrontmatterCache(file.path);
+        this.refreshForFile(file);
+      }),
+    );
+    this.plugin.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        invalidateFrontmatterCache(file.path);
+        this.noteStatuses.delete(file.path);
+      }),
     );
     this.app.workspace.onLayoutReady(refresh);
   }
@@ -77,17 +101,35 @@ class PublishStatusFeature {
   // ── State ────────────────────────────────────────────────────────────────────
   // Distinguishes INTENT (`status: public`) from REALITY (the plugin stamps
   // `garden_url` only on confirmed publish — its presence IS "actually live").
-  stateKey(frontmatter, path) {
+  stateKey(frontmatter, path, file) {
     const fm = frontmatter || {};
     const wantsPublish = isPublishIntent(fm);
     if (!wantsPublish) return "unpublished";
-    if (!fm["garden-url"] && !fm.url_public) return "pending";
+    const isConfirmedOnline =
+      !!fm["garden-url"] ||
+      !!fm.url_public ||
+      fm.published === true ||
+      fm.published === "true";
+    if (!isConfirmedOnline) return "pending";
 
-    // Si on a un statut en cache indiquant une désynchronisation, on l'affiche en priorité
+    // 1. Si on a un statut en cache indiquant une désynchronisation, on l'affiche en priorité
     if (path && this.noteStatuses) {
       const cached = this.noteStatuses.get(path);
       if (cached && (cached.status === "outdated" || cached.status === "changed")) {
         return cached.status;
+      }
+    }
+
+    // 2. Synchronisation immédiate avec noteStatsCache (partagé avec le side panel)
+    const statsCache = this.plugin?.garden?.noteStatsCache || this.plugin?.panel?.noteStatsCache;
+    if (statsCache && path) {
+      const stats = statsCache.get(path);
+      const remoteTime = stats?.updated_at
+        ? new Date(stats.updated_at).getTime()
+        : 0;
+      const localTime = file?.stat?.mtime || 0;
+      if (remoteTime > 0 && localTime > remoteTime + 3000) {
+        return "changed";
       }
     }
 
@@ -100,53 +142,80 @@ class PublishStatusFeature {
   // ── Async Status Check ───────────────────────────────────────────────────────
   async triggerStatusCheck(file) {
     if (!file) return;
+    if (this.checkingFiles.has(file.path)) return;
     const hasKey = !!this.plugin.settings.apiKey;
     if (!hasKey) return;
 
-    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-    const wantsPublish = isPublishIntent(fm);
-    const hasGardenUrl = fm["garden-url"] != null || fm.url_public != null;
-
-    if (!wantsPublish || !hasGardenUrl) {
-      this.noteStatuses.delete(file.path);
-      return;
-    }
-
-    const cached = this.noteStatuses.get(file.path);
-    const now = Date.now();
-
-    // Skip check if verified recently and the file mtime hasn't changed since then
-    if (cached && (now - cached.timestamp < 10000) && (file.stat.mtime <= cached.timestamp)) {
-      return;
-    }
-
-    // Block concurrent checks by setting an intermediate timestamp
-    this.noteStatuses.set(file.path, {
-      status: cached ? cached.status : this.stateKey(fm, file.path),
-      remoteContent: cached ? cached.remoteContent : null,
-      timestamp: now
-    });
-
-    const garden = this.plugin.garden;
-    if (!garden) return;
-
+    this.checkingFiles.add(file.path);
     try {
+      const fm = await getNoteFrontmatterAsync(this.app, file);
+      const wantsPublish = isPublishIntent(fm);
+      const hasGardenUrl =
+        fm["garden-url"] != null ||
+        fm.url_public != null ||
+        fm.published === true ||
+        fm.published === "true";
+
+      if (!wantsPublish || !hasGardenUrl) {
+        this.noteStatuses.delete(file.path);
+        return;
+      }
+
+      const cached = this.noteStatuses.get(file.path);
+      const now = Date.now();
+
+      // Fast check: Si noteStatsCache indique déjà une modification locale
+      const statsCache = this.plugin?.garden?.noteStatsCache || this.plugin?.panel?.noteStatsCache;
+      if (statsCache) {
+        const stats = statsCache.get(file.path);
+        const remoteTime = stats?.updated_at ? new Date(stats.updated_at).getTime() : 0;
+        const localTime = file.stat?.mtime || 0;
+        if (remoteTime > 0 && localTime > remoteTime + 3000) {
+          if (!cached || cached.status !== "changed") {
+            this.noteStatuses.set(file.path, {
+              status: "changed",
+              remoteContent: cached ? cached.remoteContent : null,
+              timestamp: now,
+            });
+            this.renderCurrentWidgets();
+          }
+        }
+      }
+
+      // Skip check if verified recently and the file mtime hasn't changed since then
+      if (cached && (now - cached.timestamp < 10000) && (file.stat?.mtime <= cached.timestamp)) {
+        return;
+      }
+
+      // Block concurrent checks by setting an intermediate timestamp
+      if (!this.noteStatuses.has(file.path)) {
+        this.noteStatuses.set(file.path, {
+          status: cached ? cached.status : this.stateKey(fm, file.path, file),
+          remoteContent: cached ? cached.remoteContent : null,
+          timestamp: now
+        });
+      }
+
+      const garden = this.plugin.garden;
+      if (!garden) return;
+
       const res = await garden.checkNoteStatus(file);
       this.noteStatuses.set(file.path, {
         status: res.status,
         remoteContent: res.remoteContent,
         timestamp: Date.now()
       });
-      this.refreshAll();
+      this.renderCurrentWidgets();
     } catch (err) {
       console.error("Standard : Erreur lors de la vérification asynchrone du statut :", err);
+    } finally {
+      this.checkingFiles.delete(file.path);
     }
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────────
   refreshAll() {
     const hasKey = !!this.plugin.settings.apiKey;
-    const location = this.plugin.settings.publishStatusLocation || "titlebar";
     const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
 
     if (!hasKey && indicatorStyle === "hidden") {
@@ -157,6 +226,19 @@ class PublishStatusFeature {
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && hasKey) {
       this.triggerStatusCheck(activeFile);
+    }
+
+    this.renderCurrentWidgets();
+  }
+
+  renderCurrentWidgets() {
+    const hasKey = !!this.plugin.settings.apiKey;
+    const location = this.plugin.settings.publishStatusLocation || "titlebar";
+    const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
+
+    if (!hasKey && indicatorStyle === "hidden") {
+      this.cleanupAll();
+      return;
     }
 
     // Nettoyer les widgets inutilisés pour l'emplacement actuel
@@ -229,8 +311,8 @@ class PublishStatusFeature {
       return;
     }
 
-    const fm = this.app.metadataCache.getFileCache(view.file)?.frontmatter || null;
-    const key = this.stateKey(fm, view.file.path);
+    const fm = getNoteFrontmatter(this.app, view.file);
+    const key = this.stateKey(fm, view.file.path, view.file);
 
     if (!indicator || !indicator.isConnected || !view.containerEl.contains(indicator)) {
       const existing = view.containerEl.querySelector(".stnd-bottom-indicator");
@@ -264,9 +346,8 @@ class PublishStatusFeature {
     const view = leaf.view;
     if (!view || typeof view.addAction !== "function" || !view.file) return;
 
-    const fm =
-      this.app.metadataCache.getFileCache(view.file)?.frontmatter || null;
-    const key = this.stateKey(fm, view.file.path);
+    const fm = getNoteFrontmatter(this.app, view.file);
+    const key = this.stateKey(fm, view.file.path, view.file);
     const state = STATES[key];
 
     let el = view._stndPublishAction;
@@ -293,8 +374,8 @@ class PublishStatusFeature {
       return;
     }
 
-    const fm = this.app.metadataCache.getFileCache(activeFile)?.frontmatter || null;
-    const key = this.stateKey(fm, activeFile.path);
+    const fm = getNoteFrontmatter(this.app, activeFile);
+    const key = this.stateKey(fm, activeFile.path, activeFile);
     const state = STATES[key];
 
     if (!this.statusBarEl) {
@@ -328,8 +409,8 @@ class PublishStatusFeature {
       return;
     }
 
-    const fm = this.app.metadataCache.getFileCache(activeFile)?.frontmatter || null;
-    const key = this.stateKey(fm, activeFile.path);
+    const fm = getNoteFrontmatter(this.app, activeFile);
+    const key = this.stateKey(fm, activeFile.path, activeFile);
     const state = STATES[key];
 
     if (!this.ribbonEl) {
@@ -353,8 +434,8 @@ class PublishStatusFeature {
     const garden = this.plugin.garden;
     if (!garden) return;
 
-    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || null;
-    const key = this.stateKey(fm, file.path);
+    const fm = getNoteFrontmatter(this.app, file);
+    const key = this.stateKey(fm, file.path, file);
     const menu = new obsidian_1.Menu();
 
     const publish = async () => {
