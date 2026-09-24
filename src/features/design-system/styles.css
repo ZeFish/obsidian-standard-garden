@@ -40,7 +40,7 @@ body.stnd-adapter:not(:has(.modal.mod-settings)) {
 }
 
 /* Force native buttons in Obsidian to drop the web framework's shadow and borders */
-body.stnd-adapter button:not(.btn) {
+body.stnd-adapter :not(.stnd-panel):not(.stnd-panel *) button:not(.btn):not([class*="stnd-"]) {
     box-shadow: none !important;
     border-color: transparent !important;
     background-color: transparent;

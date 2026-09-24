@@ -508,7 +508,7 @@ class StandardGardenView extends obsidian_1.ItemView {
   // ── File Info Section ─────────────────────────────────────────────────
 
   _renderFileInfo(container, file, fm) {
-    const section = container.createEl("div", { cls: "stnd-panel-section" });
+    const card = container.createEl("div", { cls: "stnd-panel-card stnd-panel-note-card" });
 
     if (this.plugin.settings.apiKey && file && this.plugin.publishStatus) {
       this.plugin.publishStatus.triggerStatusCheck(file);
@@ -524,8 +524,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       fm.published === "true";
     const isDesynced = !isPublished && isConfirmedOnline;
 
-    const statusRow = section.createEl("div", { cls: "stnd-panel-status-row" });
-    statusRow.style.marginTop = "0"; // Pull it up since header is gone
+    const statusRow = card.createEl("div", { cls: "stnd-panel-status-row" });
 
     const statusInfo = this.plugin?.publishStatus?.noteStatuses?.get(file.path);
     const isOutdated = statusInfo?.status === "outdated";
@@ -542,7 +541,6 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     if (this.plugin.settings.apiKey) {
       const statusLeft = statusRow.createEl("div", { cls: "stnd-panel-status-left" });
-      statusLeft.style.cssText = "display: flex; align-items: center; gap: 4px;";
 
       let badge;
       if (isDesynced) {
@@ -579,10 +577,10 @@ class StandardGardenView extends obsidian_1.ItemView {
         badge.title = "Queued for publication — click for actions";
       } else {
         badge = statusLeft.createEl("span", {
-          text: "Local",
+          text: "Draft",
           cls: "stnd-panel-badge stnd-panel-badge-local is-clickable",
         });
-        badge.title = "Local note — click for actions";
+        badge.title = "Draft note (local only) — click for actions";
       }
 
       badge.addEventListener("click", (evt) => {
@@ -612,9 +610,12 @@ class StandardGardenView extends obsidian_1.ItemView {
       const visSelect = statusRow.createEl("select", {
         cls: "dropdown stnd-panel-select stnd-panel-vis-select",
       });
-      visSelect.createEl("option", { value: "public", text: "Public (feed & search)" });
-      visSelect.createEl("option", { value: "unlisted", text: "Unlisted (link only)" });
-      visSelect.createEl("option", { value: "private", text: "Private (owner only)" });
+      const optPub = visSelect.createEl("option", { value: "public", text: "Public" });
+      optPub.title = "Public (visible in feed & search)";
+      const optUnl = visSelect.createEl("option", { value: "unlisted", text: "Unlisted" });
+      optUnl.title = "Unlisted (accessible via link only)";
+      const optPriv = visSelect.createEl("option", { value: "private", text: "Private" });
+      optPriv.title = "Private (visible to you only)";
 
       const currentVis = String(fm.visibility || "public").toLowerCase().trim();
       visSelect.value = ["public", "unlisted", "private"].includes(currentVis)
@@ -633,7 +634,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
 
     if (this.plugin.settings.apiKey) {
-      const primaryContainer = section.createEl("div", { cls: "stnd-panel-primary-action" });
+      const primaryContainer = card.createEl("div", { cls: "stnd-panel-primary-action" });
 
       const publishAction = async (btn) => {
         if (btn) {
@@ -697,20 +698,20 @@ class StandardGardenView extends obsidian_1.ItemView {
       // ── Main Primary Button ───────────────────────────────────────────
       if (isOutdated) {
         const splitRow = primaryContainer.createEl("div", { cls: "stnd-panel-btn-split" });
-        const pullBtn = splitRow.createEl("button", { cls: "stnd-panel-btn-primary" });
+        const pullBtn = splitRow.createEl("button", { cls: "btn stnd-panel-btn-primary" });
         obsidian_1.setIcon(pullBtn.createSpan({ cls: "stnd-btn-icon" }), "arrow-down-circle");
         pullBtn.createSpan({ text: "Pull remote changes" });
         pullBtn.title = "Pull remote version (overwrite local)";
         pullBtn.addEventListener("click", () => pullAction(pullBtn));
 
-        const forceBtn = splitRow.createEl("button", { cls: "stnd-panel-btn-secondary" });
+        const forceBtn = splitRow.createEl("button", { cls: "btn stnd-panel-btn-secondary" });
         obsidian_1.setIcon(forceBtn.createSpan({ cls: "stnd-btn-icon" }), "refresh-cw");
         forceBtn.createSpan({ text: "Force" });
         forceBtn.title = "Force publish local version";
         forceBtn.addEventListener("click", () => publishAction(forceBtn));
       } else {
         const publishBtn = primaryContainer.createEl("button", {
-          cls: "stnd-panel-btn-primary" + (isDesynced ? " is-warning" : ""),
+          cls: "btn stnd-panel-btn-primary" + (isDesynced ? " is-warning" : ""),
         });
         const iconName = isDesynced
           ? "alert-circle"
@@ -738,16 +739,16 @@ class StandardGardenView extends obsidian_1.ItemView {
         liveUrl = this.plugin.garden.getLiveUrl(file);
       }
 
-      const toolbar = section.createEl("div", { cls: "stnd-panel-toolbar" });
+      const toolbar = card.createEl("div", { cls: "stnd-panel-toolbar" });
 
       if (isConfirmedOnline && liveUrl) {
-        const viewBtn = toolbar.createEl("button", { cls: "stnd-panel-btn" });
+        const viewBtn = toolbar.createEl("button", { cls: "btn stnd-panel-btn" });
         obsidian_1.setIcon(viewBtn.createSpan({ cls: "stnd-btn-icon" }), "external-link");
         viewBtn.createSpan({ text: "Open" });
         viewBtn.title = "View note online in browser";
         viewBtn.addEventListener("click", () => this.plugin.garden.viewLiveVersion(file));
 
-        const shareBtn = toolbar.createEl("button", { cls: "stnd-panel-btn" });
+        const shareBtn = toolbar.createEl("button", { cls: "btn stnd-panel-btn" });
         obsidian_1.setIcon(shareBtn.createSpan({ cls: "stnd-btn-icon" }), "share-2");
         shareBtn.createSpan({ text: "Share" });
         shareBtn.title = "Share public link";
@@ -755,7 +756,7 @@ class StandardGardenView extends obsidian_1.ItemView {
           new StndShareModal(this.plugin.app, file.basename, liveUrl).open();
         });
 
-        const copyBtn = toolbar.createEl("button", { cls: "stnd-panel-btn" });
+        const copyBtn = toolbar.createEl("button", { cls: "btn stnd-panel-btn" });
         obsidian_1.setIcon(copyBtn.createSpan({ cls: "stnd-btn-icon" }), "copy");
         copyBtn.createSpan({ text: "Copy" });
         copyBtn.title = "Copy public URL to clipboard";
@@ -763,30 +764,59 @@ class StandardGardenView extends obsidian_1.ItemView {
           navigator.clipboard.writeText(liveUrl);
           new obsidian_1.Notice("Public URL copied to clipboard.");
         });
-      }
 
-      const moreBtn = toolbar.createEl("button", {
-        cls: "stnd-panel-btn stnd-panel-btn-icon",
-      });
-      moreBtn.title = "More note actions";
-      moreBtn.setAttribute("aria-label", "More note actions");
-      obsidian_1.setIcon(moreBtn, "more-horizontal");
-      moreBtn.addEventListener("click", (evt) => {
-        this._showNoteActionMenu(file, fm, evt, {
-          isConfirmedOnline,
-          isDesynced,
-          isOutdated,
-          isModifiedLocally,
-          remoteContent,
-          liveUrl,
-          publishAction,
-          pullAction,
+        const moreBtn = toolbar.createEl("button", {
+          cls: "btn stnd-panel-btn stnd-panel-btn-icon",
         });
-      });
+        moreBtn.title = "More note actions";
+        moreBtn.setAttribute("aria-label", "More note actions");
+        obsidian_1.setIcon(moreBtn, "more-horizontal");
+        moreBtn.addEventListener("click", (evt) => {
+          this._showNoteActionMenu(file, fm, evt, {
+            isConfirmedOnline,
+            isDesynced,
+            isOutdated,
+            isModifiedLocally,
+            remoteContent,
+            liveUrl,
+            publishAction,
+            pullAction,
+          });
+        });
+      } else {
+        const moreBtn = toolbar.createEl("button", {
+          cls: "btn stnd-panel-btn",
+        });
+        obsidian_1.setIcon(moreBtn.createSpan({ cls: "stnd-btn-icon" }), "more-horizontal");
+        moreBtn.createSpan({ text: "Options" });
+        moreBtn.title = "More note actions";
+        moreBtn.addEventListener("click", (evt) => {
+          this._showNoteActionMenu(file, fm, evt, {
+            isConfirmedOnline,
+            isDesynced,
+            isOutdated,
+            isModifiedLocally,
+            remoteContent,
+            liveUrl,
+            publishAction,
+            pullAction,
+          });
+        });
+
+        const guideBtn = toolbar.createEl("button", {
+          cls: "btn stnd-panel-btn",
+        });
+        obsidian_1.setIcon(guideBtn.createSpan({ cls: "stnd-btn-icon" }), "help-circle");
+        guideBtn.createSpan({ text: "Guide" });
+        guideBtn.title = "Status and publishing guide";
+        guideBtn.addEventListener("click", () => {
+          new StndStatusGuideModal(this.plugin.app).open();
+        });
+      }
     }
       // ── Stats & Citations ─────────────────────────────────────────────
       if (isConfirmedOnline) {
-        const statsBox = section.createEl("div", { cls: "stnd-panel-stats-box" });
+        const statsBox = card.createEl("div", { cls: "stnd-panel-stats-box" });
         statsBox.style.cssText =
           "margin-top: var(--size-4-3); padding-top: var(--size-4-2); border-top: 1px solid var(--background-modifier-border);";
 
@@ -907,10 +937,12 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     if (hasTokens) {
       const resetBtn = row.createEl("button", {
-        text: "Reset",
-        cls: "stnd-panel-btn stnd-panel-btn-secondary",
+        cls: "btn stnd-panel-btn stnd-panel-btn-secondary",
       });
+      obsidian_1.setIcon(resetBtn.createSpan({ cls: "stnd-btn-icon" }), "rotate-ccw");
+      resetBtn.createSpan({ text: "Reset" });
       resetBtn.style.flex = "1";
+      resetBtn.title = "Clear custom design tokens";
 
       resetBtn.addEventListener("click", () => {
         new StndConfirmModal(
@@ -947,15 +979,17 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
 
     const genBtn = row.createEl("button", {
-      text: "Let's Hyphe design this",
-      cls: "stnd-panel-btn",
+      cls: "btn stnd-panel-btn stnd-panel-btn-ai",
     });
+    obsidian_1.setIcon(genBtn.createSpan({ cls: "stnd-btn-icon" }), "sparkles");
+    const genLabel = genBtn.createSpan({ text: "Let's Hyphe design this" });
     genBtn.style.flex = "2";
+    genBtn.title = "Generate harmonious design tokens with Hyphe AI";
 
     const view = this;
     genBtn.addEventListener("click", async () => {
       genBtn.disabled = true;
-      genBtn.textContent = "Hyphe is designing…";
+      genLabel.textContent = "Hyphe is designing…";
 
       try {
         const noteContent = await view.plugin.app.vault.cachedRead(file);
@@ -991,7 +1025,7 @@ class StandardGardenView extends obsidian_1.ItemView {
         new obsidian_1.Notice(`Design failed: ${msg}`);
       } finally {
         genBtn.disabled = false;
-        genBtn.textContent = "Let's Hyphe design this";
+        genLabel.textContent = "Let's Hyphe design this";
       }
     });
   }
