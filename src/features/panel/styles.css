@@ -29,6 +29,26 @@
   font-style: italic;
 }
 
+/* ─── Top status indicator bar ───────────────────────────────────── */
+
+.stnd-panel-top-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 25;
+  background: var(--background-primary);
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.stnd-panel-top-indicator {
+  width: 100%;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* ─── Global header ──────────────────────────────────────────────── */
 
 .stnd-panel-global-header {

@@ -62,12 +62,12 @@ class GardenSettingTab extends PluginSettingTab {
           })
       );
 
-    // Note bottom status indicator
+    // Panel top status indicator
     new Setting(containerEl)
-      .setName("Note bottom status indicator")
+      .setName("Panel top status indicator")
       .setDesc(
         descWithLinks(
-          "A discreet visual accent at the bottom of the active note reflecting its publication state. §",
+          "A visual accent on top of the Garden side panel reflecting the active note's publication state. §",
           [{ text: "Learn more →", href: DOCS_URLS.plugin }]
         )
       )
@@ -83,13 +83,14 @@ class GardenSettingTab extends PluginSettingTab {
             const { PublishStatusFeature } = require("../../features/publish-status/index.js");
             const feature = this.plugin.features.find((f) => f instanceof PublishStatusFeature);
             if (feature) feature.refreshAll();
+            if (this.plugin.panel) this.plugin.panel.render();
           })
       );
 
     // ─── Status & Color Guide ────────────────────────────────────────────────
     containerEl.createEl("h3", { text: "Status & Color Guide" });
     containerEl.createEl("p", {
-      text: "Standard Garden uses a unified color system across the note titlebar, the side panel badge, and the bottom status bar:",
+      text: "Standard Garden uses a unified color system across the note titlebar, the side panel badge, and the panel top indicator:",
       cls: "setting-item-description",
     });
     renderStatusGuide(containerEl);

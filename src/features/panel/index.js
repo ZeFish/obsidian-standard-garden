@@ -157,6 +157,41 @@ class StandardGardenView extends obsidian_1.ItemView {
     }, 400);
   }
 
+  // ── Top Status Indicator ────────────────────────────────────────────────
+
+  updateTopIndicator(triggerAnimation = false) {
+    if (!this.topIndicatorEl) return;
+    const indicatorStyle = this.plugin?.settings?.publishIndicatorStyle || "garden";
+    if (indicatorStyle === "hidden") {
+      this.topIndicatorEl.style.display = "none";
+      return;
+    }
+    this.topIndicatorEl.style.display = "";
+
+    const file = this.plugin.app.workspace.getActiveFile();
+    let key = "unpublished";
+    let stateLabel = "Unpublished";
+    if (file && this.plugin.publishStatus) {
+      const fm = getNoteFrontmatter(this.plugin.app, file);
+      const info = this.plugin.publishStatus.getStateInfo(fm, file.path, file);
+      key = info.key;
+      if (key === "synced" && (info.visibility === "private" || info.visibility === "unlisted")) {
+        key = info.visibility;
+      }
+      stateLabel = info.state?.label || key;
+    }
+
+    const indEl = this.topIndicatorEl.querySelector(".stnd-panel-top-indicator") || this.topIndicatorEl;
+    indEl.className = `stnd-panel-top-indicator stnd-style-${indicatorStyle} stnd-state-${key}`;
+    this.topIndicatorEl.setAttribute("title", `Garden: ${stateLabel}`);
+
+    if (triggerAnimation && indicatorStyle === "garden") {
+      indEl.classList.remove("stnd-growing");
+      void indEl.offsetWidth; // Force reflow
+      indEl.classList.add("stnd-growing");
+    }
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   render() {
@@ -166,6 +201,17 @@ class StandardGardenView extends obsidian_1.ItemView {
     container.style.overflowY = "auto";
     container.style.touchAction = "pan-y";
     container.style.webkitOverflowScrolling = "touch";
+
+    // Top status indicator bar (reflects active note state with gradient / subtle line)
+    const indicatorStyle = this.plugin?.settings?.publishIndicatorStyle || "garden";
+    if (indicatorStyle !== "hidden") {
+      const topBar = container.createEl("div", { cls: "stnd-panel-top-bar" });
+      topBar.createEl("div", { cls: "stnd-panel-top-indicator" });
+      this.topIndicatorEl = topBar;
+      this.updateTopIndicator(false);
+    } else {
+      this.topIndicatorEl = null;
+    }
 
     // Global header: left = product name, right = connected username (if any) + sync all button
     const headerEl = container.createEl("div", {

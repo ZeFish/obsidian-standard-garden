@@ -137,7 +137,7 @@ class StndStatusGuideModal extends obsidian_1.Modal {
       "margin-bottom: 8px; font-size: var(--font-ui-medium); font-weight: var(--font-semibold);";
 
     const descEl = contentEl.createEl("p", {
-      text: "Standard Garden uses this unified color code across the titlebar icon, side panel badge, and bottom status bar:",
+      text: "Standard Garden uses this unified color code across the titlebar icon, side panel badge, and panel top indicator:",
       cls: "stnd-panel-meta",
     });
     descEl.style.cssText = "margin-bottom: 16px;";

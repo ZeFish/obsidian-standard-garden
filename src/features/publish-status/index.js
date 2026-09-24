@@ -256,6 +256,9 @@ class PublishStatusFeature {
         timestamp: Date.now()
       });
       this.renderCurrentWidgets();
+      if (this.plugin.panel && typeof this.plugin.panel.updateTopIndicator === "function") {
+        this.plugin.panel.updateTopIndicator(true);
+      }
     } catch (err) {
       console.error("Standard : Erreur lors de la vérification asynchrone du statut :", err);
     } finally {
@@ -325,10 +328,19 @@ class PublishStatusFeature {
       }
     }
 
-    // Mettre à jour l'indicateur visuel de bas de note pour chaque onglet markdown
+    // Clean up any remaining note bottom indicators (moved to panel top indicator)
     this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
-      this.refreshBottomIndicator(leaf, indicatorStyle);
+      const el = leaf.view?._stndBottomIndicator || leaf.view?.containerEl?.querySelector(".stnd-bottom-indicator");
+      if (el) {
+        el.remove();
+        if (leaf.view) delete leaf.view._stndBottomIndicator;
+      }
     });
+
+    // Update the Garden side panel's top status indicator
+    if (this.plugin.panel && typeof this.plugin.panel.updateTopIndicator === "function") {
+      this.plugin.panel.updateTopIndicator(false);
+    }
   }
 
   refreshForFile(file) {
@@ -336,15 +348,16 @@ class PublishStatusFeature {
     if (activeFile && activeFile.path === file.path) {
       this.refreshAll();
     } else {
-      const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         if (leaf.view && leaf.view.file && leaf.view.file.path === file.path) {
           if (this.plugin.settings.publishStatusLocation === "titlebar") {
             this.refreshLeaf(leaf);
           }
-          this.refreshBottomIndicator(leaf, indicatorStyle);
         }
       });
+      if (this.plugin.panel && typeof this.plugin.panel.updateTopIndicator === "function") {
+        this.plugin.panel.updateTopIndicator(false);
+      }
     }
   }
 

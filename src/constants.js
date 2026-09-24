@@ -90,7 +90,7 @@ const DEFAULT_SETTINGS = {
   apiUrl: "https://standard.garden/api",
   openAfterPublish: false,
   publishStatusLocation: "titlebar", // Location of the publish status action: titlebar, statusbar, ribbon, hidden
-  publishIndicatorStyle: "garden", // Bottom view indicator: garden (animated organic gradient), subtle (minimal accent line), hidden (disabled)
+  publishIndicatorStyle: "garden", // Panel top indicator: garden (animated organic gradient), subtle (minimal accent line), hidden (disabled)
   autoSync: false, // Automatic background synchronization (disabled by default to protect local drafts)
   autoSyncStartup: false,
   syncDirection: "2way",
