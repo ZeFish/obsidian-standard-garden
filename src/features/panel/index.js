@@ -155,6 +155,9 @@ class StandardGardenView extends obsidian_1.ItemView {
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("stnd-panel");
+    container.style.overflowY = "auto";
+    container.style.touchAction = "pan-y";
+    container.style.webkitOverflowScrolling = "touch";
 
     // Global header: left = product name, right = connected username (if any)
     const headerEl = container.createEl("div", {
