@@ -105,13 +105,13 @@ const DEFAULT_SETTINGS = {
 };
 
 const DOCS_URLS = {
-  plugin: "https://stnd.build/manual/system/obsidian-plugin",
-  sync: "https://stnd.build/manual/system/obsidian-plugin#synchronisation",
-  tokens: "https://stnd.build/manual/system/obsidian-design-tokens",
-  cssHooks: "https://stnd.build/manual/system/css-and-rendering-hooks",
-  typography: "https://stnd.build/manual/standard/typography",
-  frontmatter: "https://stnd.build/manual/standard/frontmatter",
-  syntax: "https://stnd.build/manual/standard/syntax",
+  plugin: "https://standard.garden/guide/getting-started/obsidian",
+  sync: "https://standard.garden/guide/getting-started/obsidian#sync",
+  tokens: "https://standard.garden/guide/getting-started/tokens",
+  cssHooks: "https://standard.garden/guide/getting-started/css-hooks",
+  typography: "https://standard.garden/guide/getting-started/tokens#typography",
+  frontmatter: "https://standard.garden/guide/getting-started/customization#frontmatter",
+  syntax: "https://standard.garden/guide/getting-started/customization#syntax",
 };
 
 // ─── Settings UI Helpers ─────────────────────────────────────────────────────
