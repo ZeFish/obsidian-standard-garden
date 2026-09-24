@@ -552,7 +552,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
 
     const genBtn = row.createEl("button", {
-      text: "Generate theme with AI",
+      text: "Let's Hyphe design this",
       cls: "stnd-panel-btn",
     });
     genBtn.style.flex = "2";
@@ -560,7 +560,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     const view = this;
     genBtn.addEventListener("click", async () => {
       genBtn.disabled = true;
-      genBtn.textContent = "Generating…";
+      genBtn.textContent = "Hyphe is designing…";
 
       try {
         const noteContent = await view.plugin.app.vault.cachedRead(file);
@@ -579,16 +579,24 @@ class StandardGardenView extends obsidian_1.ItemView {
             }
           });
           new obsidian_1.Notice(
-            `Applied ${Object.keys(tokens).length} tokens.`,
+            `Hyphe styled this note with ${Object.keys(tokens).length} tokens.`,
           );
         } else {
           new obsidian_1.Notice("No tokens returned.");
         }
       } catch (e) {
-        new obsidian_1.Notice(`Generation failed: ${e.message}`);
+        let msg = e.message || "Failed to generate design";
+        try {
+          const jsonStart = msg.indexOf("{");
+          if (jsonStart !== -1) {
+            const parsed = JSON.parse(msg.slice(jsonStart));
+            if (parsed.error) msg = parsed.error;
+          }
+        } catch {}
+        new obsidian_1.Notice(`Design failed: ${msg}`);
       } finally {
         genBtn.disabled = false;
-        genBtn.textContent = "Generate theme with AI";
+        genBtn.textContent = "Let's Hyphe design this";
       }
     });
   }

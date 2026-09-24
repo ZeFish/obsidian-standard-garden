@@ -2385,11 +2385,15 @@ class GardenFeature {
         const data = response.json;
         return Array.isArray(data.questions) ? data.questions : [];
       } else {
-        let errText = response.text;
-        try {
-          const parsed = JSON.parse(response.text || "{}");
-          if (parsed.error) errText = parsed.error;
-        } catch {}
+        let errText = response.text || "";
+        if (errText.trim().startsWith("<") || errText.includes("<html")) {
+          errText = `Endpoint returned HTTP ${response.status} (service updating)`;
+        } else {
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed.error) errText = parsed.error;
+          } catch {}
+        }
         throw new Error(errText || `Server error (${response.status})`);
       }
     } catch (err) {
