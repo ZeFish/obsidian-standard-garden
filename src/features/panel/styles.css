@@ -193,69 +193,152 @@
   text-decoration: underline;
 }
 
-/* ─── Action buttons ─────────────────────────────────────────────── */
+/* ─── Status row (Top line: Status + Visibility) ─────────────────── */
 
-.stnd-panel-actions {
+.stnd-panel-status-row {
   display: flex;
-  gap: var(--size-4-1);
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  margin-top: 0;
 }
 
-.stnd-panel-btn {
-  height: var(--input-height, 28px);
+.stnd-panel-vis-select {
+  font-size: var(--font-ui-smaller);
+  height: 26px;
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  max-width: 140px;
+}
+
+/* ─── Primary Action Button (Prominent at top) ───────────────────── */
+
+.stnd-panel-primary-action {
+  margin-top: var(--size-4-2);
+}
+
+.stnd-panel-btn-primary {
+  width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 0 var(--size-4-3);
-  border-radius: var(--button-radius, var(--radius-s));
+  border-radius: var(--button-radius, var(--radius-m, 6px));
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: all 120ms ease;
+}
+
+.stnd-panel-btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.stnd-panel-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.stnd-panel-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.stnd-panel-btn-primary.is-warning {
+  background: var(--stnd-status-desynced, #dc2626);
+  border-color: var(--stnd-status-desynced, #dc2626);
+  color: #fff;
+}
+
+.stnd-panel-btn-primary svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stnd-panel-btn-split {
+  display: flex;
+  gap: 6px;
+}
+
+.stnd-panel-btn-split .stnd-panel-btn-primary {
+  flex: 1;
+}
+
+.stnd-panel-btn-split .stnd-panel-btn-secondary {
+  flex: 1;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary, var(--background-modifier-form-field));
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  border-radius: var(--button-radius, var(--radius-m, 6px));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Secondary Utility Toolbar ──────────────────────────────────── */
+
+.stnd-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--size-4-2);
+}
+
+.stnd-panel-toolbar .stnd-panel-btn {
+  flex: 1;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: var(--button-radius, var(--radius-s, 4px));
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
   font-family: inherit;
   cursor: pointer;
-  border: none;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  transition: opacity 120ms ease;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary, var(--background-modifier-form-field));
+  color: var(--text-normal);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 120ms ease;
   white-space: nowrap;
 }
 
-.stnd-panel-btn:hover {
-  opacity: 0.85;
-}
-.stnd-panel-btn:active {
-  opacity: 0.75;
-}
-.stnd-panel-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.stnd-panel-btn-secondary {
+.stnd-panel-toolbar .stnd-panel-btn:hover {
   background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
   color: var(--text-normal);
 }
-.stnd-panel-btn-secondary:hover {
-  background: var(--background-modifier-active-hover);
+
+.stnd-panel-toolbar .stnd-panel-btn:active {
+  transform: translateY(1px);
 }
 
-.stnd-panel-btn-danger {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--background-modifier-border);
-}
-.stnd-panel-btn-danger:hover {
-  color: var(--color-red);
-  border-color: var(--color-red);
-  background: hsla(var(--color-red-hsl), 0.06);
+.stnd-panel-toolbar .stnd-panel-btn-icon {
+  flex: 0 0 32px;
+  padding: 0;
 }
 
-.stnd-panel-btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--size-4-2);
-}
-
-.stnd-panel-btn-icon svg {
+.stnd-panel-toolbar .stnd-panel-btn svg {
   width: 14px;
   height: 14px;
+  opacity: 0.85;
 }
 
 /* ─── Collapsible section groups ─────────────────────────────────── */
