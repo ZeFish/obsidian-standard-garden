@@ -1589,7 +1589,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     const header = card.createEl("div", { cls: "stnd-inquiries-header" });
     const title = header.createEl("span", { cls: "stnd-inquiries-title" });
-    title.setText("🌐 Network Resonances");
+    title.setText("🌐 Network Echoes");
 
     if (!isConfirmedOnline) {
       const draftNote = card.createEl("p");
