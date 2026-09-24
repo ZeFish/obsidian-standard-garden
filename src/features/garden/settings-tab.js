@@ -2,6 +2,7 @@
 
 const { PluginSettingTab, Setting } = require("obsidian");
 const { descWithLinks, DOCS_URLS } = require("../../constants.js");
+const { renderStatusGuide } = require("./modals/status-guide-modal.js");
 
 class GardenSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
@@ -84,6 +85,14 @@ class GardenSettingTab extends PluginSettingTab {
             if (feature) feature.refreshAll();
           })
       );
+
+    // ─── Status & Color Guide ────────────────────────────────────────────────
+    containerEl.createEl("h3", { text: "Status & Color Guide" });
+    containerEl.createEl("p", {
+      text: "Standard Garden uses a unified color system across the note titlebar, the side panel badge, and the bottom status bar:",
+      cls: "setting-item-description",
+    });
+    renderStatusGuide(containerEl);
 
     // Open after publish
     new Setting(containerEl)

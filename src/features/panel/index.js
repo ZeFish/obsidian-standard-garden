@@ -4,6 +4,7 @@ const obsidian_1 = require("obsidian");
 const { KNOWN_TOKENS, isPublishIntent } = require("../../constants");
 const { StndConfirmModal } = require("../garden/modals/confirm-modal");
 const { StndShareModal } = require("../garden/modals/share-modal");
+const { StndStatusGuideModal } = require("../garden/modals/status-guide-modal.js");
 const {
   findOutgoingUnlinkedMentions,
   createMentionLink,
@@ -411,6 +412,16 @@ class StandardGardenView extends obsidian_1.ItemView {
       );
     }
 
+    menu.addSeparator();
+    menu.addItem((i) =>
+      i
+        .setTitle("Status & color guide...")
+        .setIcon("help-circle")
+        .onClick(() => {
+          new StndStatusGuideModal(this.plugin.app).open();
+        })
+    );
+
     if (evt && evt.clientX != null && evt.clientY != null && evt.clientX > 0 && evt.clientY > 0) {
       menu.showAtMouseEvent(evt);
     } else {
@@ -459,41 +470,44 @@ class StandardGardenView extends obsidian_1.ItemView {
       statusInfo?.status === "changed";
 
     if (this.plugin.settings.apiKey) {
+      const statusLeft = statusRow.createEl("div", { cls: "stnd-panel-status-left" });
+      statusLeft.style.cssText = "display: flex; align-items: center; gap: 4px;";
+
       let badge;
       if (isConfirmedOnline) {
         if (isOutdated) {
-          badge = statusRow.createEl("span", {
+          badge = statusLeft.createEl("span", {
             text: "Outdated",
             cls: "stnd-panel-badge stnd-panel-badge-outdated is-clickable",
           });
           badge.title = "Update available online — click for actions";
         } else if (isModifiedLocally) {
-          badge = statusRow.createEl("span", {
+          badge = statusLeft.createEl("span", {
             text: "Modified",
             cls: "stnd-panel-badge stnd-panel-badge-modified is-clickable",
           });
           badge.title = "Local edits not yet synced to Garden — click for actions";
         } else {
-          badge = statusRow.createEl("span", {
+          badge = statusLeft.createEl("span", {
             text: "Synced",
             cls: "stnd-panel-badge stnd-panel-badge-online is-clickable",
           });
           badge.title = "Up to date with Garden — click for actions";
         }
       } else if (isPublished) {
-        badge = statusRow.createEl("span", {
+        badge = statusLeft.createEl("span", {
           text: "Queued",
           cls: "stnd-panel-badge stnd-panel-badge-pending is-clickable",
         });
         badge.title = "Queued for publication — click for actions";
       } else if (fm.status === "draft" || fm.publish === false || fm.publish === "false") {
-        badge = statusRow.createEl("span", {
+        badge = statusLeft.createEl("span", {
           text: "Draft",
           cls: "stnd-panel-badge stnd-panel-badge-excluded is-clickable",
         });
         badge.title = "Draft note — click for actions";
       } else {
-        badge = statusRow.createEl("span", {
+        badge = statusLeft.createEl("span", {
           text: "Local",
           cls: "stnd-panel-badge stnd-panel-badge-local is-clickable",
         });
@@ -507,6 +521,19 @@ class StandardGardenView extends obsidian_1.ItemView {
           isModifiedLocally,
           remoteContent,
         });
+      });
+
+      const helpBtn = statusLeft.createEl("button", {
+        cls: "stnd-panel-header-btn",
+        attr: {
+          "aria-label": "Status & color guide",
+          title: "Status & color guide",
+        },
+      });
+      helpBtn.style.padding = "2px";
+      obsidian_1.setIcon(helpBtn, "help-circle");
+      helpBtn.addEventListener("click", () => {
+        new StndStatusGuideModal(this.plugin.app).open();
       });
     } else {
       const notice = statusRow.createEl("span", {
