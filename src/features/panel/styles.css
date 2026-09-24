@@ -486,7 +486,8 @@
 .stnd-panel-group summary {
   display: flex;
   align-items: center;
-  gap: var(--size-4-2);
+  justify-content: flex-start;
+  gap: 8px;
   padding: var(--size-4-2) var(--size-4-3);
   cursor: pointer;
   user-select: none;
@@ -497,6 +498,30 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   transition: color 100ms ease;
+}
+
+.stnd-panel-group-summary-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.stnd-panel-group-badge {
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stnd-panel-group-body {
+  padding: var(--size-4-2) var(--size-4-3) var(--size-4-3) var(--size-4-3);
 }
 
 .stnd-panel-group summary::-webkit-details-marker,
@@ -525,6 +550,23 @@
 }
 .stnd-panel-group[open] > summary {
   color: var(--text-muted);
+}
+
+.stnd-panel-token-group {
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.stnd-panel-token-group summary {
+  padding-left: var(--size-4-4);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.stnd-panel-design-group .stnd-panel-group-body {
+  padding: var(--size-4-2) 0 var(--size-4-3) 0;
+}
+.stnd-panel-design-group .stnd-panel-ai {
+  margin: 0 var(--size-4-3) var(--size-4-2) var(--size-4-3);
 }
 
 /* ─── Field rows ─────────────────────────────────────────────────── */

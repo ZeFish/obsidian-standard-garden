@@ -32,6 +32,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.noteStatsCache = plugin?.garden?.noteStatsCache || new Map();
     this.isLoadingStats = false;
     this.inquiryCache = new Map();
+    this._collapsedSections = new Set(["roots", "design"]);
   }
 
   async triggerHypheInquiry(file) {
@@ -192,6 +193,54 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
   }
 
+  _createCollapsibleSection(container, key, title, options = {}) {
+    const details = container.createEl("details", {
+      cls: `stnd-panel-group stnd-panel-${key}-group`,
+    });
+    if (!this._collapsedSections) {
+      this._collapsedSections = new Set(["design"]);
+    }
+    const isCollapsed = this._collapsedSections.has(key);
+    if (!isCollapsed) {
+      details.setAttribute("open", "");
+    }
+    details.addEventListener("toggle", () => {
+      if (details.open) {
+        this._collapsedSections.delete(key);
+      } else {
+        this._collapsedSections.add(key);
+      }
+    });
+
+    const summary = details.createEl("summary", { cls: "stnd-panel-group-summary" });
+    const summaryLeft = summary.createEl("div", { cls: "stnd-panel-group-summary-left" });
+    summaryLeft.createSpan({ text: title, cls: "stnd-panel-group-title" });
+
+    if (options.badge != null && options.badge !== "") {
+      summaryLeft.createSpan({ text: String(options.badge), cls: "stnd-panel-group-badge" });
+    }
+
+    if (options.onRefresh) {
+      const refreshBtn = summary.createEl("button", {
+        cls: "stnd-panel-header-btn",
+        attr: {
+          "aria-label": `Refresh ${title.toLowerCase()}`,
+          title: `Refresh ${title.toLowerCase()}`,
+        },
+      });
+      refreshBtn.style.padding = "2px";
+      obsidian_1.setIcon(refreshBtn, "refresh-cw");
+      refreshBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        options.onRefresh();
+      });
+    }
+
+    const body = details.createEl("div", { cls: "stnd-panel-group-body" });
+    return { details, summary, body };
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   render() {
@@ -290,21 +339,21 @@ class StandardGardenView extends obsidian_1.ItemView {
     this._lastRenderedFile = file;
     const fm = getNoteFrontmatter(this.plugin.app, file);
 
-    // ── Garden: File Info / Profile Settings / AI Generate / Token Groups ──
+    // ── 1. Garden Note Card (Always visible) ──
     this._renderFileInfo(container, file, fm);
     this._renderGardenSettings(container, file, fm);
-    this._renderAIGenerate(container, file, fm);
-    this._renderTokenGroups(container, file, fm);
 
-    // ── Mycelium & Links ─────────────────────────────────────────────────
+    // ── 2. Roots: Local Vault Connections (Collapsible) ──
     if ((!this.linksData || this.linksData.file !== file) && !this.isLoadingLinks) {
       this.refreshLinksData();
     }
-    this._renderLinksTab(container);
+    this._renderRootsSection(container, file);
 
-    // if (this.activeTab === "audit") {
-    //   this._renderAuditTab(container);
-    // }
+    // ── 3. Mycelium: Hyphe Inquiries & Network Echoes (Collapsible) ──
+    this._renderMyceliumSection(container, file);
+
+    // ── 4. Design: Hyphe AI Styling & Design Tokens (Collapsible) ──
+    this._renderDesignSection(container, file, fm);
   }
 
   _showNoteActionMenu(file, fm, evt, opts = {}) {
@@ -1145,22 +1194,9 @@ class StandardGardenView extends obsidian_1.ItemView {
       },
     ];
 
-    const advancedAccordion = container.createEl("details", {
-      cls: "stnd-panel-group stnd-panel-advanced-design",
-    });
-    const summary = advancedAccordion.createEl("summary", {
-      text: "Advanced Design Settings",
-    });
-    summary.style.fontWeight = "var(--font-medium)";
-
-    const contentWrap = advancedAccordion.createEl("div", {
-      cls: "stnd-panel-advanced-body",
-    });
-    contentWrap.style.paddingLeft = "var(--size-4-2)";
-
     for (const group of groups) {
-      const details = contentWrap.createEl("details", {
-        cls: "stnd-panel-group",
+      const details = container.createEl("details", {
+        cls: "stnd-panel-group stnd-panel-token-group",
       });
       if (group.open) details.setAttribute("open", "");
       details.createEl("summary", { text: group.title });
@@ -1171,6 +1207,25 @@ class StandardGardenView extends obsidian_1.ItemView {
         this._renderField(list, file, fm, field);
       }
     }
+  }
+
+  _renderDesignSection(container, file, fm) {
+    const hasTokens = Object.keys(fm).some(
+      (key) =>
+        KNOWN_TOKENS.has(key) ||
+        key.startsWith("stnd-") ||
+        key.startsWith("stnd_"),
+    );
+
+    const { body } = this._createCollapsibleSection(container, "design", "Design", {
+      badge: hasTokens ? "Custom" : null,
+    });
+
+    // 1. Hyphe AI Design Button + Reset
+    this._renderAIGenerate(body, file, fm);
+
+    // 2. Token Groups
+    this._renderTokenGroups(body, file, fm);
   }
 
   // ── Individual Field Renderers ────────────────────────────────────────
@@ -1718,50 +1773,21 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
   }
 
-  _renderLinksTab(container) {
-    const activeFile = this.plugin.app.workspace.getActiveFile();
-    if (!activeFile) {
-      const empty = container.createEl("div", { cls: "stnd-panel-empty" });
-      empty.createEl("p", { text: "No active note open.", cls: "stnd-panel-muted" });
-      return;
+  _renderRootsSection(container, activeFile) {
+    if (!activeFile) return;
+
+    let unlinkedCount = 0;
+    if (this.linksData?.unlinked) {
+      unlinkedCount = this.linksData.unlinked.length;
     }
 
-    const linksWrap = container.createEl("div", { cls: "stnd-audit-container" });
-
-    const headerRow = linksWrap.createEl("div", { cls: "stnd-audit-header-row" });
-    const titleCol = headerRow.createEl("div", { cls: "stnd-resonances-title-col" });
-    titleCol.createEl("h3", { text: "Resonances", cls: "stnd-audit-title" });
-    titleCol.createEl("span", {
-      text: "Connections, inspiration & inquiries",
-      cls: "stnd-resonances-subtitle",
+    const { body } = this._createCollapsibleSection(container, "roots", "Roots", {
+      badge: unlinkedCount > 0 ? `${unlinkedCount} unlinked` : null,
+      onRefresh: () => this.refreshLinksData(),
     });
-
-    const refreshBtn = headerRow.createEl("button", {
-      cls: "stnd-audit-refresh-btn" + (this.isLoadingLinks ? " is-loading" : ""),
-      title: "Refresh resonances",
-    });
-    obsidian_1.setIcon(refreshBtn, "refresh-cw");
-    refreshBtn.addEventListener("click", () => {
-      this.noteStatsCache.delete(activeFile.path);
-      this.loadNoteStats(activeFile);
-      this.refreshLinksData();
-    });
-
-    // 1. Hyphe's Inquiries Card
-    this._renderHypheInquiries(linksWrap, activeFile);
-
-    // 2. Network Resonances Card (Citations & Related)
-    this._renderPublicResonances(linksWrap, activeFile);
-
-    // 3. Vault Connections Section
-    const vaultHeader = linksWrap.createEl("div", {
-      cls: "stnd-network-subheading",
-      text: "Vault Connections",
-    });
-    vaultHeader.style.cssText = "margin-top: 14px; margin-bottom: 8px;";
 
     // ── Quick Preferences (Ghost links & Compost footer toggles) ──
-    const prefsCard = linksWrap.createEl("div", { cls: "stnd-panel-mycelium-prefs" });
+    const prefsCard = body.createEl("div", { cls: "stnd-panel-mycelium-prefs" });
     prefsCard.style.cssText =
       "display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--size-4-3) 0; padding: 10px 12px; background: var(--background-secondary); border-radius: var(--radius-m); border: 1px solid var(--background-modifier-border);";
 
@@ -1825,10 +1851,6 @@ class StandardGardenView extends obsidian_1.ItemView {
         mySettings.enableCompostFooter = enabled;
         window.stndMyceliumSettings = mySettings;
         await this.plugin.saveSettings();
-        // Not getActiveViewOfType(MarkdownView): the panel itself is the
-        // active view while its own toggle is being clicked, so that lookup
-        // returns null and the open note never re-renders. Refresh every
-        // open leaf instead, same as the Ghost links toggle above.
         if (typeof window.stndRefreshMycelium === "function") {
           window.stndRefreshMycelium();
         }
@@ -1839,10 +1861,10 @@ class StandardGardenView extends obsidian_1.ItemView {
     );
 
     if (this.isLoadingLinks) {
-      const loadingEl = linksWrap.createEl("div", { cls: "stnd-audit-loading" });
+      const loadingEl = body.createEl("div", { cls: "stnd-audit-loading" });
       const spin = loadingEl.createEl("div", { cls: "stnd-audit-spinner" });
       obsidian_1.setIcon(spin, "loader");
-      loadingEl.createEl("p", { text: "Scanning mycelium & links...", cls: "stnd-audit-loading-text" });
+      loadingEl.createEl("p", { text: "Scanning roots & mentions...", cls: "stnd-audit-loading-text" });
       return;
     }
 
@@ -1869,7 +1891,6 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     const unlinkedMentions = [];
     for (const item of unlinked) {
-      // Never show a note in unlinked mentions if it is already in incoming backlinks or processed!
       if (processedPaths.has(item.file.path)) continue;
       processedPaths.add(item.file.path);
 
@@ -1881,10 +1902,10 @@ class StandardGardenView extends obsidian_1.ItemView {
       }
     }
 
-    // Section 1 : Mentions non liées (Mycélium)
+    // Section 1 : Mentions non liées
     this._renderAuditSection(
-      linksWrap,
-      "Unlinked mentions (Mycelium)",
+      body,
+      "Unlinked mentions",
       unlinkedMentions,
       "link-2",
       (el) => this._renderUnlinkedMentionsList(el, unlinkedMentions, activeFile, blockedTag),
@@ -1894,7 +1915,7 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     // Section 2 : Mentions liées (Backlinks)
     this._renderAuditSection(
-      linksWrap,
+      body,
       "Linked mentions (Backlinks)",
       linkedMentions,
       "link",
@@ -1904,15 +1925,35 @@ class StandardGardenView extends obsidian_1.ItemView {
     );
 
     // Section 3 : Exclusions actives
-    this._renderAuditSection(
-      linksWrap,
-      "Active exclusions",
-      excludedMentions,
-      "eye-off",
-      (el) => this._renderExcludedMentionsList(el, excludedMentions, blockedTag),
-      null,
-      excludedMentions.length > 0,
-    );
+    if (excludedMentions.length > 0) {
+      this._renderAuditSection(
+        body,
+        "Active exclusions",
+        excludedMentions,
+        "eye-off",
+        (el) => this._renderExcludedMentionsList(el, excludedMentions, blockedTag),
+        null,
+        false,
+      );
+    }
+  }
+
+  _renderMyceliumSection(container, activeFile) {
+    if (!activeFile) return;
+
+    const { body } = this._createCollapsibleSection(container, "mycelium", "Mycelium", {
+      onRefresh: () => {
+        this.noteStatsCache.delete(activeFile.path);
+        this.loadNoteStats(activeFile);
+        this.render();
+      },
+    });
+
+    // 1. Hyphe's Inquiries Card
+    this._renderHypheInquiries(body, activeFile);
+
+    // 2. Network Echoes Card (Citations & Related)
+    this._renderPublicResonances(body, activeFile);
   }
 
   _renderLinkedMentionsList(parent, items, blockedTag) {
