@@ -32,7 +32,7 @@ class AccountSettingTab {
     const card = containerEl.createEl("div");
     card.style.cssText =
       "display:flex;align-items:center;gap:14px;padding:16px;" +
-      "border:1px solid var(--background-modifier-border);border-radius:12px;margin-bottom:16px;";
+      "background:var(--background-secondary);border:1px solid var(--background-modifier-border);border-radius:12px;margin-bottom:16px;";
 
     const avatar = card.createEl("div", {
       text: username.slice(0, 2).toLowerCase(),
@@ -40,7 +40,7 @@ class AccountSettingTab {
     avatar.style.cssText =
       "width:44px;height:44px;border-radius:50%;display:flex;align-items:center;" +
       "justify-content:center;font-weight:600;flex:0 0 auto;" +
-      "background:var(--background-secondary);color:var(--interactive-accent);";
+      "background:var(--background-primary);color:var(--interactive-accent);";
 
     const idCol = card.createEl("div");
     idCol.style.cssText = "flex:1;min-width:0;";
@@ -139,7 +139,7 @@ class AccountSettingTab {
 
     const badge = card.createEl("div");
     badge.style.cssText =
-      "width:48px;height:48px;border-radius:50%;display:flex;align-items:center;" +
+      "background:var(--background-secondary);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;" +
       "justify-content:center;margin:0 auto 14px;background:var(--background-secondary);" +
       "color:var(--interactive-accent);";
     setIcon(badge, "leaf");
@@ -194,13 +194,13 @@ class AccountSettingTab {
       text: "Views",
     });
 
-    const syncCol = container.createEl("div", { cls: "stnd-account-stat-col wide" });
+    const syncCol = container.createEl("div", { cls: "stnd-account-stat-col" });
     let syncText = "Never";
     if (data.lastSync) {
       syncText = new Date(data.lastSync).toLocaleDateString();
     }
     syncCol.createEl("div", {
-      cls: "stnd-account-stat-value medium stnd-stat-sync",
+      cls: "stnd-account-stat-value stnd-stat-sync",
       text: syncText,
     });
     syncCol.createEl("div", {
@@ -289,13 +289,11 @@ class StandardSettingTab extends PluginSettingTab {
     designTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
     designTab.display();
 
-    // ── 4. Mycelium (optional) ──
-    if (this.plugin.settings.enableMycelium) {
-      const { MyceliumSettingTab } = require("../mycelium/index.js");
-      const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
-      myceliumTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-      myceliumTab.display();
-    }
+    // ── 4. Mycelium ──
+    const { MyceliumSettingTab } = require("../mycelium/index.js");
+    const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
+    myceliumTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+    myceliumTab.display();
 
     // ── 5. Alt Hint ──
     const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);

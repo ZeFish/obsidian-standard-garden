@@ -2,7 +2,8 @@
 
 const { PluginSettingTab, Setting } = require("obsidian");
 const { descWithLinks, DOCS_URLS } = require("../../constants.js");
-const { renderStatusGuide } = require("./modals/status-guide-modal.js");
+const { openDoc } = require("../../utils/docs.js");
+const { setIcon } = require("obsidian");
 
 class GardenSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
@@ -15,7 +16,14 @@ class GardenSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ─── Garden Publication ──────────────────────────────────────────────────
-    containerEl.createEl("h2", { text: "Publication" });
+    const heading = containerEl.createEl("h2", { text: "Publication" });
+    const info = heading.createEl("button", {
+      cls: "clickable-icon",
+      attr: { "aria-label": "Status & colors guide", title: "Status & colors guide" },
+    });
+    info.style.cssText = "margin-left: 8px; vertical-align: middle;";
+    setIcon(info, "info");
+    info.addEventListener("click", () => openDoc(this.app, DOCS_URLS.status));
 
     containerEl.createEl("p", {
       text: "Notes marked with 'publish: true' in their frontmatter appear in your digital garden. Private drafts and notes in excluded folders are never shared online.",
@@ -62,6 +70,26 @@ class GardenSettingTab extends PluginSettingTab {
           })
       );
 
+    // Which side wins when both differ — see the guide for the full table.
+    new Setting(containerEl)
+      .setName("Sync direction")
+      .setDesc(
+        descWithLinks(
+          "Push: your vault always wins — online edits never touch your files. Two-way: the newer side wins, online edits are pulled into your vault, and notes written online are downloaded. §",
+          [{ text: "Compare the two →", href: DOCS_URLS.sync }]
+        )
+      )
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("1way", "Push (vault wins)")
+          .addOption("2way", "Two-way (newer wins)")
+          .setValue(this.plugin.settings.syncDirection === "2way" ? "2way" : "1way")
+          .onChange(async (value) => {
+            this.plugin.settings.syncDirection = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
     // Panel top status indicator
     new Setting(containerEl)
       .setName("Panel top status indicator")
@@ -86,14 +114,6 @@ class GardenSettingTab extends PluginSettingTab {
             if (this.plugin.panel) this.plugin.panel.render();
           })
       );
-
-    // ─── Status & Color Guide ────────────────────────────────────────────────
-    containerEl.createEl("h3", { text: "Status & Color Guide" });
-    containerEl.createEl("p", {
-      text: "Standard Garden uses a unified color system across the note titlebar, the side panel badge, and the panel top indicator:",
-      cls: "setting-item-description",
-    });
-    renderStatusGuide(containerEl);
 
     // Open after publish
     new Setting(containerEl)
@@ -135,11 +155,10 @@ class GardenSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setClass("stnd-advanced-setting")
-      .setName("Excluded folders")
+      .setName("Ignored folders")
       .setDesc(
         descWithLinks(
-          "Folders completely ignored by the publication engine (comma-separated, e.g. Utopie, Archive). §",
+          "The Garden ignores these folders entirely: nothing is published or synced, no status badge, and Mycelium neither suggests nor links them (comma-separated, e.g. Utopie, Archive). You can also right-click a folder in the file explorer. §",
           [{ text: "Configuration guide →", href: DOCS_URLS.plugin }]
         )
       )

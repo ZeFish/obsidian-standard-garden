@@ -91,3 +91,28 @@
   font-size: var(--font-ui-small, 0.9em);
   font-style: italic;
 }
+
+.stnd-feed-more-btn {
+  background: var(--interactive-normal, rgba(125, 125, 125, 0.1));
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border, rgba(125, 125, 125, 0.2));
+  border-radius: var(--radius-s, 4px);
+  padding: var(--size-4-1, 0.35rem) var(--size-4-3, 0.75rem);
+  font-size: var(--font-ui-small, 0.85em);
+  font-style: normal;
+  cursor: pointer;
+  display: inline-block;
+  margin: 0.5rem auto;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.stnd-feed-more-btn:hover {
+  background: var(--interactive-hover, rgba(125, 125, 125, 0.2));
+  border-color: var(--interactive-accent, #6366f1);
+}
+
+.stnd-feed-more-btn:active {
+  background: var(--interactive-accent, #6366f1);
+  color: var(--text-on-accent, #ffffff);
+}
+

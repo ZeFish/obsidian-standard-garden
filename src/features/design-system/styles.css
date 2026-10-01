@@ -12,7 +12,7 @@
 /* ============================================= */
 
 body.stnd-adapter {
-    --body-max-width: none;
+    --page-max-width: none;
 
     /* Typography bridge */
     --font-header: var(--font-text);
@@ -24,7 +24,7 @@ body.stnd-adapter {
     --font-variation: "";
     --font-size: var(--font-text-size);
     --bold-weight: var(--font-weight-bold, 600);
-    --font-header-weight: var(--font-weight-header, 400);
+    --font-weight-header: var(--font-weight-header, 400);
     --font-header-letter-spacing: -0.025em;
     --font-header-line-height: 1.3em;
     --font-header-feature: "";
@@ -237,6 +237,7 @@ body.stnd-note-published.stnd-note-private
     color: var(--text-muted);
     font-size: var(--font-ui-small);
     line-height: 1.5;
+    padding: 0 var(--size-4-4);
 }
 
 /* ─── Garden Connected Account Card Stats ────────────────────────────────── */
@@ -321,9 +322,9 @@ body.stnd-note-published.stnd-note-private
     --h4-size: var(--scale, calc(var(--font-size) * pow(var(--font-ratio), 1)));
     --h5-size: var(--scale-d2, calc(var(--font-size) * pow(var(--font-ratio), 0.5)));
     --h6-size: var(--scale-d2, calc(var(--font-size) * pow(var(--font-ratio), 0.5)));
-    --font-smallest: var(--size-2xs, calc(var(--font-size) * pow(var(--font-ratio), -1.5)));
-    --font-smaller: var(--size-xs, calc(var(--font-size) * pow(var(--font-ratio), -1)));
-    --font-small: var(--size-sm, calc(var(--font-size) * pow(var(--font-ratio), -0.5)));
+    --font-smallest: var(--scale-d4, calc(var(--font-size) * pow(var(--font-ratio), -1.5)));
+    --font-smaller: var(--scale-d3, calc(var(--font-size) * pow(var(--font-ratio), -1)));
+    --font-small: var(--scale-d2, calc(var(--font-size) * pow(var(--font-ratio), -0.5)));
     --tag-size: var(--font-smaller);
     --tag-background: none;
     --tab-border-width: 0;
@@ -333,13 +334,13 @@ body.stnd-note-published.stnd-note-private
     --code-size: inherit;
     --code-white-space: pre;
     --metadata-input-font-size: calc(var(--font-size) * pow(var(--font-ratio), 0));
-    --inline-title-weight: var(--font-header-weight);
-    --h1-weight: var(--font-header-weight);
-    --h2-weight: calc(var(--font-header-weight) * 1);
-    --h3-weight: calc(var(--font-header-weight) * 1);
-    --h4-weight: calc(var(--font-header-weight) * 1);
-    --h5-weight: calc(var(--font-header-weight) * 1);
-    --h6-weight: calc(var(--font-header-weight) * 1);
+    --inline-title-weight: var(--font-weight-header);
+    --h1-weight: var(--font-weight-header);
+    --h2-weight: calc(var(--font-weight-header) * 1);
+    --h3-weight: calc(var(--font-weight-header) * 1);
+    --h4-weight: calc(var(--font-weight-header) * 1);
+    --h5-weight: calc(var(--font-weight-header) * 1);
+    --h6-weight: calc(var(--font-weight-header) * 1);
     --h1-font: var(--font-header);
     --h2-font: var(--font-header);
     --h3-font: var(--font-header);
@@ -570,7 +571,7 @@ body.stnd-note-published.stnd-note-private
     line-height: var(--font-header-line-height, 1em); /*0.50em;*/
     text-wrap: balance;
     font-style: var(--font-header-style, normal);
-    font-weight: var(--font-header-weight);
+    font-weight: var(--font-weight-header);
     font-family: var(--font-header);
     text-overflow: ellipsis;
     overflow-wrap: break-word;
@@ -1308,10 +1309,11 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 .stnd-adapter .markdown-preview-view [class^="el-"] ul > li + li {
     margin-block-start: 1rlh;
 }
-
+/*
 .stnd-adapter .mod-cm6 .cm-line:not(.HyperMD-list-line) {
     padding-bottom: 1em;
 }
+*/
 
 .stnd-adapter .mod-cm6 .HyperMD-list-line.cm-line {
     padding-top: calc(var(--line-height-normal) * 0.25em);
@@ -1405,7 +1407,7 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     box-shadow: var(--shadow-inset), var(--shadow-ring);
     border-radius: var(--radius-m);
     padding: 1rlh 0.75rlh;
-    font-size: var(--size-sm);
+    font-size: var(--scale-d2);
     color: var(--text-normal);
     margin-left: 0;
 }

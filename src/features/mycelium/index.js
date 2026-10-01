@@ -1,5 +1,6 @@
 "use strict";
 
+const { parseFolderList, isInFolderList } = require("../../utils/folders.js");
 const { PluginSettingTab, Setting, Notice, SuggestModal, MarkdownView } = require("obsidian");
 const { Decoration, ViewPlugin } = require("@codemirror/view");
 const { descWithLinks } = require("../../constants.js");
@@ -118,18 +119,9 @@ function isFileIgnoredForMycelium(file, plugin) {
 
   if (RESERVED_FILENAMES.has(file.basename.toLowerCase())) return true;
 
-  if (plugin?.settings?.excludedFolders) {
-    const raw = plugin.settings.excludedFolders;
-    const folders = Array.isArray(raw)
-      ? raw
-      : String(raw)
-          .split(",")
-          .map((f) => f.trim().toLowerCase().replace(/^\/+|\/+$/g, ""))
-          .filter(Boolean);
-    const norm = file.path.toLowerCase().replace(/^\/+/, "");
-    if (folders.some((f) => norm.startsWith(f + "/") || norm === f)) {
-      return true;
-    }
+  // The Garden-wide ignore list (Settings → Garden, or right-click a folder).
+  if (isInFolderList(file.path, parseFolderList(plugin?.settings?.excludedFolders))) {
+    return true;
   }
 
   // Also check tag `#backlink-exclude`
@@ -155,6 +147,7 @@ const COMMON_FRENCH_IDIOMS = [
 ];
 
 async function findOutgoingUnlinkedMentions(app, activeFile, plugin = null) {
+  if (isFileIgnoredForMycelium(activeFile, plugin)) return [];
   const rawContent = await app.vault.cachedRead(activeFile);
   const content = getSearchableContent(rawContent);
   const files = app.vault.getMarkdownFiles();
@@ -172,20 +165,30 @@ async function findOutgoingUnlinkedMentions(app, activeFile, plugin = null) {
     }
   }
 
+  // Lowercased once: lets us reject most notes with a plain substring test
+  // instead of compiling a RegExp per note title (thousands per scan).
+  const contentLower = content.toLowerCase();
+
   for (const file of files) {
     if (file.path === activeFile.path) continue;
-    if (isFileIgnoredForMycelium(file, plugin)) continue;
 
     const baseNameLower = file.basename.toLowerCase();
     if (seenBasenames.has(baseNameLower)) continue;
-    
+
+    // A term can only match if its text appears in the note at all.
+    const termsToCheck = [file.basename, ...getFileAliases(app, file)].filter(
+      (t) => contentLower.includes(String(t).toLowerCase()),
+    );
+    if (termsToCheck.length === 0) continue;
+
+    if (isFileIgnoredForMycelium(file, plugin)) continue;
+
     // Check if it's already explicitly linked in outgoing OR incoming links
     const outgoing = app.metadataCache.resolvedLinks[activeFile.path] || {};
     if (outgoing.hasOwnProperty(file.path)) continue;
     const incoming = app.metadataCache.resolvedLinks[file.path] || {};
     if (incoming.hasOwnProperty(activeFile.path)) continue;
 
-    const termsToCheck = [file.basename, ...getFileAliases(app, file)];
     let matchFound = false;
     let matchedTerm = "";
 
@@ -656,17 +659,26 @@ class MyceliumFeature {
     this.settings = plugin.settings.mycelium;
   }
 
-  async refreshSuggestions() {
+  // `precomputed` lets a caller that just ran the scan (the panel) hand over its
+  // result instead of making us repeat a full-vault scan.
+  async refreshSuggestions(precomputed = null) {
+    // The cache only feeds ghost links and the compost footer. When both are off
+    // (the default) a vault-wide scan + re-render of every preview is pure waste.
+    const wanted =
+      this.settings.enableGhostLinks || this.settings.enableCompostFooter;
+    if (!wanted && !(window.stndMyceliumCache || []).length) return;
+
     const activeFile = this.app.workspace.getActiveFile();
-    if (activeFile && activeFile.extension === "md") {
-      const suggestions = await findOutgoingUnlinkedMentions(
+    if (!wanted || !activeFile || activeFile.extension !== "md") {
+      window.stndMyceliumCache = [];
+    } else if (precomputed) {
+      window.stndMyceliumCache = precomputed;
+    } else {
+      window.stndMyceliumCache = await findOutgoingUnlinkedMentions(
         this.app,
         activeFile,
         this.plugin
       );
-      window.stndMyceliumCache = suggestions;
-    } else {
-      window.stndMyceliumCache = [];
     }
 
     ghostLinksRevision++;
@@ -690,7 +702,7 @@ class MyceliumFeature {
     window.stndMyceliumCache = [];
     window.stndMyceliumSettings = this.settings;
     window.stndMyceliumFeature = this;
-    window.stndRefreshMycelium = () => this.refreshSuggestions();
+    window.stndRefreshMycelium = (precomputed) => this.refreshSuggestions(precomputed);
 
     // Initial cache population for current active file
     this.refreshSuggestions();
@@ -772,18 +784,25 @@ class MyceliumFeature {
 
         const suggestions = window.stndMyceliumCache || [];
 
-        // 3. Clean up any previous duplicate footers in this document view
-        const containerParent =
-          el.closest(".markdown-preview-section") ||
-          el.closest(".markdown-rendered") ||
-          el.parentElement;
-
-        if (containerParent) {
-          const existingList = containerParent.querySelectorAll(
-            ".mycelium-compost-footer"
-          );
-          existingList.forEach((n) => n.remove());
-        }
+        // 3. Remove every previous footer in this note's view. Don't look them up
+        // through `el`: Reading View often runs post-processors on a block that
+        // isn't attached to the DOM yet (closest()/parentElement are null), so a
+        // stale footer left on the former last block survived and they piled up
+        // under every paragraph as the note grew.
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const scopes = new Set(
+          [
+            view?.containerEl,
+            el.closest(".markdown-preview-section"),
+            el.closest(".markdown-rendered"),
+            el.parentElement,
+          ].filter(Boolean),
+        );
+        scopes.forEach((scope) =>
+          scope
+            .querySelectorAll(".mycelium-compost-footer")
+            .forEach((n) => n.remove()),
+        );
 
         if (suggestions.length === 0) return;
 

@@ -1,5 +1,7 @@
 "use strict";
 
+const { parseFolderList, isInFolderList } = require("../../utils/folders.js");
+
 const obsidian_1 = require("obsidian");
 const {
   KNOWN_TOKENS,
@@ -22,6 +24,57 @@ const {
 // Les accents sont translittérés AVANT le filtrage : sans cette étape,
 // `[^a-z0-9]` traitait chaque caractère accentué comme un séparateur et
 // « Épistémologie sociale » devenait « pist-mologie-sociale ».
+// ─── Change detection ────────────────────────────────────────────────────────
+// The server hashes exactly what we PUT, but publishNote() then rewrites the
+// local frontmatter (garden-url, garden-short, permalink, modified), so the raw
+// local file can never equal the remote copy and every sync re-uploaded it.
+// Compare a canonical form instead: plugin-managed keys removed, image syntax
+// reduced to its name (local `![[a.png]]` vs CDN `![](https://…)`).
+const SYNC_MANAGED_KEYS = new Set([
+  "garden-url",
+  "garden-short",
+  "published",
+  "url_public",
+  "modified",
+]);
+
+function canonicalForSync(content, slug = null) {
+  let s = String(content || "").replace(/\r\n/g, "\n");
+  const fm = s.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+  if (fm) {
+    const out = [];
+    let skipping = false;
+    for (const line of fm[1].split("\n")) {
+      const k = line.match(/^([A-Za-z0-9_-]+)\s*:(.*)$/);
+      if (k) {
+        // `permalink` is locked by publishNote() after the first push; it only
+        // counts as a real edit when it differs from the slug already online.
+        const value = k[2].trim().replace(/^["']|["']$/g, "").replace(/^\/+|\/+$/g, "");
+        skipping =
+          SYNC_MANAGED_KEYS.has(k[1]) ||
+          (k[1] === "permalink" && slug != null && value === slug);
+        if (skipping) continue;
+      } else if (skipping && /^\s/.test(line)) {
+        continue; // continuation of a skipped multi-line value
+      } else {
+        skipping = false;
+      }
+      out.push(line);
+    }
+    s = "---\n" + out.join("\n") + "\n---\n" + s.slice(fm[0].length);
+  }
+  s = s.replace(/!\[\[([^\]]+)\]\]/g, (m, p1) => {
+    const [name, alt] = p1.split("|").map((x) => x.trim());
+    return `[IMAGE:${(alt || name.substring(0, name.lastIndexOf(".")) || name).toLowerCase()}]`;
+  });
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, url) => {
+    const file = url.split("/").pop() || "";
+    const base = file.substring(0, file.lastIndexOf(".")) || file;
+    return `[IMAGE:${(alt.trim() || base).toLowerCase()}]`;
+  });
+  return s.trim();
+}
+
 function slugify(name) {
   return String(name)
     .normalize("NFD")
@@ -614,22 +667,14 @@ class GardenFeature {
     this.noteStatsCache = new Map(); // path -> { views, citations, related, created_at, updated_at, online }
     this.lastAttachmentUploadTime = 0;
     this.lastPublishTime = 0;
+    this.remoteOnly = null; // online notes with no local file (null = not checked yet)
+    this.lastRemoteOnlyCheck = 0;
   }
 
   isPathExcluded(filePath) {
-    const raw = this.plugin.settings.excludedFolders;
-    if (!raw) return false;
-    const folders = Array.isArray(raw)
-      ? raw
-      : String(raw)
-          .split(",")
-          .map((f) => f.trim().replace(/^\/+|\/+$/g, ""))
-          .filter(Boolean);
-    if (folders.length === 0) return false;
-    const normalizedPath = filePath.replace(/^\/+/, "");
-    return folders.some(
-      (folder) =>
-        normalizedPath.startsWith(folder + "/") || normalizedPath === folder
+    return isInFolderList(
+      filePath,
+      parseFolderList(this.plugin.settings.excludedFolders),
     );
   }
 
@@ -639,6 +684,9 @@ class GardenFeature {
   }
 
   async load() {
+    if (this.plugin.settings.apiKey) {
+      setTimeout(() => this.refreshRemoteOnly(true), 8000);
+    }
     if (this.plugin.settings.autoSync && this.plugin.settings.apiKey) {
       setTimeout(() => {
         this.pollRemoteChanges();
@@ -672,8 +720,41 @@ class GardenFeature {
     }
   }
 
+  // Notes that exist online but have no file in this vault — they have no note
+  // to carry a status badge, so the count is surfaced in the panel header.
+  // Uses the light list (no content). Throttled: callers may fire it freely.
+  async refreshRemoteOnly(force = false) {
+    if (!this.plugin.settings.apiKey) {
+      this.remoteOnly = null;
+      return;
+    }
+    const now = Date.now();
+    if (!force && now - this.lastRemoteOnlyCheck < 120000) return;
+    this.lastRemoteOnlyCheck = now;
+    try {
+      const res = await fetchWithRetry(`${this.plugin.settings.apiUrl}/publish`, {
+        method: "GET",
+        headers: { "x-api-key": this.plugin.settings.apiKey },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const localIndex = new LocalNoteIndex(this.app, this.getPublishableFiles());
+      const remoteOnly = (data.notes || []).filter(
+        (n) => !localIndex.findMatchForRemote(n),
+      );
+      const changed = (this.remoteOnly?.length ?? -1) !== remoteOnly.length;
+      this.remoteOnly = remoteOnly;
+      if (changed && typeof this.plugin.panel?.render === "function") {
+        this.plugin.panel.render();
+      }
+    } catch (e) {
+      // Background check: stay silent on network errors.
+    }
+  }
+
   async pollRemoteChanges() {
     if (!this.plugin.settings.apiKey) return;
+    this.refreshRemoteOnly();
     try {
       const activeFile = this.app.workspace.getActiveFile();
       const { PublishStatusFeature } = require("../publish-status/index.js");
@@ -797,6 +878,39 @@ class GardenFeature {
     new obsidian_1.Notice(
       who ? `Garden: connected as @${who} ✓` : "Garden: connected ✓",
     );
+  }
+
+  // True when the note is identical to its online copy AND nothing it embeds
+  // (image, attachment, transcluded note) changed since we last synced it. Pure
+  // local work — no image checks, no network.
+  isUnchangedSinceSync(file, raw, remoteNote) {
+    if (typeof remoteNote?.content !== "string") return false;
+    if (
+      canonicalForSync(raw, remoteNote.slug) !==
+      canonicalForSync(remoteNote.content, remoteNote.slug)
+    ) {
+      return false;
+    }
+    // Replaced image / edited transcluded note with unchanged wikilinks.
+    const remoteTime = remoteNote.updated_at ? new Date(remoteNote.updated_at).getTime() : 0;
+    const since = this.plugin.settings.syncedAt?.[file.path] ?? remoteTime;
+    if (!since) return false;
+    const cache = this.app.metadataCache.getFileCache(file);
+    for (const ref of [...(cache?.embeds || []), ...(cache?.links || [])]) {
+      const link = String(ref.link || "").split("#")[0];
+      if (!link) continue;
+      const dest = this.app.metadataCache.getFirstLinkpathDest(link, file.path);
+      if (dest?.stat && dest.path !== file.path && dest.stat.mtime > since) return false;
+    }
+    return true;
+  }
+
+  markSynced(file) {
+    const settings = this.plugin.settings;
+    if (!settings.syncedAt) settings.syncedAt = {};
+    settings.syncedAt[file.path] = Date.now();
+    clearTimeout(this._syncedAtTimer);
+    this._syncedAtTimer = setTimeout(() => this.plugin.saveSettings(), 1000);
   }
 
   async syncAllPublished() {
@@ -1018,17 +1132,26 @@ class GardenFeature {
             } else {
               // Exists on both sides, compare content
               const raw = await this.app.vault.read(file);
-              const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
 
-              // Compute local hash
-              const hashBuffer = await crypto.subtle.digest(
-                "SHA-256",
-                new TextEncoder().encode(finalContent)
-              );
-              const hashArray = Array.from(new Uint8Array(hashBuffer));
-              const localHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+              // Cheap check first: identical to the online copy (ignoring what
+              // the plugin itself writes) → nothing to upload, nothing to verify.
+              const unchanged = this.isUnchangedSinceSync(file, raw, remoteNote);
+              const finalContent = unchanged
+                ? null
+                : await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
 
-              if (remoteNote.hash === localHash) {
+              let localHash = null;
+              if (!unchanged) {
+                const hashBuffer = await crypto.subtle.digest(
+                  "SHA-256",
+                  new TextEncoder().encode(finalContent)
+                );
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                localHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+              }
+
+              if (unchanged || remoteNote.hash === localHash) {
+                if (!unchanged) this.markSynced(file);
                 skipped++;
                 modal.recordResult("skipped", file.basename);
               } else {
@@ -1189,6 +1312,7 @@ class GardenFeature {
         stats: syncStats,
       });
 
+      this.refreshRemoteOnly(true);
       new obsidian_1.Notice(
         `Garden : Synchronisation ${modal.cancelled ? "annulée" : "terminée"}. ${synced + pulled + created + unpublished} action(s), ${skipped} identique(s), ${failed} en échec.`,
       );
@@ -1262,6 +1386,7 @@ class GardenFeature {
             ? `Garden : Toutes les ${remoteMatchedLocal.length} notes sont déjà dans le coffre (métadonnées synchronisées).`
             : "Garden : Aucune nouvelle note en ligne à télécharger."
         );
+        this.refreshRemoteOnly(true);
         return;
       }
 
@@ -1301,6 +1426,7 @@ class GardenFeature {
       }
 
       new obsidian_1.Notice(`Garden: Downloaded ${created} new note(s) successfully!`);
+      this.refreshRemoteOnly(true);
     } catch (err) {
       console.error("Garden: Error during downloading online notes:", err);
       new obsidian_1.Notice("Garden: Failed to download online notes.");
@@ -1455,8 +1581,8 @@ class GardenFeature {
       for (const file of files) {
         const cache = this.app.metadataCache.getFileCache(file);
         const fm = cache?.frontmatter || {};
-        const rawDomain = fm["garden-domain"] ?? fm.garden_domain ?? fm.domain;
-        if (fm.permalink === "/" && rawDomain) {
+        const isRoot = fm.permalink === "/" || fm.permalink === "index" || file.basename.toLowerCase() === "index";
+        if (isRoot && rawDomain) {
           return String(rawDomain)
             .trim()
             .replace(/^https?:\/\//, "")
@@ -1983,6 +2109,11 @@ class GardenFeature {
   }
 
   async publishNote(file, isBulk = false, preCalculatedContent = null) {
+    // Every publish path (panel buttons, titlebar, sync) ends up here.
+    if (this.isPathExcluded(file.path)) {
+      this.lastError = "Folder is excluded from publication";
+      return false;
+    }
     try {
       const content = preCalculatedContent !== null ? preCalculatedContent : await this.uploadContentImages(await this.app.vault.read(file), file, isBulk);
       // Résoudre le slug de la même façon que unpublishNote()/checkNoteStatus() :
@@ -2059,6 +2190,7 @@ class GardenFeature {
         }
       });
 
+      this.markSynced(file);
       return true;
     } catch (error) {
       this.lastError = error.message || String(error);
@@ -2302,7 +2434,10 @@ class GardenFeature {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const localHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-      if (remoteHash === localHash) {
+      if (
+        remoteHash === localHash ||
+        canonicalForSync(localRawContent, slug) === canonicalForSync(remoteContent, slug)
+      ) {
         return { status: "synced" };
       }
 

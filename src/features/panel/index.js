@@ -1,10 +1,16 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
-const { KNOWN_TOKENS, isPublishIntent } = require("../../constants");
+const {
+  KNOWN_TOKENS,
+  TOKEN_GROUPS,
+  RAW_SANITIZER_MAP,
+  isPublishIntent,
+} = require("../../constants");
 const { StndConfirmModal } = require("../garden/modals/confirm-modal");
 const { StndShareModal } = require("../garden/modals/share-modal");
-const { StndStatusGuideModal } = require("../garden/modals/status-guide-modal.js");
+const { openDoc } = require("../../utils/docs.js");
+const { DOCS_URLS } = require("../../constants.js");
 const {
   findOutgoingUnlinkedMentions,
   createMentionLink,
@@ -113,8 +119,14 @@ class StandardGardenView extends obsidian_1.ItemView {
       if (this._writing) return;
       const active = this.plugin.app.workspace.getActiveFile();
       if (active && file && (file === active || (file.path && active.path && file.path === active.path))) {
-        this.linksData = null;
+        // Re-render now, but recompute links (a full-vault scan) only once the
+        // user pauses: "changed" fires repeatedly while typing.
         this.render();
+        clearTimeout(this._linksResetTimer);
+        this._linksResetTimer = setTimeout(() => {
+          this.linksData = null;
+          this.render();
+        }, 2000);
       }
     };
     this.plugin.app.workspace.on("file-open", this._onFileChange);
@@ -134,6 +146,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       this.plugin.app.metadataCache.off("resolve", this._onMetaChange);
     }
     for (const t of Object.values(this._debounceTimers)) clearTimeout(t);
+    clearTimeout(this._linksResetTimer);
   }
 
   // ── Frontmatter write helper ────────────────────────────────────────────
@@ -290,6 +303,27 @@ class StandardGardenView extends obsidian_1.ItemView {
           this.render();
         }
       });
+
+      // Online notes with no file in this vault: no note to badge, so a
+      // vault-level chip. Click to download them.
+      const garden = this.plugin.garden;
+      garden?.refreshRemoteOnly(); // throttled, non-blocking
+      const toDownload = garden?.remoteOnly?.length || 0;
+      if (toDownload > 0) {
+        const dlBtn = headerRight.createEl("button", {
+          cls: "stnd-panel-header-btn stnd-panel-download-chip",
+          text: `↓ ${toDownload}`,
+          attr: {
+            "aria-label": `${toDownload} online note(s) not in this vault — click to download`,
+            title: `${toDownload} online note(s) not in this vault — click to download`,
+          },
+        });
+        dlBtn.style.color = "var(--stnd-status-outdated)";
+        dlBtn.addEventListener("click", async () => {
+          await garden.downloadNewOnlineNotes();
+          this.render();
+        });
+      }
     }
 
     const username = this.plugin?.settings?.apiUsername || "";
@@ -531,16 +565,6 @@ class StandardGardenView extends obsidian_1.ItemView {
       );
     }
 
-    menu.addSeparator();
-    menu.addItem((i) =>
-      i
-        .setTitle("Status & color guide...")
-        .setIcon("help-circle")
-        .onClick(() => {
-          new StndStatusGuideModal(this.plugin.app).open();
-        })
-    );
-
     if (evt && evt.clientX != null && evt.clientY != null && evt.clientX > 0 && evt.clientY > 0) {
       menu.showAtMouseEvent(evt);
     } else {
@@ -642,21 +666,17 @@ class StandardGardenView extends obsidian_1.ItemView {
         });
       });
 
-      // Only show top guide button if online (draft notes have a prominent Guide button in the toolbar)
-      if (isConfirmedOnline) {
-        const helpBtn = statusLeft.createEl("button", {
-          cls: "stnd-panel-header-btn",
-          attr: {
-            "aria-label": "Status & color guide",
-            title: "Status & color guide",
-          },
-        });
-        helpBtn.style.padding = "2px";
-        obsidian_1.setIcon(helpBtn, "help-circle");
-        helpBtn.addEventListener("click", () => {
-          new StndStatusGuideModal(this.plugin.app).open();
-        });
-      }
+      // ⓘ: the status & color legend lives in the online guide, not in the UI.
+      const helpBtn = statusLeft.createEl("button", {
+        cls: "stnd-panel-header-btn",
+        attr: {
+          "aria-label": "Status & colors guide",
+          title: "Status & colors guide",
+        },
+      });
+      helpBtn.style.padding = "2px";
+      obsidian_1.setIcon(helpBtn, "info");
+      helpBtn.addEventListener("click", () => openDoc(this.plugin.app, DOCS_URLS.status));
 
       // Right side: Visibility selector
       const visSelect = statusRow.createEl("select", {
@@ -870,16 +890,6 @@ class StandardGardenView extends obsidian_1.ItemView {
             publishAction,
             pullAction,
           });
-        });
-
-        const guideBtn = toolbar.createEl("button", {
-          cls: "btn stnd-panel-btn",
-        });
-        obsidian_1.setIcon(guideBtn.createSpan({ cls: "stnd-btn-icon" }), "help-circle");
-        guideBtn.createSpan({ text: "Guide" });
-        guideBtn.title = "Status and publishing guide";
-        guideBtn.addEventListener("click", () => {
-          new StndStatusGuideModal(this.plugin.app).open();
         });
       }
     }
@@ -1101,130 +1111,81 @@ class StandardGardenView extends obsidian_1.ItemView {
 
   // ── Token Groups ──────────────────────────────────────────────────────
 
-  _renderTokenGroups(container, file, fm) {
-    const groups = [
-      {
-        title: "Typography",
-        fields: [
-          {
-            key: "font-text",
-            label: "Body font",
-            type: "text",
-            placeholder: "Inter",
-          },
-          {
-            key: "font-header",
-            label: "Heading font",
-            type: "text",
-            placeholder: "Merriweather",
-          },
-          {
-            key: "font-monospace",
-            label: "Code font",
-            type: "text",
-            placeholder: "Fira Code",
-          },
-          {
-            key: "font-interface",
-            label: "UI font",
-            type: "text",
-            placeholder: "System-UI",
-          },
-          {
-            key: "font-weight-body",
-            label: "Body weight",
-            type: "number",
-            placeholder: "400",
-            step: "50",
-          },
-          {
-            key: "font-weight-header",
-            label: "Heading weight",
-            type: "number",
-            placeholder: "700",
-            step: "50",
-          },
-          {
-            key: "line-height",
-            label: "Line height",
-            type: "number",
-            placeholder: "1.6",
-            step: "0.05",
-          },
-        ],
-      },
-      {
-        title: "Colors — Semantic",
-        fields: [
-          { key: "color-accent", label: "Accent", type: "color" },
-          { key: "color-header", label: "Headings", type: "color" },
-          { key: "color-bold", label: "Bold", type: "color" },
-          { key: "color-italic", label: "Italic", type: "color" },
-        ],
-      },
-      {
-        title: "Colors — Light",
-        fields: [
-          { key: "color-light-foreground", label: "Foreground", type: "color" },
-          { key: "color-light-background", label: "Background", type: "color" },
-          { key: "color-light-accent", label: "Accent", type: "color" },
-          { key: "color-light-red", label: "Red", type: "color" },
-          { key: "color-light-orange", label: "Orange", type: "color" },
-          { key: "color-light-yellow", label: "Yellow", type: "color" },
-          { key: "color-light-green", label: "Green", type: "color" },
-          { key: "color-light-cyan", label: "Cyan", type: "color" },
-          { key: "color-light-blue", label: "Blue", type: "color" },
-          { key: "color-light-purple", label: "Purple", type: "color" },
-          { key: "color-light-pink", label: "Pink", type: "color" },
-        ],
-      },
-      {
-        title: "Colors — Dark",
-        fields: [
-          { key: "color-dark-foreground", label: "Foreground", type: "color" },
-          { key: "color-dark-background", label: "Background", type: "color" },
-          { key: "color-dark-accent", label: "Accent", type: "color" },
-          { key: "color-dark-red", label: "Red", type: "color" },
-          { key: "color-dark-orange", label: "Orange", type: "color" },
-          { key: "color-dark-yellow", label: "Yellow", type: "color" },
-          { key: "color-dark-green", label: "Green", type: "color" },
-          { key: "color-dark-cyan", label: "Cyan", type: "color" },
-          { key: "color-dark-blue", label: "Blue", type: "color" },
-          { key: "color-dark-purple", label: "Purple", type: "color" },
-          { key: "color-dark-pink", label: "Pink", type: "color" },
-        ],
-      },
-      {
-        title: "Vertical Rhythm",
-        fields: [
-          {
-            key: "margin",
-            label: "Base unit",
-            type: "text",
-            placeholder: "1rlh",
-          },
-          {
-            key: "margin-block",
-            label: "Block multiplier",
-            type: "number",
-            placeholder: "2",
-            step: "0.5",
-          },
-        ],
-      },
-    ];
+  _humanizeTokenKey(key) {
+    const customLabels = {
+      "font-text": "Body font",
+      "font-header": "Heading font",
+      "font-monospace": "Code font",
+      "font-interface": "UI font",
+      "font-weight": "Body weight",
+      "font-weight-bold": "Bold weight",
+      "font-header-weight": "Heading weight",
+      "font-header-letter-spacing": "Letter spacing",
+      "font-header-line-height": "Line height",
+      "font-header-style": "Heading style",
+      "font-density": "Font density",
+      "optical-ratio": "Optical ratio",
+      "line-width": "Line width",
+      "body-max-width": "Max width",
+      "margin": "Base unit",
+      "margin-block": "Block multiplier",
+      "foreground": "Foreground",
+      "background": "Background",
+      "accent": "Accent",
+    };
+    if (customLabels[key]) return customLabels[key];
 
-    for (const group of groups) {
+    const clean = key
+      .replace(/^color-(light|dark)-/, "")
+      .replace(/^color-/, "")
+      .replace(/^font-/, "");
+    return clean.charAt(0).toUpperCase() + clean.slice(1).replace(/-/g, " ");
+  }
+
+  _getTokenFieldType(key) {
+    const sanitizer = RAW_SANITIZER_MAP?.get(key);
+    if (
+      sanitizer === "color" ||
+      key.startsWith("color-") ||
+      key === "accent" ||
+      key === "foreground" ||
+      key === "background"
+    ) {
+      return "color";
+    }
+    if (sanitizer === "number") {
+      return "number";
+    }
+    return "text";
+  }
+
+  _renderTokenGroups(container, file, fm) {
+    for (const group of TOKEN_GROUPS) {
       const details = container.createEl("details", {
         cls: "stnd-panel-group stnd-panel-token-group",
       });
-      if (group.open) details.setAttribute("open", "");
       details.createEl("summary", { text: group.title });
 
       const list = details.createEl("div", { cls: "stnd-panel-fields" });
 
-      for (const field of group.fields) {
-        this._renderField(list, file, fm, field);
+      for (const key of group.keys) {
+        const type = this._getTokenFieldType(key);
+        const def = group.defaults?.[key];
+        const placeholder = def ? String(def).replace(/^["']|["']$/g, "") : "";
+        const step =
+          key.includes("line-height") || key.includes("margin")
+            ? "0.05"
+            : key.includes("weight")
+              ? "50"
+              : "1";
+
+        this._renderField(list, file, fm, {
+          key,
+          label: this._humanizeTokenKey(key),
+          type,
+          placeholder,
+          step,
+        });
       }
     }
   }
@@ -1574,7 +1535,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       // Keep the ghost-link editor cache in sync so decorations never lag
       // behind what this panel just found.
       if (typeof window.stndRefreshMycelium === "function") {
-        window.stndRefreshMycelium();
+        window.stndRefreshMycelium(unlinked);
       }
 
       this.linksData = {

@@ -348,14 +348,22 @@ class PublishStatusFeature {
     if (activeFile && activeFile.path === file.path) {
       this.refreshAll();
     } else {
+      // "changed"/"resolve" fire for every file during indexing; only a note
+      // shown in some leaf has anything to redraw.
+      let shown = false;
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         if (leaf.view && leaf.view.file && leaf.view.file.path === file.path) {
+          shown = true;
           if (this.plugin.settings.publishStatusLocation === "titlebar") {
             this.refreshLeaf(leaf);
           }
         }
       });
-      if (this.plugin.panel && typeof this.plugin.panel.updateTopIndicator === "function") {
+      if (
+        shown &&
+        this.plugin.panel &&
+        typeof this.plugin.panel.updateTopIndicator === "function"
+      ) {
         this.plugin.panel.updateTopIndicator(false);
       }
     }
@@ -409,6 +417,13 @@ class PublishStatusFeature {
     const view = leaf.view;
     if (!view || typeof view.addAction !== "function" || !view.file) return;
 
+    // Ignored folders: the Garden doesn't look at these notes, so no badge.
+    if (this.plugin.garden?.isPathExcluded(view.file.path)) {
+      view._stndPublishAction?.remove();
+      delete view._stndPublishAction;
+      return;
+    }
+
     const fm = getNoteFrontmatter(this.app, view.file);
     const { key, state } = this.getStateInfo(fm, view.file.path, view.file);
 
@@ -432,6 +447,10 @@ class PublishStatusFeature {
   refreshStatusBar() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
+      if (this.statusBarEl) this.statusBarEl.style.display = "none";
+      return;
+    }
+    if (this.plugin.garden?.isPathExcluded(activeFile.path)) {
       if (this.statusBarEl) this.statusBarEl.style.display = "none";
       return;
     }
@@ -466,6 +485,10 @@ class PublishStatusFeature {
   refreshRibbon() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
+      if (this.ribbonEl) this.ribbonEl.style.display = "none";
+      return;
+    }
+    if (this.plugin.garden?.isPathExcluded(activeFile.path)) {
       if (this.ribbonEl) this.ribbonEl.style.display = "none";
       return;
     }

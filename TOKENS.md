@@ -40,10 +40,10 @@ The CSS layers (`stnd-typography`, `stnd-color`, `stnd-vertical-rhythm`) read th
 | `font-interface` | `--font-interface` | Obsidian UI font. Auto-imports. |
 | `optical-ratio` | `--optical-ratio` | Modular type scale ratio (`1.333` = perfect fourth, `1.25` = major third). |
 | `font-density` | `--font-density` | Line height multiplier for body text. |
-| `line-width` | `--line-width` | Maximum line width (`35rlh`, `680px`, etc.). |
+| `prose-width` | `--prose-width` | Maximum reading line width (`35rlh`, `680px`, etc.). |
 | `font-weight` | `--font-weight` | Body text weight. |
 | `font-weight-bold` | `--font-weight-bold` | Bold text weight. |
-| `font-header-weight` | `--font-header-weight` | Weight for all heading levels. |
+| `font-header-weight` | `--font-weight-header` | Weight for all heading levels. |
 | `font-header-letter-spacing` | `--font-header-letter-spacing` | Heading letter spacing (`-0.025em`). |
 | `font-header-line-height` | `--font-header-line-height` | Heading line height. |
 | `font-header-style` | `--font-header-style` | `normal` or `italic`. |

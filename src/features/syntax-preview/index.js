@@ -144,7 +144,7 @@ class SyntaxPreviewFeature {
       const child = children[i];
       if (child.tagName === "P") {
         const text = child.textContent.trim();
-        const blockMatch = text.match(/^::(callout|toggle|cards|hero-block|small|accent|feature-block|center|grid|split|columns|card|image|gallery|button|form|hero|full|feature|editorial|excerpt)\s*(.*)$/i);
+        const blockMatch = text.match(/^::(callout|toggle|cards|hero-block|small|feature-block|grid|split|columns|card|image|gallery|button|form|hero|full|feature|editorial|excerpt)\s*(.*)$/i);
         
         if (blockMatch) {
           const type = blockMatch[1].toLowerCase();
@@ -440,13 +440,13 @@ class SyntaxPreviewFeature {
       
       const submitBtn = blockEl.createEl("button", { text: "Send", type: "submit", cls: "button button-primary" });
       submitBtn.style.cssText = "align-self: flex-start; padding: 0.5rem 1rem; border-radius: var(--radius-s); background: var(--interactive-accent); color: var(--text-on-accent); border: none; font-weight: bold; cursor: pointer;";
-    } else if (type === "card" || type === "small" || type === "accent" || type === "center") {
+    } else if (type === "card" || type === "narrow" || type === "small") {
       blockEl = document.createElement("div");
-      blockEl.className = type === "card" ? "card" : `container-${type}`;
+      blockEl.className = type === "card" ? "card" : "narrow";
       innerElements.forEach(el => blockEl.appendChild(el.cloneNode(true)));
-    } else if (type === "hero-block" || type === "feature-block") {
+    } else if (type === "full-block" || type === "hero-block" || type === "wide-block" || type === "wide" || type === "feature-block") {
       blockEl = document.createElement("div");
-      const baseClass = type === "hero-block" ? "container-hero" : "container-feature";
+      const baseClass = (type === "hero-block" || type === "full-block") ? "full" : "wide";
       const alignClass = args ? `text-${args}` : "";
       blockEl.className = `${baseClass} ${alignClass}`.trim();
       innerElements.forEach(el => blockEl.appendChild(el.cloneNode(true)));

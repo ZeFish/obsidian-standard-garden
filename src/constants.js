@@ -1,78 +1,21 @@
-"use strict";
+const {
+  ALL_TOKEN_NAMES,
+  KNOWN_TOKENS_SET,
+  QUOTED_TOKEN_SET,
+  TOKEN_GROUPS,
+  RAW_SANITIZER_MAP,
+  buildTokenStyle,
+} = require("@stnd/utils/theme-tokens");
 
-// ─── Canonical token names ───────────────────────────────────────────────────
-// Keep in sync with packages/utils/theme-tokens.js (run sync-tokens.js).
-// FM key === CSS property name minus the `--` prefix. No namespace prefix.
+const {
+  STRUCTURAL_KEYS: CANONICAL_STRUCTURAL_KEYS,
+  PROFILE_KEYS,
+  PROFILE_FIELD_NAMES,
+} = require("@stnd/utils/profile-schema");
 
-const KNOWN_TOKENS = new Set([
-  // Light mode
-  "color-light-background",
-  "color-light-foreground",
-  "color-light-accent",
-  "color-light-red",
-  "color-light-orange",
-  "color-light-yellow",
-  "color-light-green",
-  "color-light-cyan",
-  "color-light-blue",
-  "color-light-purple",
-  "color-light-pink",
-  "color-light-bold",
-  "color-light-italic",
-  // Dark mode
-  "color-dark-background",
-  "color-dark-foreground",
-  "color-dark-accent",
-  "color-dark-red",
-  "color-dark-orange",
-  "color-dark-yellow",
-  "color-dark-green",
-  "color-dark-cyan",
-  "color-dark-blue",
-  "color-dark-purple",
-  "color-dark-pink",
-  "color-dark-bold",
-  "color-dark-italic",
-  // Typography weights & metrics
-  "font-header-weight",
-  "font-header-letter-spacing",
-  "font-header-line-height",
-  "font-header-style",
-  "font-header-feature",
-  "font-header-variation",
-  "font-weight",
-  "font-weight-bold",
-  "font-feature",
-  "font-variation",
-  "font-monospace-feature",
-  "font-monospace-variation",
-  "font-interface-feature",
-  "font-interface-variation",
-  "optical-ratio",
-  "font-density",
-  // Fine color control
-  "color-header",
-  "color-bold",
-  "color-italic",
-  "color-accent",
-  // Layout
-  "line-width",
-  // Vertical rhythm
-  "margin",
-  "margin-block",
-  // Font families (quoted in CSS output)
-  "font-header",
-  "font-text",
-  "font-interface",
-  "font-monospace",
-]);
-
-const FONT_TOKENS = new Set([
-  "font-header",
-  "font-text",
-  "font-interface",
-  "font-monospace",
-]);
+// ─── Canonical token names directly from @stnd/utils (single source of truth) ──
+const KNOWN_TOKENS = KNOWN_TOKENS_SET;
+const FONT_TOKENS = QUOTED_TOKEN_SET;
 
 // Settings interface
 const DEFAULT_SETTINGS = {
@@ -93,9 +36,8 @@ const DEFAULT_SETTINGS = {
   publishIndicatorStyle: "garden", // Panel top indicator: garden (animated organic gradient), subtle (minimal accent line), hidden (disabled)
   autoSync: false, // Automatic background synchronization (disabled by default to protect local drafts)
   autoSyncStartup: false,
-  syncDirection: "2way",
+  syncDirection: "1way", // Push: the vault wins. "2way" lets the newer side win (online edits are pulled).
   excludedFolders: "Utopie",
-  enableMycelium: false,
   panelOpenedOnInstall: false,
   mycelium: {
     enableGhostLinks: false,
@@ -105,13 +47,15 @@ const DEFAULT_SETTINGS = {
 };
 
 const DOCS_URLS = {
-  plugin: "https://standard.garden/guide/getting-started/obsidian",
-  sync: "https://standard.garden/guide/getting-started/obsidian#sync",
-  tokens: "https://standard.garden/guide/getting-started/tokens",
-  cssHooks: "https://standard.garden/guide/getting-started/css-hooks",
-  typography: "https://standard.garden/guide/getting-started/tokens#typography",
-  frontmatter: "https://standard.garden/guide/getting-started/customization#frontmatter",
-  syntax: "https://standard.garden/guide/getting-started/customization#syntax",
+  plugin: "https://standard.garden/guide/publish/obsidian",
+  sync: "https://standard.garden/guide/publish/sync",
+  status: "https://standard.garden/guide/publish/status",
+  commands: "https://standard.garden/guide/publish/obsidian-reference#commands",
+  tokens: "https://standard.garden/guide/style/themes",
+  cssHooks: "https://standard.garden/guide/style/css-hooks",
+  typography: "https://standard.garden/guide/style/themes#typography",
+  frontmatter: "https://standard.garden/guide/style/frontmatter#frontmatter",
+  syntax: "https://standard.garden/guide/style/frontmatter#syntax",
 };
 
 // ─── Settings UI Helpers ─────────────────────────────────────────────────────
@@ -235,31 +179,26 @@ function getMimeType(name) {
 }
 
 // ─── Garden Frontmatter Keys ──────────────────────────────────────────────────
+const STRUCTURAL_KEYS = new Set(CANONICAL_STRUCTURAL_KEYS);
+
 const GARDEN_FRONTMATTER_KEYS = new Set([
-  "garden-domain",
-  "garden-brand",
-  "garden-favicon",
-  "garden-launcher",
-  "garden-mycelium",
-  "garden-avatar",
-  "garden-display-name",
+  ...CANONICAL_STRUCTURAL_KEYS,
+  ...PROFILE_FIELD_NAMES,
   "garden-url",
   "garden-short",
 ]);
 
-const STRUCTURAL_KEYS = new Set([
-  "garden-domain",
-  "garden-brand",
-  "garden-favicon",
-  "garden-launcher",
-  "garden-mycelium",
-]);
-
 module.exports = {
+  ALL_TOKEN_NAMES,
   KNOWN_TOKENS,
   FONT_TOKENS,
+  TOKEN_GROUPS,
+  RAW_SANITIZER_MAP,
+  buildTokenStyle,
   GARDEN_FRONTMATTER_KEYS,
   STRUCTURAL_KEYS,
+  PROFILE_KEYS,
+  PROFILE_FIELD_NAMES,
   DEFAULT_SETTINGS,
   isPublishIntent,
   isImageFile,
@@ -269,3 +208,4 @@ module.exports = {
   descWithLinks,
   DOCS_URLS,
 };
+

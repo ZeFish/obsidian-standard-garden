@@ -1,6 +1,6 @@
 "use strict";
 
-const { BasesView, MarkdownRenderer, Setting } = require("obsidian");
+const { BasesView, MarkdownRenderer, MarkdownRenderChild, Setting, Platform } = require("obsidian");
 
 const VIEW_ID = "standard-feed";
 const LEGACY_VIEW_ID = "atelier-feed";
@@ -90,6 +90,9 @@ class FeedCardRenderer {
       getToken = () => null,
     } = options;
 
+    if (token !== null && getToken() !== token) return;
+    if (!container || !container.isConnected) return;
+
     const card = container.createDiv({ cls: "stnd-feed-card" });
 
     // Header: title + date
@@ -120,8 +123,12 @@ class FeedCardRenderer {
     try {
       const raw = await app.vault.cachedRead(file);
       if (token !== null && getToken() !== token) return;
+      if (!card.isConnected) return;
 
       let content = stripFrontmatter(raw);
+
+      // Strip directives (like ::feed, ::list, etc.) to prevent recursive rendering
+      content = content.replace(/^::.*$/gm, "").trim();
 
       if (showCovers) {
         const cover = extractCover(app, content, fm);
@@ -137,6 +144,8 @@ class FeedCardRenderer {
       }
 
       if (content) {
+        if (token !== null && getToken() !== token) return;
+        if (!card.isConnected) return;
         await MarkdownRenderer.render(app, content, body, file.path, component);
       }
     } catch {
@@ -145,10 +154,33 @@ class FeedCardRenderer {
   }
 
   static renderFeedOrList(app, container, type, queryTag, plugin, component = null) {
-    const cleanTag = (queryTag || "").replace(/^#/, "").trim().toLowerCase();
-    const files = app.vault.getMarkdownFiles();
-    const matches = [];
+    const isMobile = Boolean(Platform?.isMobile);
 
+    // Register lifecycle child if component is a postprocessor context
+    if (component && typeof component.addChild === "function") {
+      try {
+        const child = new MarkdownRenderChild(container);
+        child.onunload = () => {
+          container._stndFeedToken = (container._stndFeedToken || 0) + 1;
+        };
+        component.addChild(child);
+      } catch {}
+    }
+
+    // Parse tag and optional limit from queryTag (e.g. "#article", "#article 10", "#article limit=5")
+    let cleanTag = (queryTag || "").trim();
+    let customLimit = null;
+    const limitMatch = cleanTag.match(/(?:\s+limit[=:]\s*(\d+)|\s+(\d+))$/i);
+    if (limitMatch) {
+      customLimit = parseInt(limitMatch[1] || limitMatch[2], 10);
+      cleanTag = cleanTag.slice(0, limitMatch.index).trim();
+    }
+    cleanTag = cleanTag.replace(/^#/, "").toLowerCase();
+
+    const files = app.vault
+      .getMarkdownFiles()
+      .filter((f) => !plugin?.garden?.isPathExcluded(f.path));
+    const matches = [];
     const publishKey = (plugin?.settings?.keyPrefix || "") + (plugin?.settings?.publishKey || "publish");
 
     for (const file of files) {
@@ -163,7 +195,6 @@ class FeedCardRenderer {
       });
 
       if (matchesTag) {
-        // Publish status check: published if truthy (date, boolean true, or public visibility)
         const isPublished = fm[publishKey] === true ||
           typeof fm[publishKey] === "string" ||
           fm.visibility === "public" ||
@@ -186,39 +217,120 @@ class FeedCardRenderer {
     matches.sort((a, b) => b.time - a.time);
 
     if (matches.length === 0) {
-      const emptyMsg = container.createEl("p", {
+      container.createEl("p", {
         text: cleanTag ? `Aucune note publique trouvée pour #${cleanTag}` : "Aucune note publique trouvée.",
         cls: "stnd-feed-empty",
       });
       return;
     }
 
+    const token = (container._stndFeedToken = (container._stndFeedToken || 0) + 1);
+    const getToken = () => container._stndFeedToken;
+    const renderComponent = (component && typeof component.register === "function") ? component : plugin;
+
     if (type === "list") {
       const ul = container.createEl("ul", { cls: "stnd-feed-list" });
-      matches.forEach((m) => {
-        const li = ul.createEl("li");
-        const a = li.createEl("a", {
-          text: m.title,
-          cls: "internal-link stnd-feed-link",
-        });
-        a.addEventListener("click", (e) => {
-          e.preventDefault();
-          app.workspace.getLeaf().openFile(m.file);
-        });
-        if (m.time) {
-          li.createSpan({ cls: "stnd-feed-list-date", text: ` (${formatDate(m.time)})` });
+      const defaultListBatch = isMobile ? 30 : 100;
+      const batchSize = customLimit || defaultListBatch;
+      let renderedCount = 0;
+      let moreContainer = null;
+
+      const renderListBatch = (startIdx, count) => {
+        const batch = matches.slice(startIdx, startIdx + count);
+        for (const m of batch) {
+          const li = ul.createEl("li");
+          const a = li.createEl("a", {
+            text: m.title,
+            cls: "internal-link stnd-feed-link",
+          });
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            app.workspace.getLeaf().openFile(m.file);
+          });
+          if (m.time) {
+            li.createSpan({ cls: "stnd-feed-list-date", text: ` (${formatDate(m.time)})` });
+          }
         }
-      });
-    } else {
-      // type === "feed"
-      const feedRoot = container.createDiv({ cls: "stnd-feed" });
-      matches.forEach((m) => {
-        FeedCardRenderer.renderCard(app, feedRoot, m.file, {
-          previewChars: plugin?.settings?.feed?.previewChars ?? 600,
-          showCovers: plugin?.settings?.feed?.showCovers ?? true,
-        }, component);
-      });
+        renderedCount = startIdx + batch.length;
+        updateListMore();
+      };
+
+      const updateListMore = () => {
+        if (moreContainer) {
+          moreContainer.remove();
+          moreContainer = null;
+        }
+        const remaining = matches.length - renderedCount;
+        if (remaining > 0) {
+          moreContainer = container.createDiv({ cls: "stnd-feed-more" });
+          const moreBtn = moreContainer.createEl("button", {
+            cls: "stnd-feed-more-btn",
+            text: `+ ${remaining} note(s) de plus (afficher)`,
+          });
+          moreBtn.addEventListener("click", () => {
+            renderListBatch(renderedCount, batchSize);
+          });
+        }
+      };
+
+      renderListBatch(0, batchSize);
+      return;
     }
+
+    // type === "feed"
+    const feedRoot = container.createDiv({ cls: "stnd-feed" });
+    const defaultFeedBatch = isMobile ? 10 : 25;
+    const batchSize = customLimit || defaultFeedBatch;
+    let currentRendered = 0;
+    let moreContainer = null;
+
+    const renderFeedBatch = async (startIdx, count) => {
+      const itemsToRender = matches.slice(startIdx, startIdx + count);
+      for (const m of itemsToRender) {
+        if (getToken() !== token || !container.isConnected) break;
+        await FeedCardRenderer.renderCard(
+          app,
+          feedRoot,
+          m.file,
+          {
+            previewChars: plugin?.settings?.feed?.previewChars ?? (isMobile ? 300 : 600),
+            showCovers: plugin?.settings?.feed?.showCovers ?? true,
+            token,
+            getToken,
+          },
+          renderComponent,
+        );
+        // Small async yield to keep UI thread and scrolling 100% responsive
+        await new Promise((resolve) => setTimeout(resolve, isMobile ? 25 : 5));
+      }
+      currentRendered = startIdx + itemsToRender.length;
+      updateFeedMore();
+    };
+
+    const updateFeedMore = () => {
+      if (moreContainer) {
+        moreContainer.remove();
+        moreContainer = null;
+      }
+      if (getToken() !== token || !container.isConnected) return;
+
+      const remaining = matches.length - currentRendered;
+      if (remaining > 0) {
+        moreContainer = container.createDiv({ cls: "stnd-feed-more" });
+        const moreBtn = moreContainer.createEl("button", {
+          cls: "stnd-feed-more-btn mod-cta",
+          text: `+ ${remaining} note(s) de plus (afficher ${Math.min(remaining, batchSize)})`,
+        });
+        moreBtn.addEventListener("click", async () => {
+          moreBtn.disabled = true;
+          moreBtn.textContent = "Chargement...";
+          await renderFeedBatch(currentRendered, batchSize);
+        });
+      }
+    };
+
+    // Render initial batch
+    renderFeedBatch(0, batchSize);
   }
 }
 
@@ -249,7 +361,7 @@ class FeedBasesView extends (BasesView || class {}) {
     this._render();
   }
 
-  _render() {
+  async _render() {
     const token = ++this.renderToken;
     const root = this.feedContainerEl;
     if (!root) return;
@@ -263,8 +375,10 @@ class FeedBasesView extends (BasesView || class {}) {
       return;
     }
 
-    const maxItems = this._option("maxItems", this.settings?.maxItems ?? 50);
-    const previewChars = this._option("previewChars", this.settings?.previewChars ?? 600);
+    const isMobile = Boolean(Platform?.isMobile);
+    const defaultMax = isMobile ? 15 : 50;
+    const maxItems = this._option("maxItems", this.settings?.maxItems ?? defaultMax);
+    const previewChars = this._option("previewChars", this.settings?.previewChars ?? (isMobile ? 300 : 600));
     const showCovers = this._option("showCovers", this.settings?.showCovers ?? true);
 
     const shown = entries.slice(0, maxItems);
@@ -272,7 +386,8 @@ class FeedBasesView extends (BasesView || class {}) {
     for (const entry of shown) {
       const file = entry.file;
       if (!file) continue;
-      FeedCardRenderer.renderCard(
+      if (this.renderToken !== token || !root.isConnected) break;
+      await FeedCardRenderer.renderCard(
         this.app,
         root,
         file,
@@ -284,9 +399,10 @@ class FeedBasesView extends (BasesView || class {}) {
         },
         this,
       );
+      await new Promise((resolve) => setTimeout(resolve, isMobile ? 25 : 5));
     }
 
-    if (entries.length > shown.length) {
+    if (this.renderToken === token && root.isConnected && entries.length > shown.length) {
       root.createDiv({
         cls: "stnd-feed-more",
         text: `+ ${entries.length - shown.length} note(s) de plus — affine le filtre ou augmente la limite.`,
