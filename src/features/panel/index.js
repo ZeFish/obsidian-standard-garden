@@ -1078,7 +1078,7 @@ class StandardGardenView extends obsidian_1.ItemView {
                 ? `Cleared ${removed} design token${removed > 1 ? "s" : ""}.`
                 : "No design tokens found.",
             );
-            this.plugin.design.updateBodyClasses();
+            this.plugin.design?.updateBodyClasses();
             this.render();
           },
           () => {},

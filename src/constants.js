@@ -20,7 +20,8 @@ const FONT_TOKENS = QUOTED_TOKEN_SET;
 // Settings interface
 const DEFAULT_SETTINGS = {
   // Design-system layers (frontmatter tokens → CSS variables)
-  enableDesignSystem: true,
+  enableDesignSystem: false, // opt-in: it restyles the notes in Obsidian, so a new install leaves the interface alone
+  enableSyntaxPreview: false, // opt-in: typing `::` in a note offers Garden syntax suggestions
   defaultTheme: "",
   startupSnapshot: {
     cssClasses: [],
@@ -189,7 +190,23 @@ const GARDEN_FRONTMATTER_KEYS = new Set([
   "garden-short",
 ]);
 
+// The settings a session starts from: the defaults, then what the person saved,
+// then the few answers that depend on how long they have been here. Anything
+// that is opt-in for a NEW install keeps behaving as it always did for someone
+// who already had the plugin and never chose a value.
+function resolveSettings(data) {
+  const settings = Object.assign({}, DEFAULT_SETTINGS, data);
+  if (data) {
+    if (data.enableDesignSystem === undefined) settings.enableDesignSystem = true;
+    if (data.enableSyntaxPreview === undefined) settings.enableSyntaxPreview = true;
+    // Already publishing before the first-publish prompt existed: no walkthrough.
+    if (data.apiKey && data.firstPublishDone === undefined) settings.firstPublishDone = true;
+  }
+  return settings;
+}
+
 module.exports = {
+  resolveSettings,
   ALL_TOKEN_NAMES,
   KNOWN_TOKENS,
   FONT_TOKENS,

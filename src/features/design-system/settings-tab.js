@@ -14,7 +14,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ─── Design System Section ───────────────────────────────────────────
-    containerEl.createEl("h2", { text: "Apparence" });
+    containerEl.createEl("h2", { text: "Appearance" });
     const desc = containerEl.createEl("p", {
       text: "The Standard Design System guarantees 1:1 typographic fidelity between your local editor and your online garden. Frontmatter tokens and curated typography are rendered directly in the workspace. ",
       cls: "setting-item-description",
@@ -28,7 +28,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
       .setName("Standard Design System")
       .setDesc(
         descWithLinks(
-          "Apply classical typography, fluid vertical rhythm, callouts, and harmonious color palettes across notes. §",
+          "Restyle your notes in Obsidian with classical typography, fluid vertical rhythm, callouts and harmonious color palettes, so they match your garden. It is off by default because it changes how every note looks. §",
           [{ text: "Learn more →", href: DOCS_URLS.typography }]
         )
       )
@@ -38,7 +38,23 @@ class DesignSystemSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.enableDesignSystem = value;
             await this.plugin.saveSettings();
-            this.plugin.design.updateBodyClasses();
+            // Off at startup means the feature was never built: build it now.
+            if (value) await this.plugin.ensureDesign();
+            await this.plugin.design?.updateBodyClasses();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Editor suggestions")
+      .setDesc("Type :: in a note to get suggestions for Garden syntax: cards, columns, callouts, galleries and more. Off by default. Turning it off takes effect after you restart Obsidian.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(!!this.plugin.settings.enableSyntaxPreview)
+          .onChange(async (value) => {
+            this.plugin.settings.enableSyntaxPreview = value;
+            await this.plugin.saveSettings();
+            if (value) await this.plugin.ensureSyntaxPreview();
+            else if (this.plugin.syntaxPreview) new Notice("Restart Obsidian to turn off editor suggestions.");
           })
       );
 
@@ -61,7 +77,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.defaultTheme = value;
             await this.plugin.saveSettings();
-            this.plugin.design.updateBodyClasses();
+            this.plugin.design?.updateBodyClasses();
           });
       });
 
@@ -74,7 +90,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
         btn.setButtonText("Clear Cache").onClick(async () => {
           this.plugin.settings.themeCache = {};
           await this.plugin.saveSettings();
-          await this.plugin.design.updateBodyClasses();
+          await this.plugin.design?.updateBodyClasses();
           new Notice("Theme cache cleared");
         })
       );

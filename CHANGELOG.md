@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.45 — 2026-10-02
+
+### Added
+
+- The design system and the editor suggestions are off on a new install, and switch on without a restart
+
 ## 0.1.44 — 2026-10-02
 
 ### Added

@@ -19,6 +19,8 @@ Standard Garden bridges your local Obsidian vault with our curated design system
 
 ## 🎨 Live Visual Mirroring: Obsidian as Your Visual Canvas
 
+*Off by default, so enabling the plugin never changes how your notes look. Turn it on in **Settings → Standard Garden → Appearance → Standard Design System**.*
+
 Standard Garden eliminates the gap between local note-taking and web publication:
 - **Typographic Mirroring:** Whenever you change the temperament in frontmatter (`theme: humanist`, `theme: blueprint`, `theme: editorial`, `theme: academic`, `theme: international`, `theme: gallery`...) or pick a theme in the Design panel, Obsidian dynamically adopts the authentic fonts (*EB Garamond*, *Söhne*, *Newsreader*, *Instrument Sans*, *MonoLisa*) and typographic hierarchy.
 - **Architectural WYSIWYG:** What you compose locally in Obsidian is rendered with the exact same margins, line heights, and atmospheric grace as on [standard.garden](https://standard.garden).
@@ -46,6 +48,8 @@ Obsidian is a local-first application, and Standard Garden treats your Markdown 
 3. Reload Obsidian and enable the plugin.
 
 ## 📖 Usage & Frontmatter
+
+> **Editor suggestions** (type `::` in a note to get suggestions for cards, columns, callouts and galleries) are also off by default. Turn them on in **Settings → Standard Garden → Appearance → Editor suggestions**.
 
 ### Standard Note Frontmatter
 Control publishing and visibility directly from note frontmatter or the Garden panel:
