@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.43 — 2026-10-02
+
+### Fixed
+
+- Resolve css lint warnings and eliminate !important
+
 ## 0.1.41 — 2026-10-02
 
 ### Fixed

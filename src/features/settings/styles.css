@@ -1,14 +1,14 @@
 /* ─── Settings: Minimalist View & Alt Key Revealer (T45) ───────────────────── */
 
-.stnd-settings-flat .stnd-advanced-setting {
-  display: none !important;
+.stnd-settings-flat .setting-item.stnd-advanced-setting {
+  display: none;
   opacity: 0;
   transform: translateY(-4px);
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.stnd-settings-flat.stnd-show-advanced .stnd-advanced-setting {
-  display: flex !important;
+.stnd-settings-flat.stnd-show-advanced .setting-item.stnd-advanced-setting {
+  display: flex;
   opacity: 1;
   transform: translateY(0);
 }

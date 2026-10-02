@@ -13,56 +13,65 @@
 }
 
 /* ── Titlebar Action & Ribbon Overrides ────────────────────────────────────── */
-.stnd-publish-status[data-stnd-state="synced"],
-.stnd-publish-status-ribbon[data-stnd-state="synced"],
-.stnd-publish-status[data-stnd-state="public"],
-.stnd-publish-status-ribbon[data-stnd-state="public"] {
-  color: var(--stnd-status-synced) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="synced"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="synced"],
+.clickable-icon.stnd-publish-status[data-stnd-state="public"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="public"] {
+  --icon-color: var(--stnd-status-synced);
+  color: var(--stnd-status-synced);
 }
 
-.stnd-publish-status[data-stnd-state="changed"],
-.stnd-publish-status-ribbon[data-stnd-state="changed"],
-.stnd-publish-status[data-stnd-state="modified"],
-.stnd-publish-status-ribbon[data-stnd-state="modified"] {
-  color: var(--stnd-status-modified) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="changed"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="changed"],
+.clickable-icon.stnd-publish-status[data-stnd-state="modified"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="modified"] {
+  --icon-color: var(--stnd-status-modified);
+  color: var(--stnd-status-modified);
 }
 
-.stnd-publish-status[data-stnd-state="pending"],
-.stnd-publish-status-ribbon[data-stnd-state="pending"] {
-  color: var(--stnd-status-pending) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="pending"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="pending"] {
+  --icon-color: var(--stnd-status-pending);
+  color: var(--stnd-status-pending);
 }
 
-.stnd-publish-status[data-stnd-state="outdated"],
-.stnd-publish-status-ribbon[data-stnd-state="outdated"] {
-  color: var(--stnd-status-outdated) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="outdated"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="outdated"] {
+  --icon-color: var(--stnd-status-outdated);
+  color: var(--stnd-status-outdated);
 }
 
-.stnd-publish-status[data-stnd-state="desynced"],
-.stnd-publish-status-ribbon[data-stnd-state="desynced"] {
-  color: var(--stnd-status-desynced) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="desynced"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="desynced"] {
+  --icon-color: var(--stnd-status-desynced);
+  color: var(--stnd-status-desynced);
 }
 
-.stnd-publish-status[data-stnd-state="private"],
-.stnd-publish-status-ribbon[data-stnd-state="private"] {
-  color: var(--stnd-status-private) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="private"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="private"] {
+  --icon-color: var(--stnd-status-private);
+  color: var(--stnd-status-private);
 }
 
-.stnd-publish-status[data-stnd-state="unlisted"],
-.stnd-publish-status-ribbon[data-stnd-state="unlisted"] {
-  color: var(--stnd-status-unlisted) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="unlisted"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="unlisted"] {
+  --icon-color: var(--stnd-status-unlisted);
+  color: var(--stnd-status-unlisted);
 }
 
-.stnd-publish-status[data-stnd-state="unpublished"],
-.stnd-publish-status-ribbon[data-stnd-state="unpublished"],
-.stnd-publish-status[data-stnd-state="local"],
-.stnd-publish-status-ribbon[data-stnd-state="local"] {
-  color: var(--stnd-status-local) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="unpublished"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="unpublished"],
+.clickable-icon.stnd-publish-status[data-stnd-state="local"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="local"] {
+  --icon-color: var(--stnd-status-local);
+  color: var(--stnd-status-local);
 }
 
 /* A newcomer who has not connected yet: the same sprout, quiet grey. */
-.stnd-publish-status[data-stnd-state="disconnected"],
-.stnd-publish-status-ribbon[data-stnd-state="disconnected"] {
-  color: var(--stnd-status-local) !important;
+.clickable-icon.stnd-publish-status[data-stnd-state="disconnected"],
+.clickable-icon.stnd-publish-status-ribbon[data-stnd-state="disconnected"] {
+  --icon-color: var(--stnd-status-local);
+  color: var(--stnd-status-local);
 }
 
 /* States that ask for something (modified, outdated, still online) carry a dot

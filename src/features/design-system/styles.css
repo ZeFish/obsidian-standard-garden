@@ -35,14 +35,14 @@ body.stnd-adapter {
     --font-interface-variation: "";
 }
 
-body.stnd-adapter:not(:has(.modal.mod-settings)) {
-    padding: 0 !important;
+body.stnd-adapter {
+    padding: 0;
 }
 
-/* Force native buttons in Obsidian to drop the web framework's shadow and borders */
+/* Force native buttons in Obsidian to drop unwanted shadows or borders if needed */
 body.stnd-adapter :not(.stnd-panel):not(.stnd-panel *) button:not(.btn):not([class*="stnd-"]) {
-    box-shadow: none !important;
-    border-color: transparent !important;
+    box-shadow: none;
+    border-color: transparent;
     background-color: transparent;
 }
 
@@ -65,10 +65,10 @@ body.stnd-adapter summary {
 }
 
 body.stnd-adapter hr.workspace-leaf-resize-handle {
- border-color:var(--divider-color)  !important;
+    border-color: var(--divider-color);
 }
 body.stnd-adapter hr.workspace-leaf-resize-handle::after {
-    display:none !important;
+    display: none;
 }
 
 /* ─── Sidebar transition ──────────────────────────────────────────────────── */
@@ -90,19 +90,22 @@ body.stnd-adapter.mod-macos:not(.is-mobile) .workspace:not(.is-left-sidedock-ope
 /* Pre-collapse animation — narrows to 0 before Obsidian hides the element */
 body:not(.is-mobile).stnd-collapsing-left .workspace-split.mod-left-split,
 body:not(.is-mobile).stnd-collapsing-left .workspace-ribbon.mod-left {
-    width: 0 !important;
-    overflow: hidden !important;
-    min-width: 0 !important;
+    width: 0;
+    max-width: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 body:not(.is-mobile).stnd-collapsing-right .workspace-split.mod-right-split {
-    width: 0 !important;
-    overflow: hidden !important;
-    min-width: 0 !important;
+    width: 0;
+    max-width: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 /* Auto-hide ribbon — width collapses with the same transition */
 body:not(.is-mobile).stnd-ribbon-hidden .workspace-ribbon.mod-left {
-    width: 0 !important;
+    width: 0;
+    max-width: 0;
     overflow: hidden;
 }
 
@@ -129,7 +132,7 @@ body.stnd-hide-vault-name .workspace-sidedock-vault-profile,
 body.stnd-hide-vault-name .nav-vault-profile,
 body.stnd-hide-vault-name .workspace-drawer-vault-profile,
 body.stnd-hide-vault-name:not(.is-mobile) .workspace-split.mod-left-split .workspace-sidedock-vault-profile {
-    display: none !important;
+    display: none;
 }
 
 /* Hide file explorer header */
@@ -162,7 +165,7 @@ body.stnd-single-tab .mod-root .workspace-tabs .workspace-tab-header-container {
 /* ─── Resize handle ──────────────────────────────────────────────────────── */
 
 body:not(.is-mobile).stnd-adapter .workspace-leaf-resize-handle {
-    width: 8px !important;
+    width: 8px;
     border-radius: 4px;
     background: transparent;
     transition: background 0.2s;
@@ -288,10 +291,11 @@ body.stnd-note-published.stnd-note-private
 }
 
 /* Reset CodeMirror widget buffers which are <img> tags */
-.stnd-adapter .cm-widgetBuffer {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
+.stnd-adapter .cm-widgetBuffer,
+.stnd-adapter img.cm-widgetBuffer {
+    background: transparent;
+    box-shadow: none;
+    border: none;
 }
 
 /* ─── 2. Design System Tokens & Typography ───────────────────────────────── */
@@ -495,7 +499,7 @@ body.stnd-note-published.stnd-note-private
 .stnd-adapter .markdown-reading-view code,
 .stnd-adapter .HyperMD-codeblock {
     font-weight: 400;
-    line-height: 1.5 !important;
+    line-height: 1.5;
 }
 .stnd-adapter .cm-comment.cm-strong {
     color: color-mix(in oklch, inherit 50%, transparent);
@@ -521,7 +525,7 @@ body.stnd-note-published.stnd-note-private
 }
 @media only screen and (max-width: 600px) {
     .stnd-adapter {
-        --font-ratio: 1.3 !important;
+        --font-ratio: 1.3;
     }
 }
 .stnd-adapter .inline-title,
@@ -586,12 +590,12 @@ body.stnd-note-published.stnd-note-private
 }
 .stnd-adapter .markdown-reading-view h5,
 .stnd-adapter .HyperMD-header-5 {
-    letter-spacing: 0.005em !important;
+    letter-spacing: 0.005em;
     font-weight: var(--h5-weight);
 }
 .stnd-adapter .markdown-reading-view h6,
 .stnd-adapter .HyperMD-header-6 {
-    letter-spacing: 0.005em !important;
+    letter-spacing: 0.005em;
 }
 .stnd-adapter .markdown-reading-view code,
 .stnd-adapter .markdown-reading-view pre {
@@ -737,7 +741,7 @@ body.is-mobile.stnd-adapter.theme-dark {
     --icon-opacity-hover: 1;
     --icon-color-active: var(--color-accent);
     --icon-color-focused: var(--color-accent);
-    --icon-color-hover: var(--color-accent) !important;
+    --icon-color-hover: var(--color-accent);
     --nav-item-color: var(--color-foreground);
     --nav-item-color-active: var(--color-foreground);
     --nav-item-color-hover: var(--color-accent);
@@ -750,10 +754,10 @@ body.is-mobile.stnd-adapter.theme-dark {
     --nav-item-color-highlighted: var(--color-foreground);
     --ribbon-background: var(--background-secondary);
     --ribbon-background-collapsed: var(--background-secondary);
-    --titlebar-background: var(--background-secondary) !important;
-    --titlebar-background-focused: var(--background-secondary) !important;
-    --titlebar-text-color-focused: var(--text-normal) !important;
-    --tab-container-background: var(--background-secondary) !important;
+    --titlebar-background: var(--background-secondary);
+    --titlebar-background-focused: var(--background-secondary);
+    --titlebar-text-color-focused: var(--text-normal);
+    --tab-container-background: var(--background-secondary);
     --indentation-guide-color: color-mix(in oklch, var(--color-foreground) 12%, transparent);
     --indentation-guide-color-active: color-mix(in oklch, var(--color-foreground) 3%, transparent);
     --scrollbar-active-thumb-bg: color-mix(in oklch, var(--color-foreground) 20%, transparent);
@@ -786,15 +790,15 @@ body.is-mobile.stnd-adapter.theme-dark {
     /*
   Theme specific
   */
-    --tx1: var(--text-normal) !important;
-    --tx2: var(--text-muted) !important;
-    --tx3: var(--text-faint) !important;
-    --ui1: var(--divider-color) !important;
-    --ui2: var(--divider-color) !important;
-    --ui3: var(--divider-color) !important;
-    --bg1: var(--background-secondary) !important;
-    --bg2: var(--background-secondary) !important;
-    --bg3: var(--interactive-accent) !important;
+    --tx1: var(--text-normal);
+    --tx2: var(--text-muted);
+    --tx3: var(--text-faint);
+    --ui1: var(--divider-color);
+    --ui2: var(--divider-color);
+    --ui3: var(--divider-color);
+    --bg1: var(--background-secondary);
+    --bg2: var(--background-secondary);
+    --bg3: var(--interactive-accent);
     --alternating-color-1: var(--color-yellow);
     --alternating-color-2: var(--color-red);
     --alternating-color-3: var(--color-blue);
@@ -804,7 +808,7 @@ body.stnd-adapter.theme-light .notice,
 body.stnd-adapter.theme-light .notice-cta,
 body.stnd-adapter.theme-dark .notice,
 body.stnd-adapter.theme-dark .notice-cta {
-    color: var(--text-muted) !important;
+    color: var(--text-muted);
 }
 body.stnd-adapter.theme-light .clickable-icon:hover,
 body.stnd-adapter.theme-light .nav-buttons-container:hover,
@@ -814,12 +818,14 @@ body.stnd-adapter.theme-dark .clickable-icon:hover,
 body.stnd-adapter.theme-dark .nav-buttons-container:hover,
 body.stnd-adapter.theme-dark .sidebar-toggle-button:hover,
 body.stnd-adapter.theme-dark .view-action:hover {
-    color: var(--color-accent) !important;
-    --icon-color-hover: var(--color-accent) !important;
+    color: var(--color-accent);
+    --icon-color-hover: var(--color-accent);
 }
-body.stnd-adapter.theme-light.folder-note-underline-path .has-folder-note.view-header-breadcrumb:hover,
-body.stnd-adapter.theme-dark.folder-note-underline-path .has-folder-note.view-header-breadcrumb:hover {
-    text-decoration-color: var(--color-accent);
+@supports (text-decoration-color: currentColor) {
+    body.stnd-adapter.theme-light.folder-note-underline-path .has-folder-note.view-header-breadcrumb:hover,
+    body.stnd-adapter.theme-dark.folder-note-underline-path .has-folder-note.view-header-breadcrumb:hover {
+        text-decoration-color: var(--color-accent);
+    }
 }
 body.stnd-adapter.theme-light .side-dock-actions,
 body.stnd-adapter.theme-dark .side-dock-actions {
@@ -827,11 +833,7 @@ body.stnd-adapter.theme-dark .side-dock-actions {
 }
 body.stnd-adapter.theme-light .nav-folder.is-being-dragged-over,
 body.stnd-adapter.theme-dark .nav-folder.is-being-dragged-over {
-    background: color-mix(in oklch, var(--color-accent) 5%, transparent) !important;
-}
-body.stnd-adapter.theme-light :not(.sidebar-color) .mod-right-split,
-body.stnd-adapter.theme-dark :not(.sidebar-color) .mod-right-split {
-    /*--background-secondary: unset !important;*/
+    background: color-mix(in oklch, var(--color-accent) 5%, transparent);
 }
 body.stnd-adapter.theme-light .tree-item-self:hover,
 body.stnd-adapter.theme-dark .tree-item-self:hover {
@@ -841,9 +843,11 @@ body.stnd-adapter.theme-dark .tree-item-self:hover {
 body.stnd-adapter .suggestion-item.is-selected {
     color: var(--color-accent);
 }
-body.stnd-adapter.theme-light.folder-note-underline .has-folder-note:hover .nav-folder-title-content,
-body.stnd-adapter.theme-dark.folder-note-underline .has-folder-note:hover .nav-folder-title-content {
-    text-decoration-color: color-mix(in oklch, var(--color-accent) 25%, transparent);
+@supports (text-decoration-color: currentColor) {
+    body.stnd-adapter.theme-light.folder-note-underline .has-folder-note:hover .nav-folder-title-content,
+    body.stnd-adapter.theme-dark.folder-note-underline .has-folder-note:hover .nav-folder-title-content {
+        text-decoration-color: color-mix(in oklch, var(--color-accent) 25%, transparent);
+    }
 }
 body.stnd-adapter.theme-light .markdown-reading-view b,
 body.stnd-adapter.theme-light .markdown-reading-view strong,
@@ -873,9 +877,9 @@ body.stnd-adapter.theme-dark input[type="checkbox"][data-indeterminate="true"]:n
 }
 body.stnd-adapter.theme-light.hider-tabs .workspace:not(.is-left-sidedock-open),
 body.stnd-adapter.theme-dark.hider-tabs .workspace:not(.is-left-sidedock-open) {
-    --bg1: var(--background-primary) !important;
-    --titlebar-background: var(--background-primary) !important;
-    --titlebar-background-focused: var(--background-primary) !important;
+    --bg1: var(--background-primary);
+    --titlebar-background: var(--background-primary);
+    --titlebar-background-focused: var(--background-primary);
 }
 
 body.stnd-adapter.theme-light.theme-light,
@@ -950,7 +954,7 @@ body.stnd-adapter.theme-dark a.footnote-link {
 }
 body.stnd-adapter.theme-light .sidebar-toggle-button.mod-right,
 body.stnd-adapter.theme-dark .sidebar-toggle-button.mod-right {
-    background: none !important;
+    background: none;
 }
 body.stnd-adapter.theme-light .workspace-drawer-inner,
 body.stnd-adapter.theme-light .workspace-split.mod-root,
@@ -979,7 +983,10 @@ body.stnd-adapter.theme-dark .is-translucent:not(.is-fullscreen) {
     --nav-collapse-icon-color-collapsed: color-mix(in oklch, var(--color-foreground) 30%, transparent);
 }
 
-.workspace-tabs .workspace-leaf,body.stnd-adapter .workspace-leaf-content[data-type=file-properties] {background: var(--background-secondary) !important ;}
+body.stnd-adapter .workspace-tabs .workspace-leaf,
+body.stnd-adapter .workspace-leaf-content[data-type=file-properties] {
+    background: var(--background-secondary);
+}
 
 
 
@@ -1228,7 +1235,7 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 
 .stnd-adapter .cm-html-embed th,
 .stnd-adapter .markdown-rendered th {
-    background: var(--background-secondary) !important;
+    background: var(--background-secondary);
 }
 .stnd-adapter {
     --tag-border-width: 1px;
@@ -1240,7 +1247,7 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     --marge: var(--font-density);
     --marge-block-calculated: calc(var(--marge) * 1.5);
 
-    line-height: var(--line-height-normal) !important;
+    line-height: var(--line-height-normal);
 }
 
 /* General sibling `~` (not adjacent `+`): empty divs that Obsidian injects
@@ -1248,7 +1255,7 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
    every el- block after the first still gets its top gap. Visually identical to
    `+` in the normal case. */
 .stnd-adapter .markdown-reading-view [class^="el-"] ~ [class^="el-"]:not(:has(.cm-hmd-frontmatter)) {
-    line-height: var(--line-height-normal) !important;
+    line-height: var(--line-height-normal);
     margin: 0;
     margin-block-start: 2rlh;
 }
@@ -1265,8 +1272,9 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     margin-block-start: 0;
 }
 
+.stnd-adapter .markdown-reading-view .el-p:has(img) + .el-p:has(img),
 .stnd-adapter .el-p:has(img) + .el-p:has(img) {
-    margin-block-start: var(--img-grid-gap) !important;
+    margin-block-start: var(--img-grid-gap);
 }
 
 /* hr spacing — must match/beat the general "[el-] + [el-]" rule's specificity */
@@ -1341,12 +1349,14 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
 }
 
 @media (max-width: 600px) {
-    .stnd-adapter .markdown-reading-view blockquote,
-    .stnd-adapter .markdown-reading-view pre,
-    .stnd-adapter .markdown-reading-view figure,
-    .stnd-adapter .markdown-reading-view .callout,
-    .stnd-adapter .markdown-reading-view p:has(img) {
-        margin-inline: 0 !important;
+    body.stnd-adapter .markdown-reading-view blockquote,
+    body.stnd-adapter .markdown-reading-view pre,
+    body.stnd-adapter .markdown-reading-view figure,
+    body.stnd-adapter .markdown-reading-view .callout,
+    body.stnd-adapter .markdown-reading-view p:has(img),
+    body.stnd-adapter.full-width .markdown-reading-view p:has(img),
+    body.stnd-adapter .full-width .markdown-reading-view p:has(img) {
+        margin-inline: 0;
     }
 }
 
@@ -1412,14 +1422,15 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
     margin-left: 0;
 }
 
-.stnd-adapter .markdown-embed {
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
+body.stnd-adapter .markdown-rendered .markdown-embed,
+body.stnd-adapter .markdown-embed {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
 }
-.stnd-adapter .markdown-embed-link {
-    display: none !important;
+body.stnd-adapter .markdown-embed-link {
+    display: none;
 }
 
 /* ─── Print / PDF export ────────────────────────────────────────────── */
@@ -1433,10 +1444,10 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
    are the token chain it falls back to elsewhere in this file. Override
    all three so whichever one a given rule reads, print comes out tight. */
 @media print {
-    .stnd-adapter {
-        --line-height-normal: 1.35 !important;
-        --font-density: 1.35 !important;
-        --optical-ratio: 1.35 !important;
+    body.stnd-adapter {
+        --line-height-normal: 1.35;
+        --font-density: 1.35;
+        --optical-ratio: 1.35;
     }
 
     /* The visible gap in a printed CV isn't leading, it's this: on screen the
@@ -1447,16 +1458,16 @@ body.stnd-adapter:where(.theme-light, .theme-dark) {
        ol > li + li, etc.) — more specific than anything standard-31-print.scss
        ships for the web, so importing that partial wouldn't have overridden
        them anyway. Reset the same selectors directly, for print only. */
-    .stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol) {
-        margin-block-start: 0.25em !important;
-        margin-block-end: 0.25em !important;
+    body.stnd-adapter .markdown-preview-view [class^="el-"] :is(ul, ol) {
+        margin-block-start: 0.25em;
+        margin-block-end: 0.25em;
     }
-    .stnd-adapter .markdown-preview-view [class^="el-"] ol > li + li,
-    .stnd-adapter .markdown-preview-view [class^="el-"] ul > li + li {
-        margin-block-start: 0 !important;
+    body.stnd-adapter .markdown-preview-view [class^="el-"] ol > li + li,
+    body.stnd-adapter .markdown-preview-view [class^="el-"] ul > li + li {
+        margin-block-start: 0;
     }
-    .stnd-adapter .markdown-preview-view [class^="el-"] p + p {
-        margin-block-start: 0.5em !important;
+    body.stnd-adapter .markdown-preview-view [class^="el-"] p + p {
+        margin-block-start: 0.5em;
     }
 }
 

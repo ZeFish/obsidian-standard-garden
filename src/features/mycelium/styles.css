@@ -2,13 +2,21 @@
 
 /* --- Ghost Links (Editor / Live Preview) --- */
 .mycelium-ghost-link {
-  text-decoration: underline dotted var(--text-accent, #c99352);
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1.5px;
+  text-decoration: underline;
   border-radius: 3px;
   padding: 0 2px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+@supports (text-decoration-style: dotted) {
+  .mycelium-ghost-link {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--text-accent, #c99352);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1.5px;
+  }
 }
 
 .mycelium-ghost-link:hover {
@@ -30,8 +38,8 @@
 /* Nested inside the last `el-*` block, so none of the framework's own
    `[class^="el-"]` vertical-rhythm rules reach these — the rhythm below is
    supplied by hand, using the same rlh unit the rest of the framework uses. */
-.mycelium-footer-title {
-  margin: 0 0 1rlh 0 !important;
+.mycelium-compost-footer .mycelium-footer-title {
+  margin: 0 0 1rlh 0;
   font-size: var(--font-ui-smaller, 0.78rem);
   font-weight: 600;
   letter-spacing: 0.06em;
