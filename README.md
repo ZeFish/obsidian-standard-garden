@@ -35,17 +35,23 @@ Obsidian is a local-first application, and Standard Garden treats your Markdown 
 
 ## 📦 Installation
 
-### From the Obsidian Community Plugins
-1. Open Obsidian **Settings** → **Community Plugins**.
-2. Search for **Standard Garden**.
-3. Click **Install**, then **Enable**.
+> Standard Garden is being reviewed for Obsidian's Community Plugins list. Until it appears there, install it with BRAT or by hand.
 
-👉 **Or jump straight into Obsidian: [Install Standard Garden](obsidian://show-plugin?id=standard-garden)**
+### With BRAT (updates itself)
+1. Install the **BRAT** plugin from Obsidian's Community Plugins.
+2. Open BRAT's settings, choose **Add beta plugin**, and enter `ZeFish/obsidian-standard-garden`.
+3. Enable **Standard Garden** in **Settings** → **Community plugins**.
 
-### Manual Installation
+### Manual installation
 1. Download the latest release (`main.js`, `manifest.json`, `styles.css`) from the [Releases](https://github.com/ZeFish/obsidian-standard-garden/releases) page.
 2. Place them inside your vault at `.obsidian/plugins/standard-garden/`.
-3. Reload Obsidian and enable the plugin.
+3. Reload Obsidian and enable the plugin in **Settings** → **Community plugins**.
+
+### From the Obsidian Community Plugins (once listed)
+Open **Settings** → **Community plugins**, search for **Standard Garden**, then **Install** and **Enable**.
+
+### Then
+Open the Garden panel (the flower icon in the left ribbon), press **Connect to Garden**, sign in in your browser, and you are back in Obsidian, connected.
 
 ## 📖 Usage & Frontmatter
 
@@ -79,32 +85,32 @@ garden-mycelium: true                # participate in the semantic network
 ---
 ```
 
-## ⌨️ Commandes Obsidian (Command Palette)
+## ⌨️ Obsidian commands (Command palette)
 
-Toutes les actions du jardin sont directement accessibles depuis la palette de commande (`Cmd + P` / `Ctrl + P`) :
+Every garden action is in the command palette (`Cmd + P` / `Ctrl + P`):
 
-| Commande | Action |
+| Command | What it does |
 | :--- | :--- |
-| **Standard Garden: Open Garden panel** | Ouvre le volet latéral Garden. |
-| **Standard Garden: Open settings** | Ouvre l'onglet de réglages Standard Garden. |
-| **Standard Garden: Plant seed (Publish current note)** | Publie ou met à jour la note active dans votre jardin en ligne. |
-| **Standard Garden: Uproot seed (Remove from garden)** | Dé-publie la note active du jardin. |
-| **Standard Garden: View live version** | Ouvre la version publique de la note dans le navigateur. |
-| **Standard Garden: Copy live URL to clipboard** | Copie l'URL publique de la note dans le presse-papiers. |
-| **Standard Garden: Copy short URL (garden-short) to clipboard** | Copie le lien court de partage (`stnd.gd/...`). |
-| **Standard Garden: Share note (Open share dialog)** | Ouvre la boîte de dialogue de partage (liens Markdown, code iframe, URL directe). |
-| **Standard Garden: Check garden publication status** | Vérifie si la note locale est synchronisée, modifiée ou dépassée par rapport au serveur. |
-| **Standard Garden: Set visibility: Public** | Définit `visibility: public` sur la note. |
-| **Standard Garden: Set visibility: Unlisted** | Définit `visibility: unlisted` sur la note. |
-| **Standard Garden: Set visibility: Private** | Définit `visibility: private` sur la note. |
-| **Standard Garden: Cycle visibility (Public / Unlisted / Private)** | Alterne séquentiellement la visibilité de la note. |
-| **Standard Garden: Tend the garden (Sync all notes)** | Lance une synchronisation complète du coffre avec le jardin. |
-| **Standard Garden: Harvest seeds (Download new notes from garden)** | Télécharge les notes créées en ligne absentes de votre coffre local. |
-| **Standard Garden: Prune garden (Clean up unpublished notes)** | Nettoie les notes en ligne dont le fichier local a été supprimé ou dé-publié. |
-| **Standard Garden: Ask Hyphe** | Ouvre le modal pour interroger l'IA Hyphe (recherche en ligne parmi vos notes publiées sur standard.garden). |
-| **Standard Garden: Set note theme** | Ouvre un sélecteur flou pour choisir l'un des 27 thèmes du design system. |
-| **Standard Garden: Reset note styling (Clear design tokens)** | Nettoie les propriétés de tokens CSS de la note pour revenir aux styles par défaut. |
-| **Standard Garden: Tend the Mycelium (Link mentions)** | Analyse et propose des liens sémantiques entre concepts non liés. |
+| **Standard Garden: Open Garden panel** | Opens the Garden side panel. |
+| **Standard Garden: Open settings** | Opens the Standard Garden settings. |
+| **Standard Garden: Plant seed (Publish current note)** | Publishes or updates the current note in your online garden. |
+| **Standard Garden: Uproot seed (Remove from garden)** | Takes the current note offline. |
+| **Standard Garden: View live version** | Opens the public version of the note in your browser. |
+| **Standard Garden: Copy live URL to clipboard** | Copies the note's public URL. |
+| **Standard Garden: Copy short URL (garden-short) to clipboard** | Copies the short share link (`stnd.gd/...`). |
+| **Standard Garden: Share note (Open share dialog)** | Opens the share dialog (Markdown links, iframe code, direct URL). |
+| **Standard Garden: Check garden publication status** | Tells you whether the local note is in sync, modified, or behind the server. |
+| **Standard Garden: Set visibility: Public** | Sets `visibility: public` on the note. |
+| **Standard Garden: Set visibility: Unlisted** | Sets `visibility: unlisted` on the note. |
+| **Standard Garden: Set visibility: Private** | Sets `visibility: private` on the note. |
+| **Standard Garden: Cycle visibility (Public / Unlisted / Private)** | Steps the note through the three visibilities. |
+| **Standard Garden: Tend the garden (Sync all notes)** | Runs a full sync of your vault with your garden. |
+| **Standard Garden: Harvest seeds (Download new notes from garden)** | Downloads the notes that exist online but not in your vault. |
+| **Standard Garden: Prune garden (Clean up unpublished notes)** | Cleans up online notes whose local file was deleted or unpublished. |
+| **Standard Garden: Ask Hyphe** | Opens the dialog to question the Hyphe AI (it searches the notes you published on standard.garden). |
+| **Standard Garden: Set note theme** | Opens a picker for one of the 27 design system themes. |
+| **Standard Garden: Reset note styling (Clear design tokens)** | Clears the note's CSS token properties to go back to the default styles. |
+| **Standard Garden: Tend the Mycelium (Link mentions)** | Finds and suggests semantic links between unlinked concepts. |
 
 ## 🏗️ Development
 
