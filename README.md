@@ -102,14 +102,6 @@ Toutes les actions du jardin sont directement accessibles depuis la palette de c
 | **Standard Garden: Reset note styling (Clear design tokens)** | Nettoie les propriétés de tokens CSS de la note pour revenir aux styles par défaut. |
 | **Standard Garden: Tend the Mycelium (Link mentions)** | Analyse et propose des liens sémantiques entre concepts non liés. |
 
-## 🔮 Future AI Directions / Development Ideas
-
-Here are additional AI integration ideas made possible by the Cloudflare Workers AI + Vectorize stack:
-
-1. **Editor Writing Copilot**: Shortcuts or commands to generate summaries, brainstorm content, or autocomplete text in the active note.
-2. **Automatic Metadata Generation**: Auto-suggested tags and intelligent frontmatter structuring based on text analysis.
-3. **Live Link Suggestions (Mycelium Autopilot)**: A panel showing potential semantic links to other notes in your garden in real time while writing.
-
 ## 🏗️ Development
 
 Garden relies on the `@stnd/styles` and `@stnd/themes` packages.
@@ -124,11 +116,6 @@ pnpm build         # bundle and deploy to your local Obsidian vault
 ```
 
 The build script bundles JS/CSS into `dist/` and (when possible) deploys the plugin into the configured vault path (see `build.js`).
-
-### Performance note
-
-Theme/frontmatter refresh is intentionally scoped to the active note (and the currently selected theme note) to avoid visual stutter while typing.
-Text Trim is scoped to reading/preview surfaces and does not apply to `markdown-source-view`.
 
 ## 💬 Questions & Support
 
