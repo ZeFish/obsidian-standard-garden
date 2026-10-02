@@ -1429,3 +1429,44 @@ body.stnd-adapter .workspace-tab-header-container {
   letter-spacing: 0.05em;
   margin: 8px 0 4px 0;
 }
+
+/* ── Not connected: the one way in ───────────────────────────────────────── */
+.stnd-panel-connect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-3, 12px);
+  padding: var(--size-4-8, 32px) var(--size-4-4, 16px);
+  text-align: center;
+}
+
+.stnd-panel-connect-icon {
+  color: var(--stnd-status-synced);
+}
+
+.stnd-panel-connect-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.stnd-panel-connect-title {
+  margin: 0;
+}
+
+.stnd-panel-connect-text {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.stnd-panel-connect-hint {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller, 12px);
+}
+
+.stnd-panel-connect-guide {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller, 12px);
+  cursor: pointer;
+  text-decoration: underline;
+}

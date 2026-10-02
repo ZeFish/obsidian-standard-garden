@@ -140,11 +140,12 @@ class GardenSettingTab extends PluginSettingTab {
       )
       .addDropdown((dropdown) =>
         dropdown
+          .addOption("auto", "Automatic (status bar, or note header on mobile)")
           .addOption("titlebar", "Title bar (Note header)")
           .addOption("statusbar", "Status bar")
           .addOption("ribbon", "Ribbon bar")
           .addOption("hidden", "Hidden")
-          .setValue(this.plugin.settings.publishStatusLocation || "titlebar")
+          .setValue(this.plugin.settings.publishStatusLocation || "auto")
           .onChange(async (value) => {
             this.plugin.settings.publishStatusLocation = value;
             await this.plugin.saveSettings();

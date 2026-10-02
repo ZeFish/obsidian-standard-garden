@@ -86,6 +86,9 @@ function slugify(name) {
     .replace(/^-|-$/g, "");
 }
 
+// How long a started connection stays valid (sign-in by e-mail code can take a moment).
+const CONNECT_WINDOW_MS = 15 * 60 * 1000;
+
 // ─── Local Note Index ─────────────────────────────────────────────────────────
 // Multi-tier index to robustly reconcile local vault notes with remote garden notes.
 // Prevents duplicate note creation across renames, title changes, and subfolders.
@@ -773,7 +776,7 @@ class GardenFeature {
     if (!this.plugin.settings.apiKey) {
       new StndConfirmModal(
         this.app,
-        "No API key configured.\nTo publish or edit a post, you must link your account.",
+        "You're not connected to Standard Garden yet.\nConnect your account to publish notes.",
         "Connect",
         () => this.startConnect()
       ).open();
@@ -826,11 +829,37 @@ class GardenFeature {
     const state =
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
-        : String(Math.random()).slice(2);
+        : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
     this._connectState = state;
-    const url = `${base}/connect/obsidian?state=${encodeURIComponent(state)}`;
+    // A connection may only be completed by the browser page we opened, soon
+    // after opening it. Without this window any link could hand us a key.
+    this._connectExpires = Date.now() + CONNECT_WINDOW_MS;
+    // `device` makes the key this device's own: the phone and the computer can
+    // both be connected, and connecting one never signs the other out.
+    const url = `${base}/connect/obsidian?state=${encodeURIComponent(state)}&device=${encodeURIComponent(this.getDeviceId())}`;
     this._openExternal(url);
-    new obsidian_1.Notice("Standard : connexion ouverte dans le navigateur…");
+    new obsidian_1.Notice("Garden: finish connecting in your browser, then come back here.");
+  }
+
+  // An id for THIS device, kept in Obsidian's per-device local storage rather
+  // than in the plugin's data.json — that file is shared by Obsidian Sync or
+  // iCloud, which would give the phone and the computer the same id.
+  getDeviceId() {
+    const KEY = "standard-garden-device-id";
+    const valid = (v) => typeof v === "string" && /^[A-Za-z0-9_-]{6,32}$/.test(v);
+    const app = this.plugin.app;
+    let id = null;
+    try {
+      id = app.loadLocalStorage ? app.loadLocalStorage(KEY) : window.localStorage.getItem(KEY);
+    } catch (_) {}
+    if (!valid(id)) {
+      id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
+      try {
+        if (app.saveLocalStorage) app.saveLocalStorage(KEY, id);
+        else window.localStorage.setItem(KEY, id);
+      } catch (_) {}
+    }
+    return id;
   }
 
   // The connect page hands the key back via an `obsidian://standard-connect`
@@ -859,12 +888,24 @@ class GardenFeature {
       new obsidian_1.Notice("Garden: connection cancelled (missing key).");
       return;
     }
-    // Reject a callback that doesn't match the nonce we opened with.
-    if (this._connectState && state !== this._connectState) {
+    // `obsidian://standard-connect?key=…` can be opened by ANY web page or
+    // document, so a callback is accepted only if we started a connection
+    // ourselves, it is still fresh, and it echoes our one-time nonce. Without
+    // all three, anyone could swap in their own key and have this vault publish
+    // into THEIR garden.
+    const pending = this._connectState;
+    const fresh = this._connectExpires && Date.now() < this._connectExpires;
+    if (!pending || !fresh) {
+      this._connectState = null;
+      new obsidian_1.Notice("Garden: that connection link was not started from Obsidian, or it expired. Use “Connect to Garden” and try again.");
+      return;
+    }
+    if (state !== pending) {
       new obsidian_1.Notice("Garden: connection skipped (invalid token).");
       return;
     }
     this._connectState = null;
+    this._connectExpires = 0;
     this.plugin.settings.apiKey = key;
     this.plugin.settings.apiUsername = username;
     await this.plugin.saveSettings();
@@ -874,6 +915,9 @@ class GardenFeature {
         this.plugin.settingTab.display();
       }
     });
+    // Everything that was showing "not connected" updates right away.
+    this.plugin.panel?.render?.();
+    this.plugin.publishStatus?.refreshAll?.();
     const who = this.plugin.settings.apiUsername || username;
     new obsidian_1.Notice(
       who ? `Garden: connected as @${who} ✓` : "Garden: connected ✓",

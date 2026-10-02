@@ -188,7 +188,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     if (file && this.plugin.publishStatus) {
       const fm = getNoteFrontmatter(this.plugin.app, file);
       const info = this.plugin.publishStatus.getStateInfo(fm, file.path, file);
-      key = info.key;
+      key = info.key === "disconnected" ? "unpublished" : info.key;
       if (key === "synced" && (info.visibility === "private" || info.visibility === "unlisted")) {
         key = info.visibility;
       }
@@ -347,6 +347,13 @@ class StandardGardenView extends obsidian_1.ItemView {
       });
     }
 
+    // Not connected: nothing else in the panel can work yet, so show only the
+    // way in. One button — no keys, no settings to dig through.
+    if (!this.plugin?.settings?.apiKey) {
+      this._renderConnectCard(container);
+      return;
+    }
+
     // Garden (note) and Mycelium now render together as a single view — no
     // tab bar needed. Audit is disabled here for now (candidate for moving
     // into the chisel plugin later); _renderAuditTab is kept intact below,
@@ -388,6 +395,28 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     // ── 4. Design: Hyphe AI Styling & Design Tokens (Collapsible) ──
     this._renderDesignSection(container, file, fm);
+  }
+
+  _renderConnectCard(container) {
+    const card = container.createEl("div", { cls: "stnd-panel-connect" });
+    const icon = card.createEl("div", { cls: "stnd-panel-connect-icon" });
+    obsidian_1.setIcon(icon, "sprout");
+    card.createEl("h3", { text: "Connect to Garden", cls: "stnd-panel-connect-title" });
+    card.createEl("p", {
+      text: "Publish your notes to your own garden on standard.garden, straight from Obsidian.",
+      cls: "stnd-panel-connect-text",
+    });
+    const btn = card.createEl("button", { text: "Connect to Garden", cls: "mod-cta stnd-panel-connect-btn" });
+    btn.addEventListener("click", () => this.plugin.garden?.startConnect());
+    card.createEl("p", {
+      text: "A page opens in your browser. Sign in, press Authorize, and you come right back here.",
+      cls: "stnd-panel-connect-hint",
+    });
+    const guide = card.createEl("a", { text: "New to Garden? Read the guide", cls: "stnd-panel-connect-guide" });
+    guide.addEventListener("click", (e) => {
+      e.preventDefault();
+      openDoc(this.plugin.app, DOCS_URLS.plugin);
+    });
   }
 
   _showNoteActionMenu(file, fm, evt, opts = {}) {
@@ -650,10 +679,10 @@ class StandardGardenView extends obsidian_1.ItemView {
         badge.title = "Queued for publication — click for actions";
       } else {
         badge = statusLeft.createEl("span", {
-          text: "Draft",
+          text: "Local",
           cls: "stnd-panel-badge stnd-panel-badge-local is-clickable",
         });
-        badge.title = "Draft note (local only) — click for actions";
+        badge.title = "Local note (not published) — click for actions";
       }
 
       badge.addEventListener("click", (evt) => {
@@ -711,7 +740,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       });
     } else {
       const notice = statusRow.createEl("span", {
-        text: "Add an API key in settings to plant seeds.",
+        text: "Connect your account to plant seeds.",
         cls: "stnd-panel-meta",
       });
       notice.style.fontStyle = "italic";

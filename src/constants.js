@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS = {
   apiUsername: "",
   apiUrl: "https://standard.garden/api",
   openAfterPublish: false,
-  publishStatusLocation: "titlebar", // Location of the publish status action: titlebar, statusbar, ribbon, hidden
+  publishStatusLocation: "auto", // Where the status sprout lives: auto (status bar on desktop, note header on mobile), titlebar, statusbar, ribbon, hidden
   publishIndicatorStyle: "garden", // Panel top indicator: garden (animated organic gradient), subtle (minimal accent line), hidden (disabled)
   autoSync: false, // Automatic background synchronization (disabled by default to protect local drafts)
   autoSyncStartup: false,

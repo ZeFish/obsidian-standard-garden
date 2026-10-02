@@ -3,6 +3,16 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.40 — 2026-10-02
+
+### Added
+
+- One sprout icon colored by status, a menu that explains it, and a panel that starts with Connect
+
+### Fixed
+
+- Only accept a connection that Obsidian started, and give each device its own key
+
 ## 0.1.35 — 2026-10-01
 
 ### Added

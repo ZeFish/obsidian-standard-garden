@@ -221,14 +221,25 @@ esbuild
       console.warn("Warning: design-system/styles.css not found.");
     }
 
-    // 3. Inject all other feature styles in deterministic order
+    // 3. Inject all other feature styles in deterministic order.
+    //
+    // The plugin's own UI (panel, status icon and menu, settings, feed,
+    // mycelium) is collected apart as well: the whole bundle below is wrapped
+    // in `body.stnd-adapter`, a class that only exists while the design system
+    // ("artisan mode") is on. Someone who has it off must still get a working,
+    // coloured sprout and a styled panel, so these files — which use Obsidian's
+    // own variables only — are emitted a second time for `body:not(.stnd-adapter)`.
+    const UI_FEATURES = ["feed", "mycelium", "panel", "publish-status", "settings"];
+    let uiCss = "";
     if (fs.existsSync(featuresDir)) {
       for (const feature of fs.readdirSync(featuresDir).sort()) {
         if (feature === "design-system") continue; // already injected first
         const cssFile = path.join(featuresDir, feature, "styles.css");
         if (fs.existsSync(cssFile)) {
+          const css = fs.readFileSync(cssFile, "utf8");
           combinedCss += `/* --- Feature: ${feature} --- */\n`;
-          combinedCss += fs.readFileSync(cssFile, "utf8") + "\n\n";
+          combinedCss += css + "\n\n";
+          if (UI_FEATURES.includes(feature)) uiCss += css + "\n\n";
         }
       }
     }
@@ -276,6 +287,19 @@ esbuild
       }
     } catch (e) {
       console.error("SASS compilation failed:", e);
+      process.exit(1);
+    }
+
+    // The native-only copy of the plugin's UI. Rules that are artisan-mode
+    // refinements (they name .stnd-adapter) are left out of it.
+    try {
+      const nativeScss = uiCss
+        .replace(/^\uFEFF/gm, "")
+        .replace(/[^{}]*stnd-adapter[^{}]*\{[^{}]*\}/g, "");
+      const nativeCss = sass.compileString(`body:not(.stnd-adapter) {\n${nativeScss}\n}`, { style: "compressed" }).css;
+      minifiedCss += "\n" + nativeCss;
+    } catch (e) {
+      console.error("SASS compilation of the native UI styles failed:", e);
       process.exit(1);
     }
 

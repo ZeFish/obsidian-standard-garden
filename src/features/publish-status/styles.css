@@ -1,24 +1,15 @@
 /* ── Unified Garden Status Color Tokens ───────────────────────────────────── */
+/* Obsidian's own palette, so the sprout is coloured with or without the design
+   system, and in any theme. Each --color-* already adapts to light and dark. */
 & {
-  --stnd-status-synced: #059669;
-  --stnd-status-modified: #0284c7;
-  --stnd-status-pending: #d97706;
-  --stnd-status-outdated: #ea580c;
-  --stnd-status-desynced: #dc2626;
-  --stnd-status-private: #7c3aed;
-  --stnd-status-unlisted: #ca8a04;
-  --stnd-status-local: var(--text-muted, #6b7280);
-}
-
-&.theme-dark {
-  --stnd-status-synced: #34d399;
-  --stnd-status-modified: #38bdf8;
-  --stnd-status-pending: #fbbf24;
-  --stnd-status-outdated: #fb923c;
-  --stnd-status-desynced: #f87171;
-  --stnd-status-private: #a78bfa;
-  --stnd-status-unlisted: #facc15;
-  --stnd-status-local: var(--text-muted, #9ca3af);
+  --stnd-status-synced: var(--color-green);
+  --stnd-status-modified: var(--color-blue);
+  --stnd-status-pending: var(--color-yellow);
+  --stnd-status-outdated: var(--color-orange);
+  --stnd-status-desynced: var(--color-red);
+  --stnd-status-private: var(--color-purple);
+  --stnd-status-unlisted: var(--color-yellow);
+  --stnd-status-local: var(--text-faint);
 }
 
 /* ── Titlebar Action & Ribbon Overrides ────────────────────────────────────── */
@@ -66,6 +57,91 @@
 .stnd-publish-status[data-stnd-state="local"],
 .stnd-publish-status-ribbon[data-stnd-state="local"] {
   color: var(--stnd-status-local) !important;
+}
+
+/* A newcomer who has not connected yet: the same sprout, quiet grey. */
+.stnd-publish-status[data-stnd-state="disconnected"],
+.stnd-publish-status-ribbon[data-stnd-state="disconnected"] {
+  color: var(--stnd-status-local) !important;
+}
+
+/* States that ask for something (modified, outdated, still online) carry a dot
+   too, so the signal does not rest on colour alone. */
+.stnd-publish-status,
+.stnd-publish-status-ribbon {
+  position: relative;
+}
+
+.stnd-publish-status[data-stnd-attn="true"]::after,
+.stnd-publish-status-ribbon[data-stnd-attn="true"]::after,
+.stnd-status-legend-icon.stnd-has-attention::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px var(--background-primary);
+  pointer-events: none;
+}
+
+/* ── Status menu: the state, and what it means, in grey ──────────────────── */
+.menu-item.stnd-menu-status {
+  flex-wrap: wrap;
+  max-width: 260px;
+  cursor: default;
+  opacity: 1;
+}
+
+.menu-item.stnd-menu-status .menu-item-title {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+}
+
+.menu-item.stnd-menu-status .stnd-menu-status-desc {
+  flex-basis: 100%;
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller, 12px);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+/* ── Legend ("What do these colors mean?") ───────────────────────────────── */
+.stnd-status-legend-intro {
+  margin: 0 0 var(--size-4-3, 12px);
+  color: var(--text-muted);
+}
+
+.stnd-status-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3, 12px);
+  margin-bottom: var(--size-4-3, 12px);
+}
+
+.stnd-status-legend-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-3, 12px);
+}
+
+.stnd-status-legend-icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+}
+
+.stnd-status-legend-label {
+  font-weight: var(--font-semibold, 600);
+}
+
+.stnd-status-legend-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small, 13px);
 }
 
 /* ── Publish Status Indicators (Panel Top & Note Bottom) ─────────────────── */

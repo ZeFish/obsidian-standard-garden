@@ -10,23 +10,12 @@ const {
 
 // ─── Publish Status ───────────────────────────────────────────────────────────
 // A live "magic" status icon/button in Obsidian.
-// The icon + colour reflect the note's garden state — not-published / public /
-// unlisted / private — and update on the fly as the frontmatter changes.
+// One sprout icon; its COLOUR (plus a dot when something needs doing) reflects
+// the note's garden state and updates on the fly as the frontmatter changes.
 // Location is configurable: titlebar (default), statusbar, ribbon, or hidden.
 
-const STATES = {
-  unpublished: { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Local" },
-  local:       { icon: "cloud-off",          color: "var(--stnd-status-local)",    label: "Local" },
-  pending:     { icon: "upload-cloud",       color: "var(--stnd-status-pending)",  label: "Queued" },
-  synced:      { icon: "check-circle",       color: "var(--stnd-status-synced)",   label: "Synced" },
-  changed:     { icon: "upload-cloud",       color: "var(--stnd-status-modified)", label: "Modified" },
-  outdated:    { icon: "arrow-down-circle",  color: "var(--stnd-status-outdated)", label: "Outdated" },
-  desynced:    { icon: "alert-circle",       color: "var(--stnd-status-desynced)", label: "Unpublished (online)" },
-  // Backward compatibility aliases
-  public:      { icon: "globe",              color: "var(--stnd-status-synced)",   label: "Synced" },
-  unlisted:    { icon: "eye-off",            color: "var(--stnd-status-synced)",   label: "Synced (unlisted)" },
-  private:     { icon: "lock",               color: "var(--stnd-status-synced)",   label: "Synced (private)" },
-};
+const { STATES, VISIBILITY_DESC } = require("./states.js");
+const { StatusLegendModal } = require("./legend-modal.js");
 
 class PublishStatusFeature {
   constructor(app, plugin) {
@@ -36,6 +25,15 @@ class PublishStatusFeature {
     this.ribbonEl = null;
     this.noteStatuses = new Map(); // path -> { status, remoteContent, timestamp }
     this.checkingFiles = new Set();
+  }
+
+  // Where the sprout lives. By default it touches as little of the interface as
+  // possible: the status bar on desktop (nothing is added to any note), and the
+  // note header on mobile, which has no status bar.
+  getLocation() {
+    const chosen = this.plugin.settings.publishStatusLocation;
+    if (chosen && chosen !== "auto") return chosen;
+    return obsidian_1.Platform.isMobile ? "titlebar" : "statusbar";
   }
 
   async load() {
@@ -106,6 +104,8 @@ class PublishStatusFeature {
   // Sync state evaluates the synchronization between the local vault and the remote Garden.
   // Visibility (public/unlisted/private) is an orthogonal attribute.
   stateKey(frontmatter, path, file) {
+    // Without a connected account nothing can be published, whatever the note says.
+    if (!this.plugin.settings.apiKey) return "disconnected";
     const fm = frontmatter || {};
     const wantsPublish = isPublishIntent(fm);
     const isConfirmedOnline =
@@ -156,25 +156,12 @@ class PublishStatusFeature {
     const state = Object.assign({}, base);
     const vis = String(fm.visibility || "public").toLowerCase().trim();
 
+    // The icon is the same everywhere; visibility only changes the wording.
     if (key === "synced") {
-      if (vis === "private") {
-        state.icon = "lock";
-        state.label = "Synced (private)";
-      } else if (vis === "unlisted") {
-        state.icon = "eye-off";
-        state.label = "Synced (unlisted)";
-      } else {
-        state.icon = "globe";
-        state.label = "Synced (public)";
-      }
+      state.label = vis === "private" ? "Synced (private)" : vis === "unlisted" ? "Synced (unlisted)" : "Synced";
+      state.desc = VISIBILITY_DESC[vis] || VISIBILITY_DESC.public;
     } else if (key === "changed") {
-      state.label = vis === "private" ? "Modified (private)" : (vis === "unlisted" ? "Modified (unlisted)" : "Modified");
-    } else if (key === "outdated") {
-      state.label = "Outdated";
-    } else if (key === "desynced") {
-      state.icon = "alert-circle";
-      state.color = "var(--stnd-status-desynced)";
-      state.label = "Unpublished locally (still online)";
+      state.label = vis === "private" ? "Modified (private)" : vis === "unlisted" ? "Modified (unlisted)" : "Modified";
     }
     return { key, state, visibility: vis };
   }
@@ -269,12 +256,6 @@ class PublishStatusFeature {
   // ── Rendering ────────────────────────────────────────────────────────────────
   refreshAll() {
     const hasKey = !!this.plugin.settings.apiKey;
-    const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
-
-    if (!hasKey && indicatorStyle === "hidden") {
-      this.cleanupAll();
-      return;
-    }
 
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && hasKey) {
@@ -285,17 +266,12 @@ class PublishStatusFeature {
   }
 
   renderCurrentWidgets() {
-    const hasKey = !!this.plugin.settings.apiKey;
-    const location = this.plugin.settings.publishStatusLocation || "titlebar";
-    const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
-
-    if (!hasKey && indicatorStyle === "hidden") {
-      this.cleanupAll();
-      return;
-    }
+    // Shown whether or not an account is connected: before connecting, the
+    // sprout is how a newcomer finds out there is something to do.
+    const location = this.getLocation();
 
     // Nettoyer les widgets inutilisés pour l'emplacement actuel
-    if (location !== "titlebar" || !hasKey || location === "hidden") {
+    if (location !== "titlebar") {
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         const el = leaf.view && leaf.view._stndPublishAction;
         if (el) {
@@ -305,18 +281,18 @@ class PublishStatusFeature {
       });
     }
 
-    if ((location !== "statusbar" || !hasKey || location === "hidden") && this.statusBarEl) {
+    if (location !== "statusbar" && this.statusBarEl) {
       this.statusBarEl.remove();
       this.statusBarEl = null;
     }
 
-    if ((location !== "ribbon" || !hasKey || location === "hidden") && this.ribbonEl) {
+    if (location !== "ribbon" && this.ribbonEl) {
       this.ribbonEl.remove();
       this.ribbonEl = null;
     }
 
     // Mettre à jour ou créer le widget de l'emplacement actif
-    if (hasKey && location !== "hidden") {
+    if (location !== "hidden") {
       if (location === "titlebar") {
         this.app.workspace
           .getLeavesOfType("markdown")
@@ -354,7 +330,7 @@ class PublishStatusFeature {
       this.app.workspace.getLeavesOfType("markdown").forEach((leaf) => {
         if (leaf.view && leaf.view.file && leaf.view.file.path === file.path) {
           shown = true;
-          if (this.plugin.settings.publishStatusLocation === "titlebar") {
+          if (this.getLocation() === "titlebar") {
             this.refreshLeaf(leaf);
           }
         }
@@ -383,7 +359,9 @@ class PublishStatusFeature {
     }
 
     const fm = getNoteFrontmatter(this.app, view.file);
-    const { key, state } = this.getStateInfo(fm, view.file.path, view.file);
+    const { key: stateKey, state } = this.getStateInfo(fm, view.file.path, view.file);
+    // The thin bars have no "not connected" look of their own: grey, like a local note.
+    const key = stateKey === "disconnected" ? "unpublished" : stateKey;
 
     if (!indicator || !indicator.isConnected || !view.containerEl.contains(indicator)) {
       const existing = view.containerEl.querySelector(".stnd-bottom-indicator");
@@ -433,15 +411,16 @@ class PublishStatusFeature {
       if (existing) {
         el = existing;
       } else {
-        el = view.addAction(state.icon, "Garden Status", (evt) => this.onClick(view, evt));
+        el = view.addAction(state.icon, "Garden", (evt) => this.onClick(view, evt));
         el.addClass("stnd-publish-status");
       }
       view._stndPublishAction = el;
     }
     obsidian_1.setIcon(el, state.icon);
     el.style.color = state.color;
-    el.setAttribute("aria-label", `Garden Status — ${state.label}`);
+    el.setAttribute("aria-label", `Garden — ${state.label}`);
     el.dataset.stndState = key;
+    el.dataset.stndAttn = state.attention ? "true" : "false";
   }
 
   refreshStatusBar() {
@@ -479,7 +458,7 @@ class PublishStatusFeature {
     iconSpan.style.alignItems = "center";
 
     this.statusBarEl.createSpan({ text: `Garden: ${state.label}` });
-    this.statusBarEl.setAttribute("aria-label", `Garden Status — ${state.label}`);
+    this.statusBarEl.setAttribute("aria-label", `Garden — ${state.label}`);
   }
 
   refreshRibbon() {
@@ -497,7 +476,7 @@ class PublishStatusFeature {
     const { key, state } = this.getStateInfo(fm, activeFile.path, activeFile);
 
     if (!this.ribbonEl) {
-      this.ribbonEl = this.plugin.addRibbonIcon(state.icon, "Garden Status", (evt) => {
+      this.ribbonEl = this.plugin.addRibbonIcon(state.icon, "Garden", (evt) => {
         const view = this.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
         if (view) this.onClick(view, evt);
       });
@@ -507,7 +486,9 @@ class PublishStatusFeature {
     this.ribbonEl.style.display = "";
     obsidian_1.setIcon(this.ribbonEl, state.icon);
     this.ribbonEl.style.color = state.color;
-    this.ribbonEl.setAttribute("aria-label", `Garden Status — ${state.label}`);
+    this.ribbonEl.setAttribute("aria-label", `Garden — ${state.label}`);
+    this.ribbonEl.dataset.stndState = key;
+    this.ribbonEl.dataset.stndAttn = state.attention ? "true" : "false";
   }
 
   // ── Click → contextual menu ──────────────────────────────────────────────────
@@ -518,8 +499,23 @@ class PublishStatusFeature {
     if (!garden) return;
 
     const fm = getNoteFrontmatter(this.app, file);
-    const key = this.stateKey(fm, file.path, file);
+    const { key, state } = this.getStateInfo(fm, file.path, file);
     const menu = new obsidian_1.Menu();
+
+    // What this state means, in grey, above the actions that fit it — so nobody
+    // has to look the colors up.
+    menu.addItem((i) => {
+      i.setTitle(state.label).setIcon(state.icon).setDisabled(true);
+      try {
+        i.dom.addClass("stnd-menu-status");
+        const icon = i.dom.querySelector(".menu-item-icon");
+        if (icon) icon.style.color = state.color;
+        i.dom.createDiv({ cls: "stnd-menu-status-desc", text: state.desc });
+      } catch (_) {
+        // A different Obsidian menu DOM: the label alone still reads fine.
+      }
+    });
+    menu.addSeparator();
 
     const publish = async () => {
       if (!garden.checkApiKeyAndShowModal()) {
@@ -544,7 +540,14 @@ class PublishStatusFeature {
       this.refreshAll();
     };
 
-    if (key === "desynced") {
+    if (key === "disconnected") {
+      menu.addItem((i) =>
+        i
+          .setTitle("Connect to Garden")
+          .setIcon("log-in")
+          .onClick(() => garden.startConnect()),
+      );
+    } else if (key === "desynced") {
       menu.addItem((i) =>
         i
           .setTitle("Remove from Garden (delete online note)")
@@ -650,20 +653,30 @@ class PublishStatusFeature {
       );
     }
 
+    if (key !== "disconnected") {
+      menu.addSeparator();
+      menu.addItem((i) =>
+        i
+          .setTitle("Sync all notes")
+          .setIcon("folder-sync")
+          .onClick(async () => {
+            await garden.syncAllPublished();
+            const activeView = this.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
+            if (activeView) {
+              const leaf = activeView.leaf || { view: activeView };
+              const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
+              this.refreshBottomIndicator(leaf, indicatorStyle, true);
+            }
+          }),
+      );
+    }
+
     menu.addSeparator();
     menu.addItem((i) =>
       i
-        .setTitle("Sync all notes")
-        .setIcon("folder-sync")
-        .onClick(async () => {
-          await garden.syncAllPublished();
-          const activeView = this.app.workspace.getActiveViewOfType(obsidian_1.MarkdownView);
-          if (activeView) {
-            const leaf = activeView.leaf || { view: activeView };
-            const indicatorStyle = this.plugin.settings.publishIndicatorStyle || "garden";
-            this.refreshBottomIndicator(leaf, indicatorStyle, true);
-          }
-        }),
+        .setTitle("What do these colors mean?")
+        .setIcon("help-circle")
+        .onClick(() => new StatusLegendModal(this.app).open()),
     );
     menu.showAtMouseEvent(evt);
   }
