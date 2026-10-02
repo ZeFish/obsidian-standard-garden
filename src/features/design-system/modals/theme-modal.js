@@ -55,8 +55,8 @@ class ThemeSuggestModal extends SuggestModal {
     });
     new Notice(
       item.id
-        ? `Standard : Thème défini sur "${item.name}".`
-        : "Standard : Thème réinitialisé sur la valeur par défaut.",
+        ? `Standard: Theme set to "${item.name}".`
+        : "Standard: Theme reset to the default.",
     );
   }
 }

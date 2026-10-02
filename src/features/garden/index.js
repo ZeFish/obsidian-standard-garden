@@ -269,7 +269,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     });
     this.copyBtn.addEventListener("click", () => {
       if (this.logs.length === 0) {
-        new obsidian_1.Notice("Le journal est vide pour le moment.");
+        new obsidian_1.Notice("The log is empty for now.");
         return;
       }
       const text = this.logs
@@ -538,7 +538,7 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
     this.inProgress = true;
     this.confirmBtn.disabled = true;
     this.cancelBtn.disabled = true;
-    this.confirmBtn.setText("Nettoyage en cours...");
+    this.confirmBtn.setText("Cleaning up...");
     this.progressContainer.style.display = "block";
 
     let deleted = 0;
@@ -689,6 +689,29 @@ class GardenFeature {
   getPublishableFiles() {
     const all = this.app.vault.getMarkdownFiles();
     return all.filter((file) => !this.isPathExcluded(file.path));
+  }
+
+  // One sentence a person can act on, built from whatever the last request said,
+  // instead of a bare "failed" that hides whether it is the network, the quota or
+  // the note.
+  failureMessage(verb, file) {
+    const raw = String(this.lastError || "");
+    let why = "";
+    if (/offline|network|ERR_INTERNET|ERR_NETWORK|ERR_CONNECTION|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|Failed to fetch|timed? ?out/i.test(raw)) {
+      why = "You seem to be offline. Check your connection and try again.";
+    } else if (/HTTP 401/.test(raw)) {
+      why = "Your Garden connection is no longer valid. Reconnect from the Garden panel.";
+    } else if (/HTTP 429/.test(raw)) {
+      why = "Too many requests. Wait a minute and try again.";
+    } else if (/HTTP 413/.test(raw)) {
+      why = "This note is too large to publish.";
+    } else if (/HTTP 5\d\d/.test(raw)) {
+      why = "Standard Garden is having trouble right now. Try again in a few minutes.";
+    } else {
+      const server = raw.match(/^HTTP \d+: (.+)$/);
+      why = server ? server[1] : raw; // the server's own words: a quota, a moderation message
+    }
+    return `Standard: Could not ${verb} "${file.basename}".${why ? " " + why : ""}`;
   }
 
   // The server answered 401: the key was removed from the account, or the
@@ -985,6 +1008,7 @@ class GardenFeature {
     if (!this.checkApiKeyAndShowModal()) {
       return;
     }
+    if (!(await this.ensureUsername())) return;
     const files = this.getPublishableFiles();
     const publishKey =
       (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
@@ -1165,7 +1189,7 @@ class GardenFeature {
                     modal.recordResult("synced", file.basename);
                   } else {
                     failed++;
-                    modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
+                    modal.recordResult("failed", file.basename, this.lastError || "Publish error");
                   }
                 } else {
                   // In 2-way mode, delete locally (mark publish: false)
@@ -1194,7 +1218,7 @@ class GardenFeature {
                   modal.recordResult("synced", file.basename);
                 } else {
                   failed++;
-                  modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
+                  modal.recordResult("failed", file.basename, this.lastError || "Publish error");
                 }
               }
             } else {
@@ -1236,7 +1260,7 @@ class GardenFeature {
                     modal.recordResult("synced", file.basename);
                   } else {
                     failed++;
-                    modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
+                    modal.recordResult("failed", file.basename, this.lastError || "Publish error");
                   }
                 } else {
                   // In 2-way mode, compare mtimes
@@ -1260,7 +1284,7 @@ class GardenFeature {
                       modal.recordResult("synced", file.basename);
                     } else {
                       failed++;
-                      modal.recordResult("failed", file.basename, this.lastError || "Erreur de publication");
+                      modal.recordResult("failed", file.basename, this.lastError || "Publish error");
                     }
                   }
                 }
@@ -1521,9 +1545,7 @@ class GardenFeature {
         this.viewLiveVersion(activeFile);
       }
     } else if (result === false) {
-      new obsidian_1.Notice(
-        `Standard: Failed to publish "${activeFile.basename}".`,
-      );
+      new obsidian_1.Notice(this.failureMessage("publish", activeFile), 8000);
     }
     // null = user cancelled the confirmation modal — do nothing
   }
@@ -1545,9 +1567,7 @@ class GardenFeature {
         `Standard: "${activeFile.basename}" removed from the garden.`,
       );
     } else if (result === false) {
-      new obsidian_1.Notice(
-        `Standard: Failed to unpublish "${activeFile.basename}".`,
-      );
+      new obsidian_1.Notice(this.failureMessage("unpublish", activeFile), 8000);
     }
     // null = cancelled
   }
@@ -2057,7 +2077,7 @@ class GardenFeature {
         const data = await res.json();
         if (!data?.url) {
           console.warn(
-            `Standard: ${vaultFile.name} accepté par le serveur sans URL en retour`,
+            `Standard: ${vaultFile.name} accepted by the server without a URL in return`,
             data,
           );
           if (stats) {
@@ -2178,6 +2198,7 @@ class GardenFeature {
 
   async publishNote(file, isBulk = false, preCalculatedContent = null) {
     // Every publish path (panel buttons, titlebar, sync) ends up here.
+    this.lastError = null; // a message about THIS attempt, never a leftover
     if (this.isPathExcluded(file.path)) {
       this.lastError = "Folder is excluded from publication";
       return false;
@@ -2365,10 +2386,27 @@ class GardenFeature {
   // ── Publish with frontmatter check ────────────────────────────────────────
   // Returns true (success), false (API error), or null (user cancelled modal).
 
+  // Every address the plugin writes contains the username. A brand-new account
+  // can be connected before it has chosen one, and a note published then would be
+  // stamped with a broken link (standard.garden/@/…) for good. Ask the server once
+  // more, and if there is still none, say what to do instead of publishing.
+  async ensureUsername() {
+    if (!this.plugin.settings.apiUsername) {
+      await this.verifyApiKey(null);
+    }
+    if (this.plugin.settings.apiUsername) return true;
+    new obsidian_1.Notice(
+      "Standard: finish setting up your account on standard.garden (choose a username), then try again.",
+      10000,
+    );
+    return false;
+  }
+
   async publishWithCheck(file) {
     if (!this.checkApiKeyAndShowModal()) {
       return null;
     }
+    if (!(await this.ensureUsername())) return null;
     const meta = this.app.metadataCache.getFileCache(file);
     const fm = meta?.frontmatter || {};
 

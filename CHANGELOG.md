@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.46 — 2026-10-02
+
+### Fixed
+
+- Failed publishes explain themselves, and a new account without a username is guided instead of getting broken links
+
 ## 0.1.45 — 2026-10-02
 
 ### Added

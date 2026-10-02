@@ -356,7 +356,7 @@ async function createMentionLink(app, activeFile, suggestion) {
       }
     });
   } else {
-    new Notice(`Impossible de trouver une occurrence valide pour "${term}".`);
+    new Notice(`Could not find a valid match for "${term}".`);
   }
 }
 

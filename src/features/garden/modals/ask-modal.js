@@ -207,14 +207,14 @@ class StndAskModal extends obsidian_1.Modal {
             hintBox.style.gap = "8px";
 
             const label = hintBox.createEl("span", {
-              text: `🍄 Le Mycélium public a ${count} note${count > 1 ? "s" : ""} connexe${count > 1 ? "s" : ""}${authors}`,
+              text: `🍄 The public Mycelium has ${count} related note${count > 1 ? "s" : ""}${authors}`,
             });
             label.style.fontSize = "11px";
             label.style.color = "var(--text-muted)";
 
             const exploreBtn = hintBox.createEl("button", {
               cls: "mod-cta",
-              text: "Explorer le Mycélium →",
+              text: "Explore the Mycelium →",
             });
             exploreBtn.style.fontSize = "11px";
             exploreBtn.style.padding = "3px 8px";

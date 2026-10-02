@@ -526,7 +526,8 @@ class PublishStatusFeature {
         new obsidian_1.Notice(
           ok
             ? `Standard: "${file.basename}" published.`
-            : `Standard: Failed to publish "${file.basename}".`,
+            : garden.failureMessage("publish", file),
+          ok ? undefined : 8000,
         );
         if (ok) {
           const leaf = view.leaf || { view };

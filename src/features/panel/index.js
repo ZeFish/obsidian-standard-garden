@@ -440,7 +440,7 @@ class StandardGardenView extends obsidian_1.ItemView {
         if (this.plugin.settings.openAfterPublish) garden.viewLiveVersion(file);
         this.render();
       } else if (ok === false) {
-        new obsidian_1.Notice(`Standard: Failed to publish "${file.basename}".`);
+        new obsidian_1.Notice(garden.failureMessage("publish", file), 8000);
         this.render();
       }
     };
@@ -762,7 +762,7 @@ class StandardGardenView extends obsidian_1.ItemView {
           }
           this.render();
         } else if (ok === false) {
-          new obsidian_1.Notice(`Standard: Failed to publish "${file.basename}".`);
+          new obsidian_1.Notice(this.plugin.garden.failureMessage("publish", file), 8000);
           this.render();
         } else if (btn) {
           // null = user cancelled the confirmation — restore button
