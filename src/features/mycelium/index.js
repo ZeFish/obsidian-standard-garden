@@ -335,10 +335,10 @@ async function createMentionLink(app, activeFile, suggestion) {
     const notice = new Notice("", 7000);
     const nEl = notice.noticeEl;
     nEl.empty();
-    nEl.createSpan({ text: `Lié : "${term}" → [[${suggestion.file.basename}]]` });
+    nEl.createSpan({ text: `Linked: "${term}" → [[${suggestion.file.basename}]]` });
 
     const undoBtn = nEl.createEl("button", {
-      text: "Annuler",
+      text: "Undo",
       cls: "stnd-panel-btn stnd-panel-btn-secondary",
     });
     undoBtn.style.cssText =
@@ -347,7 +347,7 @@ async function createMentionLink(app, activeFile, suggestion) {
     undoBtn.addEventListener("click", async () => {
       await app.vault.modify(activeFile, previousContent);
       notice.hide();
-      new Notice(`Lien annulé : "${term}"`);
+      new Notice(`Link undone: "${term}"`);
       if (typeof window.stndRefreshMycelium === "function") {
         window.stndRefreshMycelium();
       }

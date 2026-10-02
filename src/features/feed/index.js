@@ -218,7 +218,7 @@ class FeedCardRenderer {
 
     if (matches.length === 0) {
       container.createEl("p", {
-        text: cleanTag ? `Aucune note publique trouvée pour #${cleanTag}` : "Aucune note publique trouvée.",
+        text: cleanTag ? `No public notes found for #${cleanTag}` : "No public notes found.",
         cls: "stnd-feed-empty",
       });
       return;
@@ -265,7 +265,7 @@ class FeedCardRenderer {
           moreContainer = container.createDiv({ cls: "stnd-feed-more" });
           const moreBtn = moreContainer.createEl("button", {
             cls: "stnd-feed-more-btn",
-            text: `+ ${remaining} note(s) de plus (afficher)`,
+            text: `+ ${remaining} more note(s) (show)`,
           });
           moreBtn.addEventListener("click", () => {
             renderListBatch(renderedCount, batchSize);
@@ -319,7 +319,7 @@ class FeedCardRenderer {
         moreContainer = container.createDiv({ cls: "stnd-feed-more" });
         const moreBtn = moreContainer.createEl("button", {
           cls: "stnd-feed-more-btn mod-cta",
-          text: `+ ${remaining} note(s) de plus (afficher ${Math.min(remaining, batchSize)})`,
+          text: `+ ${remaining} more note(s) (show ${Math.min(remaining, batchSize)})`,
         });
         moreBtn.addEventListener("click", async () => {
           moreBtn.disabled = true;
@@ -371,7 +371,7 @@ class FeedBasesView extends (BasesView || class {}) {
 
     const entries = this.data?.data ?? [];
     if (entries.length === 0) {
-      root.createDiv({ cls: "stnd-feed-empty", text: "Aucune note dans ce feed." });
+      root.createDiv({ cls: "stnd-feed-empty", text: "No notes in this feed." });
       return;
     }
 
@@ -405,7 +405,7 @@ class FeedBasesView extends (BasesView || class {}) {
     if (this.renderToken === token && root.isConnected && entries.length > shown.length) {
       root.createDiv({
         cls: "stnd-feed-more",
-        text: `+ ${entries.length - shown.length} note(s) de plus — affine le filtre ou augmente la limite.`,
+        text: `+ ${entries.length - shown.length} more note(s) — narrow the filter or raise the limit.`,
       });
     }
   }

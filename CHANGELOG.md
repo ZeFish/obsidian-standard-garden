@@ -3,6 +3,16 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.44 — 2026-10-02
+
+### Added
+
+- The first publish asks once and shows the result, and a lost connection offers to reconnect
+
+### Fixed
+
+- The remaining French messages are English, and the editor suggestion badges are colored again
+
 ## 0.1.43 — 2026-10-02
 
 ### Fixed

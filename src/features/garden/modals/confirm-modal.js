@@ -32,6 +32,7 @@ class StndConfirmModal extends obsidian_1.Modal {
       cls: "stnd-modal-btn-cancel",
     });
     cancelBtn.addEventListener("click", () => {
+      this._settled = true;
       this.close();
       this.onCancel();
     });
@@ -41,6 +42,7 @@ class StndConfirmModal extends obsidian_1.Modal {
       cls: "mod-cta",
     });
     confirmBtn.addEventListener("click", () => {
+      this._settled = true;
       this.close();
       this.onConfirm();
     });
@@ -48,6 +50,13 @@ class StndConfirmModal extends obsidian_1.Modal {
 
   onClose() {
     this.contentEl.empty();
+    // Closed with Escape or the corner button: that is a "no" too. Callers wait on
+    // an answer (the Publish button stays disabled until one comes), so silence
+    // would leave them waiting forever.
+    if (!this._settled) {
+      this._settled = true;
+      this.onCancel();
+    }
   }
 }
 

@@ -205,10 +205,10 @@ class SyncProgressModal extends obsidian_1.Modal {
   onOpen() {
     const { contentEl, titleEl } = this;
     contentEl.addClass("stnd-modal");
-    titleEl.setText("Standard — Synchronisation du jardin");
+    titleEl.setText("Standard — Garden sync");
 
     this.statusEl = contentEl.createEl("p", {
-      text: `Préparation... 0 / ${this.total}`,
+      text: `Preparing... 0 / ${this.total}`,
       cls: "stnd-modal-message",
     });
 
@@ -234,20 +234,20 @@ class SyncProgressModal extends obsidian_1.Modal {
       el.setText(`${label} ${count}`);
     };
 
-    chip("↑ À publier", b.toPublish, "var(--color-green)");
-    chip("− À dépublier", b.toUnpublish, "var(--color-orange)");
-    chip("↓ À télécharger", b.toCreate, "var(--color-blue)");
+    chip("↑ To publish", b.toPublish, "var(--color-green)");
+    chip("− To unpublish", b.toUnpublish, "var(--color-orange)");
+    chip("↓ To download", b.toCreate, "var(--color-blue)");
 
     this.currentEl = contentEl.createEl("div", {
       cls: "stnd-modal-detail",
-      text: "Vérification des notes existantes...",
+      text: "Checking existing notes...",
     });
     this.currentEl.style.cssText =
       "opacity:.7;font-size:var(--font-ui-smaller);min-height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 
     // ── Journal d'activité en direct ─────────────────────────────────────────
     const logHeader = contentEl.createEl("div", {
-      text: "Journal de synchronisation :",
+      text: "Sync log:",
       cls: "stnd-modal-detail",
     });
     logHeader.style.cssText =
@@ -276,15 +276,15 @@ class SyncProgressModal extends obsidian_1.Modal {
         .map((l) => `[${l.time}] [${l.tag}] ${l.name}${l.detail ? " — " + l.detail : ""}`)
         .join("\n");
       navigator.clipboard.writeText(text);
-      new obsidian_1.Notice(`Journal copié (${this.logs.length} entrées) !`);
+      new obsidian_1.Notice(`Log copied (${this.logs.length} entries)!`);
     });
 
-    this.actionBtn = btns.createEl("button", { text: "Annuler", cls: "mod-warning" });
+    this.actionBtn = btns.createEl("button", { text: "Cancel", cls: "mod-warning" });
     this.actionBtn.addEventListener("click", () => {
       if (this.finished) return this.close();
       this.cancelled = true;
       this.actionBtn.disabled = true;
-      this.actionBtn.setText("Annulation...");
+      this.actionBtn.setText("Cancelling...");
     });
   }
 
@@ -295,10 +295,10 @@ class SyncProgressModal extends obsidian_1.Modal {
     
     const activeActions = synced + pulled + created + unpublished;
     this.statusEl.setText(
-      `${index} / ${this.total} (${pct}%) — ${activeActions} action(s), ${skipped} identique(s)` +
-        (failed ? `, ${failed} échoué(s)` : ""),
+      `${index} / ${this.total} (${pct}%) — ${activeActions} action(s), ${skipped} unchanged` +
+        (failed ? `, ${failed} failed` : ""),
     );
-    this.currentEl.setText(current ? `Traitement : ${current}` : "");
+    this.currentEl.setText(current ? `Processing: ${current}` : "");
   }
 
   recordResult(type, name, detail = "") {
@@ -309,19 +309,19 @@ class SyncProgressModal extends obsidian_1.Modal {
 
     if (type === "synced") {
       this.syncedNotes.push(name);
-      tag = "↑ PUBLIÉ";
+      tag = "↑ PUBLISHED";
       color = "var(--color-green)";
     } else if (type === "pulled") {
       this.pulledNotes.push(name);
-      tag = "↓ TÉLÉCHARGÉ";
+      tag = "↓ DOWNLOADED";
       color = "var(--color-blue)";
     } else if (type === "created") {
       this.createdNotes.push(name);
-      tag = "+ CRÉÉ";
+      tag = "+ CREATED";
       color = "var(--color-blue)";
     } else if (type === "unpublished") {
       this.unpublishedNotes.push(name);
-      tag = "− DÉPUBLIÉ";
+      tag = "− UNPUBLISHED";
       color = "var(--color-orange)";
     } else if (type === "skipped") {
       this.skippedNotes.push(name);
@@ -330,7 +330,7 @@ class SyncProgressModal extends obsidian_1.Modal {
       textColor = "var(--text-muted)";
     } else if (type === "failed") {
       this.failedNotes.push({ name, detail });
-      tag = "✗ ÉCHEC";
+      tag = "✗ FAILED";
       color = "var(--color-red)";
       textColor = "var(--color-red)";
     }
@@ -363,9 +363,9 @@ class SyncProgressModal extends obsidian_1.Modal {
     if (!this.barEl) return;
     const secs = Math.round((Date.now() - this.startTime) / 1000);
     this.barEl.style.width = "100%";
-    const verb = this.cancelled ? "Annulée" : "Terminée";
+    const verb = this.cancelled ? "Cancelled" : "Finished";
     this.statusEl.setText(
-      `Synchronisation ${verb.toLowerCase()} · ${secs}s`,
+      `Sync ${verb.toLowerCase()} · ${secs}s`,
     );
     this.currentEl.setText("");
 
@@ -373,7 +373,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     this.reconciliationEl.empty();
 
     const summaryHeader = this.reconciliationEl.createEl("h4", {
-      text: "Rapport de réconciliation :",
+      text: "Reconciliation report:",
       cls: "stnd-reconciliation-title",
     });
     summaryHeader.style.cssText = "margin: 0 0 0.5em 0;";
@@ -387,7 +387,7 @@ class SyncProgressModal extends obsidian_1.Modal {
     const totalMissing = missingNotes + imagesFailed;
 
     const imagesInfo = (stats && stats.imagesChecked > 0)
-      ? ` + ${imagesOnline} image(s) en ligne${imagesReused > 0 ? ` (${imagesReused} dédupliquée(s))` : ""}`
+      ? ` + ${imagesOnline} image(s) online${imagesReused > 0 ? ` (${imagesReused} reused)` : ""}`
       : "";
 
     const summaryCard = this.reconciliationEl.createDiv({
@@ -398,12 +398,12 @@ class SyncProgressModal extends obsidian_1.Modal {
 
     if (totalMissing === 0) {
       summaryCard.setText(
-        `✓ ${finalOnlineNotes} note(s)${imagesInfo}, 0 manquante.`,
+        `✓ ${finalOnlineNotes} note(s)${imagesInfo}, 0 missing.`,
       );
     } else {
       const missingDetails = [];
-      if (missingNotes > 0) missingDetails.push(`${missingNotes} note(s) manquante(s)`);
-      if (imagesFailed > 0) missingDetails.push(`${imagesFailed} image(s) non téléversée(s)`);
+      if (missingNotes > 0) missingDetails.push(`${missingNotes} note(s) missing`);
+      if (imagesFailed > 0) missingDetails.push(`${imagesFailed} image(s) not uploaded`);
       summaryCard.setText(
         `⚠ ${finalOnlineNotes} note(s)${imagesInfo}, ${missingDetails.join(", ")}.`,
       );
@@ -425,18 +425,18 @@ class SyncProgressModal extends obsidian_1.Modal {
       }
     };
 
-    addList(this.syncedNotes, "Envoyée(s) / Mise(s) à jour à distance", "color: var(--text-success);", "↑");
-    addList(this.pulledNotes, "Téléchargée(s) / Mise(s) à jour localement", "color: var(--text-success);", "↓");
-    addList(this.createdNotes, "Créée(s) localement", "color: var(--text-success);", "+");
-    addList(this.unpublishedNotes, "Dé-publiée(s) localement (passée en brouillon)", "color: var(--text-warning);", "-");
-    addList(this.skippedNotes, "Déjà à jour (identiques)", "color: var(--text-muted);", "○");
-    addList(this.failedNotes, "Échec(s) de synchronisation", "color: var(--text-error);", "✗");
+    addList(this.syncedNotes, "Sent / updated online", "color: var(--text-success);", "↑");
+    addList(this.pulledNotes, "Downloaded / updated locally", "color: var(--text-success);", "↓");
+    addList(this.createdNotes, "Created locally", "color: var(--text-success);", "+");
+    addList(this.unpublishedNotes, "Unpublished locally (set back to draft)", "color: var(--text-warning);", "-");
+    addList(this.skippedNotes, "Already up to date", "color: var(--text-muted);", "○");
+    addList(this.failedNotes, "Sync failures", "color: var(--text-error);", "✗");
     if (stats?.failedImages?.length > 0) {
-      addList(stats.failedImages, "Image(s) non téléversée(s)", "color: var(--text-error);", "✗");
+      addList(stats.failedImages, "Images not uploaded", "color: var(--text-error);", "✗");
     }
 
     this.actionBtn.disabled = false;
-    this.actionBtn.setText("Fermer");
+    this.actionBtn.setText("Close");
     this.actionBtn.removeClass("mod-warning");
     this.actionBtn.addClass("mod-cta");
   }
@@ -462,10 +462,10 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
   onOpen() {
     const { contentEl, titleEl } = this;
     contentEl.addClass("stnd-modal");
-    titleEl.setText("Standard — Nettoyage des notes dépubliées");
+    titleEl.setText("Standard — Clean up unpublished notes");
 
     contentEl.createEl("p", {
-      text: `Les ${this.items.length} note(s) suivante(s) sont encore en ligne sur votre jardin ou possèdent des métadonnées de publication obsolètes, mais ne sont plus publiques localement :`,
+      text: `The following ${this.items.length} note(s) are still online in your garden or carry stale publishing metadata, but are no longer public locally:`,
       cls: "stnd-modal-detail",
     });
 
@@ -487,9 +487,9 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
       nameSpan.style.cssText =
         "font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 68%;";
 
-      let label = "Brouillon local";
-      if (item.reason === "orphan") label = "Orpheline en ligne";
-      else if (item.reason === "stale_local") label = "Lien local résiduel";
+      let label = "Local draft";
+      if (item.reason === "orphan") label = "Orphaned online";
+      else if (item.reason === "stale_local") label = "Stale local link";
 
       const reasonSpan = li.createEl("span", {
         text: label,
@@ -512,13 +512,13 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
 
     this.progressText = this.progressContainer.createEl("div", {
       cls: "stnd-modal-detail",
-      text: "Traitement...",
+      text: "Processing...",
     });
     this.progressText.style.cssText = "margin-top: 6px; font-size: var(--font-ui-smaller);";
 
     const btns = contentEl.createEl("div", { cls: "stnd-modal-btns" });
     this.cancelBtn = btns.createEl("button", {
-      text: "Annuler",
+      text: "Cancel",
       cls: "stnd-modal-btn-cancel",
     });
     this.cancelBtn.addEventListener("click", () => {
@@ -526,7 +526,7 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
     });
 
     this.confirmBtn = btns.createEl("button", {
-      text: `Supprimer du jardin (${this.items.length})`,
+      text: `Remove from garden (${this.items.length})`,
       cls: "mod-warning",
     });
     this.confirmBtn.addEventListener("click", async () => {
@@ -565,15 +565,15 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
     }
 
     this.progressText.setText(
-      `Terminé : ${deleted} note(s) nettoyée(s)${failed > 0 ? `, ${failed} en échec` : ""}.`
+      `Done: ${deleted} note(s) cleaned up${failed > 0 ? `, ${failed} failed` : ""}.`
     );
     this.confirmBtn.style.display = "none";
     this.cancelBtn.disabled = false;
-    this.cancelBtn.setText("Fermer");
+    this.cancelBtn.setText("Close");
     this.cancelBtn.removeClass("stnd-modal-btn-cancel");
     this.cancelBtn.addClass("mod-cta");
     new obsidian_1.Notice(
-      `Standard : ${deleted} note(s) dépubliée(s) du jardin.`
+      `Standard: ${deleted} note(s) unpublished from your garden.`
     );
   }
 
@@ -582,6 +582,10 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
     this.contentEl.empty();
   }
 }
+
+// Called when the server says the key is no longer valid (401). Set by the
+// Garden feature, which owns the reconnect prompt.
+let authFailureHandler = null;
 
 async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
   let attempt = 0;
@@ -626,6 +630,7 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
       }
+      if (res.status === 401 && authFailureHandler) authFailureHandler();
       return {
         ...res,
         ok: res.status >= 200 && res.status < 300,
@@ -686,7 +691,24 @@ class GardenFeature {
     return all.filter((file) => !this.isPathExcluded(file.path));
   }
 
+  // The server answered 401: the key was removed from the account, or the
+  // account itself is gone. Say so once in a while, with the way out, instead
+  // of letting every publish fail with a generic error.
+  handleAuthFailure() {
+    if (!this.plugin.settings.apiKey) return;
+    const now = Date.now();
+    if (this._authPromptAt && now - this._authPromptAt < 10 * 60 * 1000) return;
+    this._authPromptAt = now;
+    new StndConfirmModal(
+      this.app,
+      "Standard Garden no longer recognizes this connection.\n\nIt may have been removed from your account. Reconnect to keep publishing.",
+      "Reconnect",
+      () => this.startConnect(),
+    ).open();
+  }
+
   async load() {
+    authFailureHandler = () => this.handleAuthFailure();
     if (this.plugin.settings.apiKey) {
       setTimeout(() => this.refreshRemoteOnly(true), 8000);
     }
@@ -699,6 +721,7 @@ class GardenFeature {
   }
 
   unload() {
+    authFailureHandler = null;
     if (this.syncIntervalTimer) {
       clearInterval(this.syncIntervalTimer);
       this.syncIntervalTimer = null;
@@ -918,8 +941,10 @@ class GardenFeature {
     this.plugin.panel?.render?.();
     this.plugin.publishStatus?.refreshAll?.();
     const who = this.plugin.settings.apiUsername || username;
+    const next = this.plugin.settings.firstPublishDone ? "" : " Open a note and press Publish to plant your first one.";
     new obsidian_1.Notice(
-      who ? `Garden: connected as @${who} ✓` : "Garden: connected ✓",
+      (who ? `Garden: connected as @${who} ✓` : "Garden: connected ✓") + next,
+      8000,
     );
   }
 
@@ -1082,7 +1107,7 @@ class GardenFeature {
       }
 
       if (syncTasks.length === 0) {
-        new obsidian_1.Notice("Standard : Aucune note à synchroniser.");
+        new obsidian_1.Notice("Standard: No notes to sync.");
         return;
       }
 
@@ -1288,7 +1313,7 @@ class GardenFeature {
                 modal.recordResult("unpublished", file.basename);
               } else {
                 failed++;
-                modal.recordResult("failed", file.basename, this.lastError || "Erreur de dépublication");
+                modal.recordResult("failed", file.basename, this.lastError || "Unpublish error");
               }
             }
           } 
@@ -1357,11 +1382,11 @@ class GardenFeature {
 
       this.refreshRemoteOnly(true);
       new obsidian_1.Notice(
-        `Garden : Synchronisation ${modal.cancelled ? "annulée" : "terminée"}. ${synced + pulled + created + unpublished} action(s), ${skipped} identique(s), ${failed} en échec.`,
+        `Garden: sync ${modal.cancelled ? "cancelled" : "finished"}. ${synced + pulled + created + unpublished} action(s), ${skipped} unchanged, ${failed} failed.`,
       );
     } catch (err) {
       console.error("Standard : Erreur globale lors de la synchronisation en lot :", err);
-      new obsidian_1.Notice("Standard : Erreur lors de la synchronisation.");
+      new obsidian_1.Notice("Standard: Sync failed.");
     }
   }
 
@@ -1426,8 +1451,8 @@ class GardenFeature {
       if (remoteOnly.length === 0) {
         new obsidian_1.Notice(
           remoteMatchedLocal.length > 0
-            ? `Garden : Toutes les ${remoteMatchedLocal.length} notes sont déjà dans le coffre (métadonnées synchronisées).`
-            : "Garden : Aucune nouvelle note en ligne à télécharger."
+            ? `Garden: all ${remoteMatchedLocal.length} notes are already in your vault (metadata synced).`
+            : "Garden: no new online notes to download."
         );
         this.refreshRemoteOnly(true);
         return;
@@ -1486,7 +1511,7 @@ class GardenFeature {
       return;
     }
     if (this.isPathExcluded(activeFile.path)) {
-      new obsidian_1.Notice(`Standard : Cette note se trouve dans un dossier exclu de la publication (${activeFile.path}).`);
+      new obsidian_1.Notice(`Standard: this note is in a folder excluded from publishing (${activeFile.path}).`);
       return;
     }
     const result = await this.publishWithCheck(activeFile);
@@ -1533,7 +1558,7 @@ class GardenFeature {
       return;
     }
 
-    new obsidian_1.Notice("Standard : Recherche des notes à dépublier...");
+    new obsidian_1.Notice("Standard: Looking for notes to unpublish...");
 
     try {
       const res = await fetchWithRetry(`${this.plugin.settings.apiUrl}/publish`, {
@@ -1546,7 +1571,7 @@ class GardenFeature {
         const data = await res.json();
         remoteNotes = data.notes || [];
       } else {
-        new obsidian_1.Notice("Standard : Impossible de récupérer les notes distantes.");
+        new obsidian_1.Notice("Standard: Could not fetch the online notes.");
         return;
       }
 
@@ -1606,7 +1631,7 @@ class GardenFeature {
 
       if (itemsToPrune.length === 0) {
         new obsidian_1.Notice(
-          "Standard : Aucune note dépubliée à nettoyer. Le jardin est parfaitement synchronisé !"
+          "Standard: No unpublished notes to clean up. Your garden is perfectly in sync!"
         );
         return;
       }
@@ -1614,7 +1639,7 @@ class GardenFeature {
       new PruneUnpublishedModal(this.app, this, itemsToPrune).open();
     } catch (error) {
       console.error("Standard : Erreur lors du nettoyage :", error);
-      new obsidian_1.Notice("Standard : Erreur lors de la recherche des notes.");
+      new obsidian_1.Notice("Standard: Could not search the notes.");
     }
   }
 
@@ -1684,25 +1709,25 @@ class GardenFeature {
   copyLiveUrl(file) {
     const activeFile = file || this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new obsidian_1.Notice("Standard : Aucune note active.");
+      new obsidian_1.Notice("Standard: No active note.");
       return;
     }
     const url = this.getLiveUrl(activeFile);
     navigator.clipboard.writeText(url);
-    new obsidian_1.Notice("Standard : URL publique copiée dans le presse-papiers.");
+    new obsidian_1.Notice("Standard: Public URL copied to the clipboard.");
   }
 
   copyShortUrl(file) {
     const activeFile = file || this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new obsidian_1.Notice("Standard : Aucune note active.");
+      new obsidian_1.Notice("Standard: No active note.");
       return;
     }
     const fm = this.app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
     const short = fm["garden-short"] ?? fm.garden_short ?? fm.short_url;
     if (short) {
       navigator.clipboard.writeText(String(short).trim());
-      new obsidian_1.Notice("Standard : URL courte copiée dans le presse-papiers.");
+      new obsidian_1.Notice("Standard: Short URL copied to the clipboard.");
     } else {
       this.copyLiveUrl(activeFile);
     }
@@ -1711,7 +1736,7 @@ class GardenFeature {
   shareCurrentNote(file) {
     const activeFile = file || this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new obsidian_1.Notice("Standard : Aucune note active.");
+      new obsidian_1.Notice("Standard: No active note.");
       return;
     }
     const liveUrl = this.getLiveUrl(activeFile);
@@ -1721,19 +1746,19 @@ class GardenFeature {
   async setNoteVisibility(visibility, file) {
     const activeFile = file || this.app.workspace.getActiveFile();
     if (!activeFile || activeFile.extension !== "md") {
-      new obsidian_1.Notice("Standard : Ouvrez une note Markdown.");
+      new obsidian_1.Notice("Standard: Open a Markdown note.");
       return;
     }
     await this.app.fileManager.processFrontMatter(activeFile, (fm) => {
       fm.visibility = visibility;
     });
-    new obsidian_1.Notice(`Standard : Visibilité définie sur "${visibility}".`);
+    new obsidian_1.Notice(`Standard: Visibility set to "${visibility}".`);
   }
 
   async cycleNoteVisibility(file) {
     const activeFile = file || this.app.workspace.getActiveFile();
     if (!activeFile || activeFile.extension !== "md") {
-      new obsidian_1.Notice("Standard : Ouvrez une note Markdown.");
+      new obsidian_1.Notice("Standard: Open a Markdown note.");
       return;
     }
     const cache = this.app.metadataCache.getFileCache(activeFile);
@@ -2039,7 +2064,7 @@ class GardenFeature {
             stats.imagesChecked = (stats.imagesChecked || 0) + 1;
             stats.imagesFailed = (stats.imagesFailed || 0) + 1;
             if (stats.failedImages) {
-              stats.failedImages.push({ name: vaultFile.name, detail: "Réponse serveur sans URL" });
+              stats.failedImages.push({ name: vaultFile.name, detail: "Server response without a URL" });
             }
           }
           return null;
@@ -2357,6 +2382,20 @@ class GardenFeature {
       return ok;
     };
 
+    // The very first publish asks once, plainly, and then shows the result.
+    const settings = this.plugin.settings;
+    const isFirst = !settings.firstPublishDone;
+    const run = async () => {
+      const ok = await doPublish();
+      if (ok && isFirst) {
+        settings.firstPublishDone = true;
+        await this.plugin.saveSettings();
+        // Let the frontmatter stamp land, then open what was just planted.
+        setTimeout(() => this.viewLiveVersion(file), 800);
+      }
+      return ok;
+    };
+
     // Guardrails — gather any reason this note might surprise you, then ask
     // once before planting it anyway.
     const warnings = [];
@@ -2373,14 +2412,27 @@ class GardenFeature {
           this.app,
           `🌱 Plant "${file.basename}" in the garden anyway?\n\n${warnings.join("\n")}`,
           "Plant it",
-          async () => resolve(await doPublish()),
+          async () => resolve(await run()),
           () => resolve(null),
         ).open();
       });
     }
 
-    // No key set, or already true → publish (and stamp key if missing)
-    return await doPublish();
+    if (isFirst) {
+      const where = settings.apiUsername ? `standard.garden/@${settings.apiUsername}` : "your garden";
+      return new Promise((resolve) => {
+        new StndConfirmModal(
+          this.app,
+          `🌱 Publish "${file.basename}" to your garden?\n\nIt will be visible to anyone on the web at ${where}. You can limit a note to people with its link (unlisted) or to yourself (private) with its visibility, and take it offline at any time.`,
+          "Publish",
+          async () => resolve(await run()),
+          () => resolve(null),
+        ).open();
+      });
+    }
+
+    // Already planted before, or already true → publish (and stamp key if missing)
+    return await run();
   }
 
   // ── Delete online version ─────────────────────────────────────────────────
@@ -2601,4 +2653,4 @@ class GardenFeature {
   }
 }
 
-module.exports = { GardenFeature };
+module.exports = { GardenFeature, fetchWithRetry };

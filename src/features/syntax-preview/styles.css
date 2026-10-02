@@ -33,17 +33,17 @@
   color: var(--text-muted);
 }
 
-.stnd-suggest-badge.badge-flux {
+.stnd-suggest-badge.badge-feeds {
   background: rgba(99, 102, 241, 0.15);
   color: var(--interactive-accent, #6366f1);
 }
 
-.stnd-suggest-badge.badge-bloc {
+.stnd-suggest-badge.badge-blocks {
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
 }
 
-.stnd-suggest-badge.badge-mise-en-page {
+.stnd-suggest-badge.badge-layout {
   background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
 }
@@ -58,7 +58,7 @@
   color: #ec4899;
 }
 
-.stnd-suggest-badge.badge-alerte {
+.stnd-suggest-badge.badge-alerts {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }

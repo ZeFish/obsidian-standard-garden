@@ -2244,14 +2244,14 @@ class StandardGardenView extends obsidian_1.ItemView {
       banner.style.margin = "0 0 var(--size-4-3) 0";
 
       const bannerText = banner.createEl("div", { cls: "stnd-audit-banner-text" });
-      bannerText.createEl("strong", { text: "Rendu masqué par sécurité" });
+      bannerText.createEl("strong", { text: "Rendering hidden for safety" });
       bannerText.createEl("span", {
-        text: `L'affichage des ${items.length} cartes de liens brisés est désactivé pour éviter de ralentir Obsidian. Ces liens pointent généralement vers des notes futures prévues.`
+        text: `Showing the ${items.length} broken-link cards is turned off to keep Obsidian fast. These links usually point to notes you plan to write.`
       });
 
       const showBtn = banner.createEl("button", {
         cls: "stnd-panel-btn stnd-audit-banner-btn",
-        text: "Afficher quand même"
+        text: "Show anyway"
       });
       showBtn.style.background = "var(--interactive-accent)";
       showBtn.style.color = "var(--text-on-accent)";

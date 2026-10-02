@@ -37,7 +37,8 @@ const DEFAULT_SETTINGS = {
   autoSync: false, // Automatic background synchronization (disabled by default to protect local drafts)
   autoSyncStartup: false,
   syncDirection: "1way", // Push: the vault wins. "2way" lets the newer side win (online edits are pulled).
-  excludedFolders: "Utopie",
+  excludedFolders: "", // folders the Garden never looks at, comma-separated. Empty for a new install: a default of someone's own folder name silently skipped their notes.
+  firstPublishDone: false, // the first publish asks once and then shows the result; later ones just publish
   panelOpenedOnInstall: false,
   mycelium: {
     enableGhostLinks: false,

@@ -300,7 +300,7 @@ class StandardSettingTab extends PluginSettingTab {
     const keyName = isMac ? "⌥ Option" : "Alt";
     const hint = containerEl.createDiv({ cls: "stnd-alt-hint" });
     hint.createEl("span", {
-      text: `Maintenez la touche ${keyName} pour révéler les outils avancés de maintenance.`,
+      text: `Hold ${keyName} to reveal the advanced maintenance tools.`,
     });
   }
 }
