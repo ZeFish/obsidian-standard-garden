@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.41 — 2026-10-02
+
+### Fixed
+
+- Keep the device id only in Obsidian's own device storage
+
 ## 0.1.40 — 2026-10-02
 
 ### Added

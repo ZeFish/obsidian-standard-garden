@@ -841,22 +841,21 @@ class GardenFeature {
     new obsidian_1.Notice("Garden: finish connecting in your browser, then come back here.");
   }
 
-  // An id for THIS device, kept in Obsidian's per-device local storage rather
-  // than in the plugin's data.json — that file is shared by Obsidian Sync or
-  // iCloud, which would give the phone and the computer the same id.
+  // An id for THIS device, kept with Obsidian's per-device storage rather than in
+  // the plugin's data.json — that file is shared by Obsidian Sync or iCloud, which
+  // would give the phone and the computer the same id.
   getDeviceId() {
     const KEY = "standard-garden-device-id";
     const valid = (v) => typeof v === "string" && /^[A-Za-z0-9_-]{6,32}$/.test(v);
     const app = this.plugin.app;
     let id = null;
     try {
-      id = app.loadLocalStorage ? app.loadLocalStorage(KEY) : window.localStorage.getItem(KEY);
+      id = app.loadLocalStorage(KEY);
     } catch (_) {}
     if (!valid(id)) {
       id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
       try {
-        if (app.saveLocalStorage) app.saveLocalStorage(KEY, id);
-        else window.localStorage.setItem(KEY, id);
+        app.saveLocalStorage(KEY, id);
       } catch (_) {}
     }
     return id;
