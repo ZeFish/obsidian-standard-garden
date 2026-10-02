@@ -35,20 +35,21 @@ Obsidian is a local-first application, and Standard Garden treats your Markdown 
 
 ## 📦 Installation
 
-> Standard Garden is being reviewed for Obsidian's Community Plugins list. Until it appears there, install it with BRAT or by hand.
+### From the Obsidian Community Plugins
+1. Open Obsidian **Settings** → **Community plugins**.
+2. Search for **Standard Garden**.
+3. Click **Install**, then **Enable**.
 
-### With BRAT (updates itself)
+👉 **Or jump straight into Obsidian: [Install Standard Garden](obsidian://show-plugin?id=standard-garden)**
+
+### With BRAT (to follow releases as they come out)
 1. Install the **BRAT** plugin from Obsidian's Community Plugins.
 2. Open BRAT's settings, choose **Add beta plugin**, and enter `ZeFish/obsidian-standard-garden`.
-3. Enable **Standard Garden** in **Settings** → **Community plugins**.
 
 ### Manual installation
 1. Download the latest release (`main.js`, `manifest.json`, `styles.css`) from the [Releases](https://github.com/ZeFish/obsidian-standard-garden/releases) page.
 2. Place them inside your vault at `.obsidian/plugins/standard-garden/`.
 3. Reload Obsidian and enable the plugin in **Settings** → **Community plugins**.
-
-### From the Obsidian Community Plugins (once listed)
-Open **Settings** → **Community plugins**, search for **Standard Garden**, then **Install** and **Enable**.
 
 ### Then
 Open the Garden panel (the flower icon in the left ribbon), press **Connect to Garden**, sign in in your browser, and you are back in Obsidian, connected.

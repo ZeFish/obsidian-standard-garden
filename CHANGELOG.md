@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.48 — 2026-10-02
+
+### Fixed
+
+- The Obsidian plugin is listed, so the links open it in Obsidian again
+
 ## 0.1.46 — 2026-10-02
 
 ### Fixed
