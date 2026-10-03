@@ -1,9 +1,46 @@
 "use strict";
 
-const { PluginSettingTab, Setting } = require("obsidian");
+const { PluginSettingTab, Setting, AbstractInputSuggest, TFolder } = require("obsidian");
+const { parseFolderList } = require("../../utils/folders.js");
 const { descWithLinks, DOCS_URLS } = require("../../constants.js");
 const { openDoc } = require("../../utils/docs.js");
 const { setIcon } = require("obsidian");
+
+// Folder picker for the comma-separated "Ignored folders" field: suggests the
+// vault's folders for the entry being typed, skipping ones already listed.
+class FolderListSuggest extends AbstractInputSuggest {
+  constructor(app, inputEl, onPick) {
+    super(app, inputEl);
+    this.inputEl = inputEl;
+    this.onPick = onPick;
+  }
+
+  getSuggestions(value) {
+    const parts = value.split(",");
+    const typing = parts[parts.length - 1].trim().toLowerCase();
+    const taken = new Set(parseFolderList(parts.slice(0, -1).join(",")).map((f) => f.toLowerCase()));
+    return this.app.vault
+      .getAllLoadedFiles()
+      .filter((f) => f instanceof TFolder && f.path !== "/" && !taken.has(f.path.toLowerCase()))
+      .map((f) => f.path)
+      .filter((p) => p.toLowerCase().includes(typing))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 50);
+  }
+
+  renderSuggestion(path, el) {
+    el.setText(path);
+  }
+
+  selectSuggestion(path) {
+    const parts = this.inputEl.value.split(",");
+    parts[parts.length - 1] = path;
+    const value = parts.map((p) => p.trim()).filter(Boolean).join(", ");
+    this.inputEl.value = value;
+    this.onPick(value);
+    this.close();
+  }
+}
 
 class GardenSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
@@ -163,15 +200,17 @@ class GardenSettingTab extends PluginSettingTab {
           [{ text: "Configuration guide →", href: DOCS_URLS.plugin }]
         )
       )
-      .addText((text) =>
+      .addText((text) => {
+        const save = async (value) => {
+          this.plugin.settings.excludedFolders = value.trim();
+          await this.plugin.saveSettings();
+        };
         text
-          .setPlaceholder("Utopie, Archive")
+          .setPlaceholder("Click to pick a folder")
           .setValue(this.plugin.settings.excludedFolders || "")
-          .onChange(async (value) => {
-            this.plugin.settings.excludedFolders = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
+          .onChange(save);
+        new FolderListSuggest(this.app, text.inputEl, save);
+      });
   }
 }
 

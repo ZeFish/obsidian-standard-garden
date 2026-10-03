@@ -112,6 +112,11 @@ class AccountSettingTab {
         throw: false,
       })
         .then((res) => {
+          if (res.status === 401) {
+            const e = new Error("expired");
+            e.expired = true;
+            throw e;
+          }
           if (res.status < 200 || res.status >= 300) throw new Error();
           return res.json;
         })
@@ -120,11 +125,20 @@ class AccountSettingTab {
           statsContainer.empty();
           this._renderStatsValues(statsContainer, data, localCount);
         })
-        .catch(() => {
+        .catch((err) => {
           statsContainer.empty();
+          if (err && err.expired) {
+            statsContainer.createEl("span", {
+              cls: "stnd-account-stats-loading",
+              text: "Standard Garden no longer recognizes this connection. ",
+            });
+            const re = statsContainer.createEl("button", { text: "Reconnect" });
+            re.onclick = () => this.plugin.garden?.startConnect();
+            return;
+          }
           statsContainer.createEl("span", {
             cls: "stnd-account-stats-loading",
-            text: "Failed to load stats.",
+            text: "Could not load stats. Check your connection.",
           });
         });
     }
