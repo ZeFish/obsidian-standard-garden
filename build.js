@@ -251,8 +251,26 @@ esbuild
     
     // Extract text-box-trim rules (mostly from @stnd/styles) and wrap them in .stnd-text-trim
     const trimRuleRegex = /[^}]+?\{[^{}]*text-box-trim[^{}]+\}/g;
-    let trimRuleMatch = scssSource.match(trimRuleRegex);
-    if (trimRuleMatch) {
+    // @stnd/styles already wraps its text-box-trim rules in an @supports block.
+    // Take those blocks out whole (balanced braces) first: the regex below only
+    // knows bare rules, and run on an @supports block it ate the header and the
+    // first rule and left a stray "}" that closed the body.stnd-adapter wrapper
+    // early, so every token after that point lost its scope.
+    const supportsTrim = /@supports\s*\(\s*text-box-trim[^)]*\)\s*\{/g;
+    const trimBlocks = [];
+    for (let m; (m = supportsTrim.exec(scssSource)); ) {
+      let depth = 1, i = m.index + m[0].length;
+      for (; i < scssSource.length && depth > 0; i++) {
+        if (scssSource[i] === "{") depth++;
+        else if (scssSource[i] === "}") depth--;
+      }
+      trimBlocks.push(scssSource.slice(m.index + m[0].length, i - 1));
+      scssSource = scssSource.slice(0, m.index) + scssSource.slice(i);
+      supportsTrim.lastIndex = m.index;
+    }
+    let trimRuleMatch = scssSource.match(trimRuleRegex) || [];
+    if (trimBlocks.length) trimRuleMatch = trimRuleMatch.concat(trimBlocks);
+    if (trimRuleMatch.length) {
         scssSource = scssSource.replace(trimRuleRegex, "");
         const cleanedTrimRules = trimRuleMatch.map(rule => rule.replace(/\b(?:td|th),/g, ''));
         scssSource += `\n\n@supports (text-box-trim: trim-both) {\n  &.stnd-text-trim :is(.markdown-preview-view, .markdown-rendered) {\n    ${cleanedTrimRules.join('\n    ')}\n  }\n}\n`;
@@ -302,6 +320,12 @@ esbuild
       console.error("SASS compilation of the native UI styles failed:", e);
       process.exit(1);
     }
+
+    // Compressed sass output starts with a U+FEFF byte-order mark as soon as it
+    // holds a non-ASCII character. Obsidian injects styles.css as text, so the
+    // mark glues itself to the first selector and the whole rule is dropped:
+    // every token the design system sets under body.stnd-adapter vanished.
+    minifiedCss = minifiedCss.replace(/\uFEFF/g, "");
 
     fs.writeFileSync(path.join(distDir, "styles.css"), minifiedCss);
     console.log(
