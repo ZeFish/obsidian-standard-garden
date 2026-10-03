@@ -2396,7 +2396,7 @@ class GardenFeature {
     }
     if (this.plugin.settings.apiUsername) return true;
     new obsidian_1.Notice(
-      "Standard: finish setting up your account on standard.garden (choose a username), then try again.",
+      "Standard: your account has no username yet. Open standard.garden, sign in and choose one (it becomes your address), then publish again.",
       10000,
     );
     return false;
