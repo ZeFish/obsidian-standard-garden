@@ -108,7 +108,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     return "Garden";
   }
   getIcon() {
-    return "flower";
+    return "stnd-garden";
   }
 
   async onOpen() {
@@ -400,7 +400,7 @@ class StandardGardenView extends obsidian_1.ItemView {
   _renderConnectCard(container) {
     const card = container.createEl("div", { cls: "stnd-panel-connect" });
     const icon = card.createEl("div", { cls: "stnd-panel-connect-icon" });
-    obsidian_1.setIcon(icon, "sprout");
+    obsidian_1.setIcon(icon, "stnd-garden");
     card.createEl("h3", { text: "Connect to Garden", cls: "stnd-panel-connect-title" });
     card.createEl("p", {
       text: "Publish your notes to your own garden on standard.garden, straight from Obsidian.",

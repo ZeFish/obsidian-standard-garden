@@ -52,7 +52,7 @@ Obsidian is a local-first application, and Standard Garden treats your Markdown 
 3. Reload Obsidian and enable the plugin in **Settings** → **Community plugins**.
 
 ### Then
-Open the Garden panel (the flower icon in the left ribbon), press **Connect to Garden**, sign in in your browser, and you are back in Obsidian, connected.
+Open the Garden panel (the four-square Garden mark in the left ribbon), press **Connect to Garden**, sign in in your browser, and you are back in Obsidian, connected.
 
 ## 📖 Usage & Frontmatter
 
