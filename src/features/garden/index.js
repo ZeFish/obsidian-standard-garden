@@ -36,7 +36,32 @@ const SYNC_MANAGED_KEYS = new Set([
   "published",
   "url_public",
   "modified",
+  // The service keeps a hash and stores `password: __protected__` in its copy:
+  // the word itself is only ever in the author's vault, so the two never match.
+  "password",
 ]);
+
+// What the service writes in place of a password (see password-gate on the site).
+const PASSWORD_SENTINEL = "__protected__";
+
+// A note pulled from the garden carries `password: __protected__`. When the
+// local copy has the real word, keep it: pulling must never erase the one place
+// the password lives.
+function restorePassword(localContent, remoteContent) {
+  const FM = /^(\uFEFF?---\r?\n)([\s\S]*?)(\r?\n---)/;
+  const KEY = /^password[ \t]*:[ \t]*(.*?)[ \t]*$/m;
+  const l = String(localContent || "").match(FM);
+  const r = String(remoteContent || "").match(FM);
+  if (!l || !r) return remoteContent;
+  const lp = l[2].match(KEY);
+  const rp = r[2].match(KEY);
+  if (!lp || !rp) return remoteContent;
+  const bare = (v) => v.trim().replace(/^["']|["']$/g, "");
+  if (bare(rp[1]) !== PASSWORD_SENTINEL) return remoteContent;
+  if (!bare(lp[1]) || bare(lp[1]) === PASSWORD_SENTINEL) return remoteContent;
+  const front = r[2].replace(rp[0], () => lp[0]);
+  return remoteContent.replace(r[2], () => front);
+}
 
 function canonicalForSync(content, slug = null) {
   let s = String(content || "").replace(/\r\n/g, "\n");
@@ -1269,7 +1294,7 @@ class GardenFeature {
 
                   if (remoteMtime > localMtime + 5000) {
                     // Pull! Update local content
-                    await this.app.vault.modify(file, remoteNote.content);
+                    await this.app.vault.modify(file, restorePassword(await this.app.vault.read(file), remoteNote.content));
                     pulled++;
                     modal.recordResult("pulled", file.basename);
                   } else {
@@ -1305,7 +1330,7 @@ class GardenFeature {
 
             if (remoteMayWin) {
               // Remote edit wins: Pull remote change and mark publish: true
-              await this.app.vault.modify(file, remoteNote.content);
+              await this.app.vault.modify(file, restorePassword(await this.app.vault.read(file), remoteNote.content));
               await this.app.fileManager.processFrontMatter(file, (fm) => {
                 // Do not overwrite a date: `publish: 2026-08-07` is valid intent
                 // and the garden sort key.
