@@ -101,10 +101,10 @@ class AccountSettingTab {
         })
         .catch(() => {});
     } else {
-      statsContainer.createEl("span", {
-        cls: "stnd-account-stats-loading",
-        text: "Loading garden stats...",
-      });
+      const loading = statsContainer.createEl("span", { cls: "stnd-account-stats-loading" });
+      const spin = loading.createEl("span", { cls: "stnd-audit-spinner" });
+      setIcon(spin, "stnd-garden-loading");
+      loading.createSpan({ text: " Loading garden stats…" });
 
       requestUrl({
         url: `${this.plugin.settings.apiUrl}/me`,

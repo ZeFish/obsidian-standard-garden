@@ -1383,7 +1383,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     if (this.isAuditing) {
       const loadingEl = auditWrap.createEl("div", { cls: "stnd-audit-loading" });
       const spin = loadingEl.createEl("div", { cls: "stnd-audit-spinner" });
-      obsidian_1.setIcon(spin, "loader");
+      obsidian_1.setIcon(spin, "stnd-garden-loading");
       loadingEl.createEl("p", { text: "Scanning vault...", cls: "stnd-audit-loading-text" });
       return;
     }
@@ -1882,7 +1882,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     if (this.isLoadingLinks) {
       const loadingEl = body.createEl("div", { cls: "stnd-audit-loading" });
       const spin = loadingEl.createEl("div", { cls: "stnd-audit-spinner" });
-      obsidian_1.setIcon(spin, "loader");
+      obsidian_1.setIcon(spin, "stnd-garden-loading");
       loadingEl.createEl("p", { text: "Scanning roots & mentions...", cls: "stnd-audit-loading-text" });
       return;
     }

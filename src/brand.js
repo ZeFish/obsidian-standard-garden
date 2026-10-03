@@ -39,8 +39,21 @@ const ICONS = {
   "stnd-garden-unpublished": [1, 0, 0, 1], // switched off, still live online
 };
 
+// The loader: the same four squares, planted one after the other clockwise
+// (the animation lives in panel/styles.css, on .stnd-loader-sq).
+function loaderIcon() {
+  const body = [0, 1, 3, 2] // TL, TR, BR, BL
+    .map((i) => {
+      const [x, y] = SQUARES[i];
+      return `<rect class="stnd-loader-sq" x="${x}" y="${y}" width="8" height="8" fill="currentColor" stroke="none"/>`;
+    })
+    .join("");
+  return `<g transform="scale(${100 / 24})">${body}</g>`;
+}
+
 function registerBrandIcons(addIcon) {
   for (const [id, pattern] of Object.entries(ICONS)) addIcon(id, icon(pattern));
+  addIcon("stnd-garden-loading", loaderIcon());
 }
 
 module.exports = { registerBrandIcons, ICONS };
