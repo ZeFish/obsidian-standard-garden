@@ -19,7 +19,7 @@ class StatusLegendModal extends obsidian_1.Modal {
 
     contentEl.createEl("p", {
       cls: "stnd-status-legend-intro",
-      text: "The sprout in a note's title bar is the Garden. Its color tells you where that note stands.",
+      text: "The four squares in a note's title bar are the Garden. Filled squares are planted, outlined ones are not yet; the color says the same.",
     });
 
     const list = contentEl.createDiv({ cls: "stnd-status-legend-list" });

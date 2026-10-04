@@ -156,7 +156,7 @@ class AccountSettingTab {
       "background:var(--background-secondary);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;" +
       "justify-content:center;margin:0 auto 14px;background:var(--background-secondary);" +
       "color:var(--interactive-accent);";
-    setIcon(badge, "leaf");
+    setIcon(badge, "stnd-garden");
 
     const heading = card.createEl("div", {
       text: "Connect your vault to the web",
@@ -165,7 +165,7 @@ class AccountSettingTab {
       "font-size:var(--font-ui-large);font-weight:600;margin-bottom:8px;";
 
     const desc = card.createEl("div", {
-      text: "Publish notes to your digital garden with a single status: public frontmatter property.",
+      text: "Publish your notes to your own garden on standard.garden, straight from Obsidian.",
       cls: "setting-item-description",
     });
     desc.style.cssText = "max-width:380px;margin:0 auto 20px;line-height:1.5;";
@@ -175,6 +175,15 @@ class AccountSettingTab {
     });
     btn.classList.add("mod-cta");
     btn.onclick = () => this.plugin.garden.startConnect();
+
+    const code = card.createEl("div");
+    code.style.cssText = "margin-top:14px;";
+    const link = code.createEl("a", { text: "Signed in on the web already? Paste a connection code" });
+    link.style.cssText = "font-size:var(--font-ui-small);cursor:pointer;";
+    link.onclick = (e) => {
+      e.preventDefault();
+      this.plugin.garden.promptConnectCode();
+    };
   }
 
   _renderStatsValues(container, data, localCount) {

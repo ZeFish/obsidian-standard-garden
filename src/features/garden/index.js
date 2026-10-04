@@ -113,6 +113,7 @@ function slugify(name) {
 
 // How long a started connection stays valid (sign-in by e-mail code can take a moment).
 const CONNECT_WINDOW_MS = 15 * 60 * 1000;
+const CONNECT_STORAGE_KEY = "standard-garden-connect";
 
 // ─── Local Note Index ─────────────────────────────────────────────────────────
 // Multi-tier index to robustly reconcile local vault notes with remote garden notes.
@@ -905,6 +906,14 @@ class GardenFeature {
     // A connection may only be completed by the browser page we opened, soon
     // after opening it. Without this window any link could hand us a key.
     this._connectExpires = Date.now() + CONNECT_WINDOW_MS;
+    // Also kept on this device: on a phone Obsidian is often restarted while the
+    // browser is open, and the nonce in memory would be gone when the key comes back.
+    try {
+      this.plugin.app.saveLocalStorage(
+        CONNECT_STORAGE_KEY,
+        JSON.stringify({ state, expires: this._connectExpires }),
+      );
+    } catch (_) {}
     // `device` makes the key this device's own: the phone and the computer can
     // both be connected, and connecting one never signs the other out.
     const url = `${base}/connect/obsidian?state=${encodeURIComponent(state)}&device=${encodeURIComponent(this.getDeviceId())}`;
@@ -963,6 +972,16 @@ class GardenFeature {
     // ourselves, it is still fresh, and it echoes our one-time nonce. Without
     // all three, anyone could swap in their own key and have this vault publish
     // into THEIR garden.
+    // The nonce in memory, or — after a restart — the one kept on this device.
+    if (!this._connectState) {
+      try {
+        const saved = JSON.parse(this.plugin.app.loadLocalStorage(CONNECT_STORAGE_KEY) || "null");
+        if (saved && saved.state && saved.expires) {
+          this._connectState = saved.state;
+          this._connectExpires = saved.expires;
+        }
+      } catch (_) {}
+    }
     const pending = this._connectState;
     const fresh = this._connectExpires && Date.now() < this._connectExpires;
     if (!pending || !fresh) {
@@ -976,6 +995,9 @@ class GardenFeature {
     }
     this._connectState = null;
     this._connectExpires = 0;
+    try {
+      this.plugin.app.saveLocalStorage(CONNECT_STORAGE_KEY, "");
+    } catch (_) {}
     this.plugin.settings.apiKey = key;
     this.plugin.settings.apiUsername = username;
     await this.plugin.saveSettings();
@@ -994,6 +1016,23 @@ class GardenFeature {
       (who ? `Garden: connected as @${who} ✓` : "Garden: connected ✓") + next,
       8000,
     );
+  }
+
+  // The connection code the page offers when the deep link did not get through:
+  // base64url of the same parameters the link carries.
+  promptConnectCode() {
+    const { ConnectCodeModal } = require("./modals/connect-code-modal.js");
+    new ConnectCodeModal(this.plugin.app, (code) => {
+      let params;
+      try {
+        const json = atob(code.replace(/-/g, "+").replace(/_/g, "/"));
+        params = JSON.parse(decodeURIComponent(escape(json)));
+      } catch (_) {
+        new obsidian_1.Notice("Garden: that code is not valid. Copy it again from the connection page.");
+        return;
+      }
+      this.handleConnectCallback(params);
+    }).open();
   }
 
   // True when the note is identical to its online copy AND nothing it embeds

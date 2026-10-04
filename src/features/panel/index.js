@@ -412,6 +412,11 @@ class StandardGardenView extends obsidian_1.ItemView {
       text: "A page opens in your browser. Sign in, press Authorize, and you come right back here.",
       cls: "stnd-panel-connect-hint",
     });
+    const code = card.createEl("a", { text: "Got a connection code? Paste it", cls: "stnd-panel-connect-guide" });
+    code.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.plugin.garden?.promptConnectCode();
+    });
     const guide = card.createEl("a", { text: "New to Garden? Read the guide", cls: "stnd-panel-connect-guide" });
     guide.addEventListener("click", (e) => {
       e.preventDefault();
