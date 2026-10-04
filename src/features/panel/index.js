@@ -320,9 +320,23 @@ class StandardGardenView extends obsidian_1.ItemView {
         });
         dlBtn.style.color = "var(--stnd-status-outdated)";
         dlBtn.addEventListener("click", async () => {
-          await garden.downloadNewOnlineNotes();
-          this.render();
+          // One click is enough: grey the chip out so nobody clicks again
+          // while the files are being written.
+          if (dlBtn.disabled) return;
+          dlBtn.disabled = true;
+          dlBtn.setText("↓ …");
+          dlBtn.addClass("is-busy");
+          try {
+            await garden.downloadNewOnlineNotes();
+          } finally {
+            this.render();
+          }
         });
+        if (garden?.isDownloading) {
+          dlBtn.disabled = true;
+          dlBtn.setText("↓ …");
+          dlBtn.addClass("is-busy");
+        }
       }
     }
 

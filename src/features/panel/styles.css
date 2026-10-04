@@ -95,6 +95,13 @@
   transition: color 120ms ease, background 120ms ease;
 }
 
+.stnd-panel-header-btn:disabled,
+.stnd-panel-header-btn.is-busy {
+  opacity: 0.5;
+  cursor: progress;
+  pointer-events: none;
+}
+
 .stnd-panel-header-btn:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);

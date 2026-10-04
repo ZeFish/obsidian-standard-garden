@@ -1068,7 +1068,22 @@ class GardenFeature {
     this._syncedAtTimer = setTimeout(() => this.plugin.saveSettings(), 1000);
   }
 
+  isSyncing = false;
+
   async syncAllPublished() {
+    if (this.isSyncing) {
+      new obsidian_1.Notice("Garden: a sync is already running. Please wait.");
+      return;
+    }
+    this.isSyncing = true;
+    try {
+      await this.runSyncAllPublished();
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  async runSyncAllPublished() {
     if (!this.checkApiKeyAndShowModal()) {
       return;
     }
@@ -1478,10 +1493,28 @@ class GardenFeature {
     }
   }
 
+  // True while a download runs. The vault is only looked at once, at the start:
+  // a second click before the first run has written its files sees "nothing
+  // here yet" and writes every note again ("Name (1)", "Name (2)"…).
+  isDownloading = false;
+
   async downloadNewOnlineNotes() {
     if (!this.checkApiKeyAndShowModal()) {
       return;
     }
+    if (this.isDownloading) {
+      new obsidian_1.Notice("Garden: a download is already running. Please wait.");
+      return;
+    }
+    this.isDownloading = true;
+    try {
+      await this.runDownloadNewOnlineNotes();
+    } finally {
+      this.isDownloading = false;
+    }
+  }
+
+  async runDownloadNewOnlineNotes() {
     const files = this.getPublishableFiles();
     const publishKey =
       (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
@@ -1547,7 +1580,10 @@ class GardenFeature {
       }
 
       let created = 0;
+      // Downloading hundreds of notes takes a while: say so, or it looks stuck.
+      const progress = new obsidian_1.Notice(`Garden: downloading ${remoteOnly.length} note(s)…`, 0);
       for (const remoteNote of remoteOnly) {
+        progress.setMessage(`Garden: downloading ${created + 1} of ${remoteOnly.length}…`);
         let safeTitle = (remoteNote.title || remoteNote.slug)
           .replace(/[\\\/:\*\?"<>\|]/g, "-")
           .trim();
@@ -1580,6 +1616,7 @@ class GardenFeature {
         });
         created++;
       }
+      progress.hide();
 
       new obsidian_1.Notice(`Garden: Downloaded ${created} new note(s) successfully!`);
       this.refreshRemoteOnly(true);

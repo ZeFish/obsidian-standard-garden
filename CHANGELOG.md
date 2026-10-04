@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.58 — 2026-10-04
+
+### Fixed
+
+- Downloading online notes can not run twice at once — the chip greys out after one click, a progress notice shows the count, and a second download or sync while one runs is refused (clicking again re-wrote every note as "Name (1)", "Name (2)"…)
+
 ## 0.1.48 — 2026-10-02
 
 ### Fixed
