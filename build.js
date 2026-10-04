@@ -342,7 +342,10 @@ esbuild
         ".obsidian",
         "plugins",
       );
-    const dest = path.join(vaultPlugins, "garden");
+    // The folder Obsidian uses is the plugin's id (that is where a community
+    // install lands): deploying elsewhere left a second, stale copy that the
+    // changes never reached.
+    const dest = path.join(vaultPlugins, require("./manifest.json").id);
     if (fs.existsSync(vaultPlugins)) {
       if (!fs.existsSync(dest)) fs.mkdirSync(dest);
       fs.copyFileSync(

@@ -401,7 +401,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     const card = container.createEl("div", { cls: "stnd-panel-connect" });
     const icon = card.createEl("div", { cls: "stnd-panel-connect-icon" });
     obsidian_1.setIcon(icon, "stnd-garden");
-    card.createEl("h3", { text: "Connect to Garden", cls: "stnd-panel-connect-title" });
+    // No heading: the button below already says "Connect to Garden".
     card.createEl("p", {
       text: "Publish your notes to your own garden on standard.garden, straight from Obsidian.",
       cls: "stnd-panel-connect-text",

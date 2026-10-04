@@ -8,13 +8,16 @@
 // outlined ones are not yet. Colour says the same thing again (see
 // publish-status/states.js), so the signal never rests on colour alone.
 //
-// Geometry mirrors packages/icon/icons/stnd/*.svg (24 grid, squares of 8).
-// Obsidian wants icon bodies on a 100 grid, hence the scale.
+// Proportions are Fibonacci: a square of 8, a gap of 5, so 8 + 5 + 8 = 21 and
+// the squares sit at 0 and 13. The gap follows the size of the square (about
+// 1 : 1.6, the golden ratio), not a number picked by eye. Geometry mirrors
+// packages/icon/icons/stnd/*.svg. Obsidian wants icon bodies on a 100 grid,
+// hence the scale.
 
 const SQUARES = [
-  [3, 3], // top-left
-  [13, 3], // top-right
-  [3, 13], // bottom-left
+  [0, 0], // top-left
+  [13, 0], // top-right
+  [0, 13], // bottom-left
   [13, 13], // bottom-right
 ];
 
@@ -26,7 +29,7 @@ function square([x, y], filled) {
 
 function icon(pattern) {
   const body = SQUARES.map((s, i) => square(s, !!pattern[i])).join("");
-  return `<g transform="scale(${100 / 24})">${body}</g>`;
+  return `<g transform="scale(${100 / 21})">${body}</g>`;
 }
 
 // id → which squares are filled (TL, TR, BL, BR)
@@ -48,7 +51,7 @@ function loaderIcon() {
       return `<rect class="stnd-loader-sq" x="${x}" y="${y}" width="8" height="8" fill="currentColor" stroke="none"/>`;
     })
     .join("");
-  return `<g transform="scale(${100 / 24})">${body}</g>`;
+  return `<g transform="scale(${100 / 21})">${body}</g>`;
 }
 
 function registerBrandIcons(addIcon) {
