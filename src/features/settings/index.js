@@ -279,6 +279,17 @@ class StandardSettingTab extends PluginSettingTab {
       this._cleanupAltListeners = null;
     }
 
+    // ── 1. Compte ──
+    const accountTab = new AccountSettingTab(this.app, this.plugin, this);
+    accountTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+    accountTab.display();
+
+    // Not connected: show only the connection block. Once connected, all other
+    // settings (publication, appearance, mycelium) and advanced tools reveal.
+    if (!this.plugin.settings.apiKey) {
+      return;
+    }
+
     const onKeyDown = (e) => {
       if (e.key === "Alt" || e.altKey) {
         containerEl.addClass("stnd-show-advanced");
@@ -296,11 +307,6 @@ class StandardSettingTab extends PluginSettingTab {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-
-    // ── 1. Compte ──
-    const accountTab = new AccountSettingTab(this.app, this.plugin, this);
-    accountTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-    accountTab.display();
 
     // ── 2. Publication ──
     const gardenTab = new GardenSettingTab(this.app, this.plugin);

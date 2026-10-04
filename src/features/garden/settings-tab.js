@@ -67,12 +67,8 @@ class GardenSettingTab extends PluginSettingTab {
       cls: "setting-item-description",
     });
 
-    // Everything below acts on the account: without a connection it would only
-    // be switches that do nothing, so it appears once connected. Ignored folders
-    // stay, because they are worth setting before the first sync.
-    if (this.plugin.settings.apiKey) {
-      // Sync Now
-      new Setting(containerEl)
+    // Sync Now
+    new Setting(containerEl)
         .setName("Sync all published notes")
         .setDesc(
           descWithLinks(
@@ -208,7 +204,6 @@ class GardenSettingTab extends PluginSettingTab {
               if (feature) feature.refreshAll();
             })
         );
-    }
 
     new Setting(containerEl)
       .setName("Ignored folders")
