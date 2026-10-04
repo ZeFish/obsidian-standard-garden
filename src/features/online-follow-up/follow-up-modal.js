@@ -1,6 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { renderModalHeader } = require("../../utils/modal.js");
 
 // A note is live in the garden but no longer belongs in the vault (deleted,
 // moved out, or switched off). One window for one note or for forty: each row can
@@ -24,6 +25,11 @@ class FollowUpModal extends obsidian_1.Modal {
     const { contentEl } = this;
     contentEl.addClass("stnd-modal");
     const many = this.items.length > 1;
+
+    renderModalHeader(
+      contentEl,
+      many ? "Standard Garden: Online notes" : "Standard Garden: Note removed",
+    );
 
     contentEl.createEl("p", {
       cls: "stnd-modal-message",

@@ -1,24 +1,28 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { renderModalHeader } = require("../../../utils/modal.js");
 
 // ─── Confirmation Modal ───────────────────────────────────────────────────────
 
 class StndConfirmModal extends obsidian_1.Modal {
-  constructor(app, message, confirmText, onConfirm, onCancel) {
+  constructor(app, message, confirmText, onConfirm, onCancel, title = "Standard Garden") {
     super(app);
     this.message = message;
     this.confirmText = confirmText;
     this.onConfirm = onConfirm;
     this.onCancel = onCancel || (() => {});
+    this.title = title;
   }
 
   onOpen() {
     const { contentEl } = this;
     contentEl.addClass("stnd-modal");
 
+    renderModalHeader(contentEl, this.title);
+
     // Split on literal \n so callers can use \n for line breaks
-    this.message.split("\n").forEach((line, i) => {
+    this.message.split("\n").filter(Boolean).forEach((line, i) => {
       const el = contentEl.createEl(i === 0 ? "p" : "p", {
         text: line,
         cls: i === 0 ? "stnd-modal-message" : "stnd-modal-detail",

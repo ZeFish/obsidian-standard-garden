@@ -22,8 +22,6 @@ class AccountSettingTab {
       return;
     }
 
-    containerEl.createEl("h2", { text: "Account" });
-
     const base = (this.plugin.settings.apiUrl || "https://standard.garden/api")
       .replace(/\/api\/?$/, "");
     const gardenUrl = `${base}/@${username}`;
@@ -145,8 +143,6 @@ class AccountSettingTab {
   }
 
   _renderDisconnected(containerEl) {
-    containerEl.createEl("h2", { text: "Account" });
-
     const card = containerEl.createEl("div");
     card.style.cssText =
       "text-align:center;padding:32px 20px;border:1px solid var(--background-modifier-border);border-radius:12px;margin-top:8px;";

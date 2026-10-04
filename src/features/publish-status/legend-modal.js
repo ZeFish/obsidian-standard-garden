@@ -4,6 +4,7 @@ const obsidian_1 = require("obsidian");
 const { STATES, LEGEND_ORDER } = require("./states.js");
 const { DOCS_URLS } = require("../../constants.js");
 const { openDoc } = require("../../utils/docs.js");
+const { renderModalHeader } = require("../../utils/modal.js");
 
 // "What do these colours mean?" — the same words as the menu's grey line, all
 // in one place. Opened from the last item of the status menu.
@@ -14,8 +15,10 @@ class StatusLegendModal extends obsidian_1.Modal {
 
   onOpen() {
     const { contentEl, titleEl } = this;
-    titleEl.setText("Garden status");
+    titleEl.empty();
+    contentEl.addClass("stnd-modal");
     contentEl.addClass("stnd-status-legend");
+    renderModalHeader(contentEl, "Standard Garden: Note status guide");
 
     contentEl.createEl("p", {
       cls: "stnd-status-legend-intro",

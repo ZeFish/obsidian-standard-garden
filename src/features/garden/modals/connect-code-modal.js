@@ -1,6 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { renderModalHeader } = require("../../../utils/modal.js");
 
 /**
  * A fallback for the connection hand-off. The connect page normally calls the
@@ -18,7 +19,7 @@ class ConnectCodeModal extends obsidian_1.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.addClass("stnd-modal");
-    contentEl.createEl("p", { text: "Paste your connection code", cls: "stnd-modal-message" });
+    renderModalHeader(contentEl, "Standard Garden: Connection code");
     contentEl.createEl("p", {
       text: "On standard.garden, after you authorize, press “Copy connection code”, then paste it here.",
       cls: "stnd-modal-detail",

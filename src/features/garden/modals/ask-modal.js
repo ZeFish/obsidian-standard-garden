@@ -1,6 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { renderModalHeader } = require("../../../utils/modal.js");
 
 class StndAskModal extends obsidian_1.Modal {
   constructor(app, plugin) {
@@ -13,11 +14,7 @@ class StndAskModal extends obsidian_1.Modal {
     contentEl.addClass("stnd-modal");
     contentEl.addClass("stnd-ask-modal");
 
-    // Titre de la modal
-    contentEl.createEl("h2", {
-      text: "✨ Ask Hyphe",
-      cls: "stnd-modal-title",
-    });
+    renderModalHeader(contentEl, "Standard Garden: Ask Hyphe");
 
     contentEl.createEl("p", {
       text: "Ask Hyphe a question about your digital garden. Hyphe runs in the cloud on standard.garden and searches only across your published notes.",
@@ -27,7 +24,7 @@ class StndAskModal extends obsidian_1.Modal {
     const privacyNotice = contentEl.createEl("div", {
       cls: "stnd-ask-cloud-notice",
     });
-    privacyNotice.setText("🌐 Online AI · Only searches notes published to standard.garden. Local drafts remain strictly private.");
+    privacyNotice.setText("Online AI · Only searches notes published to standard.garden. Local drafts remain strictly private.");
     privacyNotice.style.fontSize = "11px";
     privacyNotice.style.color = "var(--text-muted)";
     privacyNotice.style.marginBottom = "14px";

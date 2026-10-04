@@ -1,6 +1,7 @@
 "use strict";
 
 const obsidian_1 = require("obsidian");
+const { renderModalHeader } = require("../../../utils/modal.js");
 
 // ─── Share Modal ─────────────────────────────────────────────────────────────
 
@@ -16,8 +17,7 @@ class StndShareModal extends obsidian_1.Modal {
     contentEl.addClass("stnd-modal");
     contentEl.style.cssText = "max-width: 480px; padding: 20px;";
 
-    const titleEl = contentEl.createEl("h3", { text: "Share Note" });
-    titleEl.style.cssText = "margin-bottom: 16px; font-size: var(--font-ui-medium); font-weight: var(--font-semibold);";
+    renderModalHeader(contentEl, `Standard Garden: Share "${this.noteTitle}"`);
 
     const createShareOption = (label, value) => {
       const field = contentEl.createEl("div");

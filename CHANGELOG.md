@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.62 — 2026-10-04
+
+### Added
+
+- Harmonize modal headers, refine publish modal, and clean settings
+
 ## 0.1.61 — 2026-10-04
 
 ### Added

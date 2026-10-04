@@ -12,8 +12,10 @@ const {
   getMimeType,
 } = require("../../constants");
 const { StndConfirmModal } = require("./modals/confirm-modal");
+const { StndPublishModal } = require("./modals/publish-modal");
 const { StndAskModal } = require("./modals/ask-modal");
 const { StndShareModal } = require("./modals/share-modal");
+const { renderModalHeader } = require("../../utils/modal.js");
 const {
   getNoteFrontmatter,
   getNoteFrontmatterAsync,
@@ -231,7 +233,8 @@ class SyncProgressModal extends obsidian_1.Modal {
   onOpen() {
     const { contentEl, titleEl } = this;
     contentEl.addClass("stnd-modal");
-    titleEl.setText("Standard — Garden sync");
+    titleEl.empty();
+    renderModalHeader(contentEl, "Standard Garden: Sync");
 
     this.statusEl = contentEl.createEl("p", {
       text: `Preparing... 0 / ${this.total}`,
@@ -488,7 +491,8 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
   onOpen() {
     const { contentEl, titleEl } = this;
     contentEl.addClass("stnd-modal");
-    titleEl.setText("Standard — Clean up unpublished notes");
+    titleEl.empty();
+    renderModalHeader(contentEl, "Standard Garden: Clean up notes");
 
     contentEl.createEl("p", {
       text: `The following ${this.items.length} note(s) are still online in your garden or carry stale publishing metadata, but are no longer public locally:`,
@@ -2555,7 +2559,7 @@ class GardenFeature {
       return new Promise((resolve) => {
         new StndConfirmModal(
           this.app,
-          `🌱 Plant "${file.basename}" in the garden anyway?\n\n${warnings.join("\n")}`,
+          `Plant "${file.basename}" in the garden anyway?\n\n${warnings.join("\n")}`,
           "Plant it",
           async () => resolve(await run()),
           () => resolve(null),
@@ -2564,15 +2568,19 @@ class GardenFeature {
     }
 
     if (isFirst) {
-      const where = settings.apiUsername ? `standard.garden/@${settings.apiUsername}` : "your garden";
+      const fmSlug = fm.permalink ?? fm.slug;
+      const basenameSlug = slugify(file.basename);
+      const rawSlug = fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
+      const slug = rawSlug === "~root" ? "" : rawSlug;
+
       return new Promise((resolve) => {
-        new StndConfirmModal(
-          this.app,
-          `🌱 Publish "${file.basename}" to your garden?\n\nIt will be visible to anyone on the web at ${where}. You can limit a note to people with its link (unlisted) or to yourself (private) with its visibility, and take it offline at any time.`,
-          "Publish",
-          async () => resolve(await run()),
-          () => resolve(null),
-        ).open();
+        new StndPublishModal(this.app, {
+          file,
+          username: settings.apiUsername,
+          slug,
+          onConfirm: async () => resolve(await run()),
+          onCancel: () => resolve(null),
+        }).open();
       });
     }
 

@@ -3,8 +3,6 @@
 const { PluginSettingTab, Setting, AbstractInputSuggest, TFolder } = require("obsidian");
 const { parseFolderList } = require("../../utils/folders.js");
 const { descWithLinks, DOCS_URLS } = require("../../constants.js");
-const { openDoc } = require("../../utils/docs.js");
-const { setIcon } = require("obsidian");
 
 // Folder picker for the comma-separated "Ignored folders" field: suggests the
 // vault's folders for the entry being typed, skipping ones already listed.
@@ -53,19 +51,7 @@ class GardenSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ─── Garden Publication ──────────────────────────────────────────────────
-    const heading = containerEl.createEl("h2", { text: "Publication" });
-    const info = heading.createEl("button", {
-      cls: "clickable-icon",
-      attr: { "aria-label": "Status & colors guide", title: "Status & colors guide" },
-    });
-    info.style.cssText = "margin-left: 8px; vertical-align: middle;";
-    setIcon(info, "info");
-    info.addEventListener("click", () => openDoc(this.app, DOCS_URLS.status));
-
-    containerEl.createEl("p", {
-      text: "Notes marked with 'publish: true' in their frontmatter appear in your digital garden. Private drafts and notes in excluded folders are never shared online.",
-      cls: "setting-item-description",
-    });
+    containerEl.createEl("h2", { text: "Publication" });
 
     // Sync Now
     new Setting(containerEl)
