@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.59 — 2026-10-04
+
+### Added
+
+- A published note that is deleted, moved out of the vault or set to publish: false is offered for removal from the garden — one window, one or many notes, "keep online" is remembered, a deletion made while Obsidian was closed is noticed at start-up from a ledger of notes seen online; editing content never asks. Permalinks with a slash are encoded per part (and the API accepts the old %2F form)
+
 ## 0.1.58 — 2026-10-04
 
 ### Fixed

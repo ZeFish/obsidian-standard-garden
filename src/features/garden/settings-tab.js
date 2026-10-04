@@ -152,6 +152,19 @@ class GardenSettingTab extends PluginSettingTab {
           })
       );
 
+    // Follow a note that leaves the vault
+    new Setting(containerEl)
+      .setName("Offer to remove notes from the garden")
+      .setDesc("When a published note is deleted, moved out of the vault or set to publish: false, ask whether to remove it from the garden too. Editing a note never asks: you publish changes yourself.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.followUpOnline !== false)
+          .onChange(async (value) => {
+            this.plugin.settings.followUpOnline = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
     // Open after publish
     new Setting(containerEl)
       .setName("Open in browser after publish")

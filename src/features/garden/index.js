@@ -613,6 +613,12 @@ class PruneUnpublishedModal extends obsidian_1.Modal {
 // Garden feature, which owns the reconnect prompt.
 let authFailureHandler = null;
 
+// A permalink can hold slashes ("5-reference/overview"). Encoded as one piece the
+// slash becomes %2F and the server does not find the note: encode each part.
+function slugPath(slug) {
+  return String(slug).split("/").map(encodeURIComponent).join("/");
+}
+
 async function fetchWithRetry(url, options = {}, maxAttempts = 5) {
   let attempt = 0;
   let delay = 2000;
@@ -2328,7 +2334,7 @@ class GardenFeature {
         (file.stat?.mtime ? new Date(file.stat.mtime).toISOString() : new Date().toISOString());
 
       const response = await fetchWithRetry(
-        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        `${this.plugin.settings.apiUrl}/publish/${slugPath(slug)}`,
         {
           method: "PUT",
           headers: {
@@ -2405,7 +2411,7 @@ class GardenFeature {
       if (!slug) return false;
 
       const response = await fetchWithRetry(
-        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        `${this.plugin.settings.apiUrl}/publish/${slugPath(slug)}`,
         {
           method: "DELETE",
           headers: {
@@ -2597,7 +2603,7 @@ class GardenFeature {
       // serveur (60/min). Une synchro complète en consomme deux par note, donc
       // les 429 sont attendus — il faut patienter, pas déclarer un échec.
       const response = await fetchWithRetry(
-        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        `${this.plugin.settings.apiUrl}/publish/${slugPath(slug)}`,
         {
           method: "GET",
           headers: { "x-api-key": this.plugin.settings.apiKey },
@@ -2719,7 +2725,7 @@ class GardenFeature {
       const slug = resolved === "" ? "~root" : resolved;
 
       const response = await fetchWithRetry(
-        `${this.plugin.settings.apiUrl}/publish/${encodeURIComponent(slug)}`,
+        `${this.plugin.settings.apiUrl}/publish/${slugPath(slug)}`,
         {
           method: "GET",
           headers: { "x-api-key": this.plugin.settings.apiKey },

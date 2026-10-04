@@ -1,0 +1,29 @@
+/* Online follow-up window: a list of notes still live in the garden. */
+.stnd-modal .stnd-followup-bar {
+  display: flex;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+.stnd-modal .stnd-followup-list {
+  max-height: 45vh;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+.stnd-modal .stnd-followup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  cursor: pointer;
+}
+.stnd-modal .stnd-followup-row + .stnd-followup-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+.stnd-modal .stnd-followup-text {
+  display: flex;
+  flex-direction: column;
+}
+.stnd-modal .stnd-followup-reason {
+  color: var(--text-faint);
+}

@@ -39,6 +39,9 @@ const DEFAULT_SETTINGS = {
   autoSyncStartup: false,
   syncDirection: "1way", // Push: the vault wins. "2way" lets the newer side win (online edits are pulled).
   excludedFolders: "", // folders the Garden never looks at, comma-separated. Empty for a new install: a default of someone's own folder name silently skipped their notes.
+  followUpOnline: true, // when a published note is deleted, moved out or switched off, offer to remove it from the garden too
+  onlineLedger: {}, // notes seen online (short id -> { slug, title, path }), so a deletion made while Obsidian was closed is noticed
+  declinedFollowUp: {}, // "keep it online" answers, so the question is not asked again
   firstPublishDone: false, // the first publish asks once and then shows the result; later ones just publish
   panelOpenedOnInstall: false,
   mycelium: {
