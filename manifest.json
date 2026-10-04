@@ -1,10 +1,10 @@
 {
   "id": "standard-garden",
   "name": "Standard Garden",
-  "version": "0.1.56",
+  "version": "0.1.57",
   "minAppVersion": "1.6.0",
   "description": "An artisan's toolkit for your mind. Sculpt your writing environment, tend to your thoughts, and publish to standard.garden.",
-  "author": "Francis",
-  "authorUrl": "https://github.com/ZeFish",
+  "author": "Utopie",
+  "authorUrl": "https://utopie.studio",
   "isDesktopOnly": false
 }
