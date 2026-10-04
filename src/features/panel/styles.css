@@ -1475,13 +1475,16 @@ body.stnd-adapter .workspace-tab-header-container {
   text-align: center;
 }
 
+/* Same badge as the Account card in the settings: the mark in the accent colour. */
 .stnd-panel-connect-icon {
-  color: var(--stnd-status-synced);
-}
-
-.stnd-panel-connect-icon svg {
-  width: 40px;
-  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--background-secondary);
+  color: var(--interactive-accent);
 }
 
 .stnd-panel-connect-title {
