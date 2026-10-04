@@ -253,15 +253,7 @@ class StandardSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
-    this._cleanupAltListeners = null;
-  }
-
-  hide() {
-    super.hide();
-    if (this._cleanupAltListeners) {
-      this._cleanupAltListeners();
-      this._cleanupAltListeners = null;
-    }
+    this.activeTab = "general";
   }
 
   display() {
@@ -269,64 +261,70 @@ class StandardSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.addClass("stnd-settings-flat");
 
-    // Clean up any existing listeners before re-attaching
-    if (this._cleanupAltListeners) {
-      this._cleanupAltListeners();
-      this._cleanupAltListeners = null;
-    }
-
-    // ── 1. Compte ──
-    const accountTab = new AccountSettingTab(this.app, this.plugin, this);
-    accountTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-    accountTab.display();
-
     // Not connected: show only the connection block. Once connected, all other
     // settings (publication, appearance, mycelium) and advanced tools reveal.
     if (!this.plugin.settings.apiKey) {
+      const accountTab = new AccountSettingTab(this.app, this.plugin, this);
+      accountTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
+      accountTab.display();
       return;
     }
 
-    const onKeyDown = (e) => {
-      if (e.key === "Alt" || e.altKey) {
-        containerEl.addClass("stnd-show-advanced");
-      }
-    };
-    const onKeyUp = (e) => {
-      if (e.key === "Alt" || !e.altKey) {
-        containerEl.removeClass("stnd-show-advanced");
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    this._cleanupAltListeners = () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-
-    // ── 2. Publication ──
-    const gardenTab = new GardenSettingTab(this.app, this.plugin);
-    gardenTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-    gardenTab.display();
-
-    // ── 3. Apparence ──
-    const designTab = new DesignSystemSettingTab(this.app, this.plugin);
-    designTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-    designTab.display();
-
-    // ── 4. Mycelium ──
-    const { MyceliumSettingTab } = require("../mycelium/index.js");
-    const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
-    myceliumTab.containerEl = containerEl.createDiv({ cls: "stnd-settings-section" });
-    myceliumTab.display();
-
-    // ── 5. Alt Hint ──
-    const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-    const keyName = isMac ? "⌥ Option" : "Alt";
-    const hint = containerEl.createDiv({ cls: "stnd-alt-hint" });
-    hint.createEl("span", {
-      text: `Hold ${keyName} to reveal the advanced maintenance tools.`,
+    // ── Tab Navigation ──
+    const tabsHeader = containerEl.createDiv({ cls: "stnd-settings-tabs-header" });
+    const generalBtn = tabsHeader.createEl("button", {
+      cls: `stnd-settings-tab-btn ${this.activeTab === "general" ? "active" : ""}`,
+      text: "General",
     });
+    generalBtn.onclick = () => {
+      if (this.activeTab !== "general") {
+        this.activeTab = "general";
+        this.display();
+      }
+    };
+
+    const advancedBtn = tabsHeader.createEl("button", {
+      cls: `stnd-settings-tab-btn ${this.activeTab === "advanced" ? "active" : ""}`,
+      text: "Advanced",
+    });
+    advancedBtn.onclick = () => {
+      if (this.activeTab !== "advanced") {
+        this.activeTab = "advanced";
+        this.display();
+      }
+    };
+
+    const contentSection = containerEl.createDiv({ cls: "stnd-settings-section" });
+
+    if (this.activeTab === "general") {
+      // ── 1. Compte & Stats ──
+      const accountTab = new AccountSettingTab(this.app, this.plugin, this);
+      accountTab.containerEl = contentSection.createDiv();
+      accountTab.display();
+
+      // ── 2. Publication ──
+      const gardenTab = new GardenSettingTab(this.app, this.plugin);
+      gardenTab.displayGeneral(contentSection);
+
+      // ── 3. Apparence ──
+      const designTab = new DesignSystemSettingTab(this.app, this.plugin);
+      designTab.displayGeneral(contentSection);
+    } else {
+      // ── Advanced Tab ──
+      // ── 1. Publication Options ──
+      const gardenTab = new GardenSettingTab(this.app, this.plugin);
+      gardenTab.displayAdvanced(contentSection);
+
+      // ── 2. Mycelium (Link Assist) ──
+      const { MyceliumSettingTab } = require("../mycelium/index.js");
+      const myceliumTab = new MyceliumSettingTab(this.app, this.plugin);
+      myceliumTab.containerEl = contentSection.createDiv();
+      myceliumTab.display();
+
+      // ── 3. Theme Cache & Diagnostics ──
+      const designTab = new DesignSystemSettingTab(this.app, this.plugin);
+      designTab.displayAdvanced(contentSection);
+    }
   }
 }
 

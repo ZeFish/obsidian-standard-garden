@@ -2521,10 +2521,11 @@ class GardenFeature {
     const meta = this.app.metadataCache.getFileCache(file);
     const fm = meta?.frontmatter || {};
 
-    const doPublish = async () => {
+    const doPublish = async (visibility = "public") => {
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         // Do not overwrite a date: `publish: 2026-08-07` is valid intent
         if (!isPublishIntent(fm)) fm.publish = true;
+        if (visibility) fm.visibility = visibility;
         if ("status" in fm) delete fm.status;
       });
       const ok = await this.publishNote(file);
@@ -2534,8 +2535,8 @@ class GardenFeature {
     // The very first publish asks once, plainly, and then shows the result.
     const settings = this.plugin.settings;
     const isFirst = !settings.firstPublishDone;
-    const run = async () => {
-      const ok = await doPublish();
+    const run = async (visibility = "public") => {
+      const ok = await doPublish(visibility);
       if (ok && isFirst) {
         settings.firstPublishDone = true;
         await this.plugin.saveSettings();
@@ -2561,7 +2562,7 @@ class GardenFeature {
           this.app,
           `Plant "${file.basename}" in the garden anyway?\n\n${warnings.join("\n")}`,
           "Plant it",
-          async () => resolve(await run()),
+          async () => resolve(await run(fm.visibility || "public")),
           () => resolve(null),
         ).open();
       });
@@ -2578,14 +2579,15 @@ class GardenFeature {
           file,
           username: settings.apiUsername,
           slug,
-          onConfirm: async () => resolve(await run()),
+          initialVisibility: fm.visibility || "public",
+          onConfirm: async (visibility) => resolve(await run(visibility)),
           onCancel: () => resolve(null),
         }).open();
       });
     }
 
     // Already planted before, or already true → publish (and stamp key if missing)
-    return await run();
+    return await run(fm.visibility || "public");
   }
 
   // ── Delete online version ─────────────────────────────────────────────────

@@ -813,6 +813,69 @@
   background: var(--background-modifier-hover);
 }
 
+/* ─── Publish Modal Visibility Options ───────────────────────────── */
+.stnd-publish-modal {
+  max-width: 540px;
+}
+
+.stnd-publish-vis-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: var(--size-4-3) 0;
+}
+
+.stnd-publish-vis-option {
+  padding: 10px 12px;
+  border-radius: var(--radius-m, 6px);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.stnd-publish-vis-option:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border-hover, var(--text-muted));
+}
+
+.stnd-publish-vis-option.selected {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-active-hover, var(--background-secondary));
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.stnd-publish-vis-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
+.stnd-publish-vis-desc {
+  font-size: var(--font-smallest, 0.75rem);
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.stnd-modal .stnd-modal-btns.stnd-modal-btns-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stnd-modal .stnd-modal-btns-group {
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+
 /* ─── Hyphe Ask Modal & Horizon Grass ───────────────────────────── */
 .modal.stnd-ask-modal,
 .stnd-ask-modal {

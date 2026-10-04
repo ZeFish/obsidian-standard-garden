@@ -9,10 +9,7 @@ class DesignSystemSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-
+  displayGeneral(containerEl) {
     // ─── Design System Section ───────────────────────────────────────────
     containerEl.createEl("h2", { text: "Appearance" });
     const desc = containerEl.createEl("p", {
@@ -44,20 +41,6 @@ class DesignSystemSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
-      .setName("Editor suggestions")
-      .setDesc("Type :: in a note to get suggestions for Garden syntax: cards, columns, callouts, galleries and more. Off by default. Turning it off takes effect after you restart Obsidian.")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(!!this.plugin.settings.enableSyntaxPreview)
-          .onChange(async (value) => {
-            this.plugin.settings.enableSyntaxPreview = value;
-            await this.plugin.saveSettings();
-            if (value) await this.plugin.ensureSyntaxPreview();
-            else if (this.plugin.syntaxPreview) new Notice("Restart Obsidian to turn off editor suggestions.");
-          })
-      );
-
     const THEMES = require("../../themes.generated.js");
     new Setting(containerEl)
       .setName("Default Theme")
@@ -81,9 +64,26 @@ class DesignSystemSettingTab extends PluginSettingTab {
           });
       });
 
-    // ─── Advanced settings (revealed via Alt / ⌥ Option key) ───────────────────
     new Setting(containerEl)
-      .setClass("stnd-advanced-setting")
+      .setName("Editor suggestions")
+      .setDesc("Type :: in a note to get suggestions for Garden syntax: cards, columns, callouts, galleries and more. Off by default. Turning it off takes effect after you restart Obsidian.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(!!this.plugin.settings.enableSyntaxPreview)
+          .onChange(async (value) => {
+            this.plugin.settings.enableSyntaxPreview = value;
+            await this.plugin.saveSettings();
+            if (value) await this.plugin.ensureSyntaxPreview();
+            else if (this.plugin.syntaxPreview) new Notice("Restart Obsidian to turn off editor suggestions.");
+          })
+      );
+  }
+
+  displayAdvanced(containerEl) {
+    // ─── Advanced settings ────────────────────────────────────────────────
+    containerEl.createEl("h2", { text: "Theme Cache & Diagnostics" });
+
+    new Setting(containerEl)
       .setName("Clear theme cache")
       .setDesc("Forces the plugin to re-scan and reload all theme stylesheets defined in your vault.")
       .addButton((btn) =>
@@ -96,7 +96,6 @@ class DesignSystemSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setClass("stnd-advanced-setting")
       .setName("CSS Hooks Reference")
       .setDesc(
         descWithLinks(
@@ -109,6 +108,13 @@ class DesignSystemSettingTab extends PluginSettingTab {
           window.open(DOCS_URLS.cssHooks, "_blank");
         })
       );
+  }
+
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    this.displayGeneral(containerEl);
+    this.displayAdvanced(containerEl);
   }
 }
 

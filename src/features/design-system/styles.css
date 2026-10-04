@@ -243,52 +243,6 @@ body.stnd-note-published.stnd-note-private
     padding: 0 var(--size-4-4);
 }
 
-/* ─── Garden Connected Account Card Stats ────────────────────────────────── */
-
-.stnd-account-stats-container {
-    margin-top: 12px;
-    display: flex;
-    gap: 12px;
-    padding: 10px 12px;
-    background: var(--background-secondary-alt);
-    border-radius: 8px;
-    border: 1px solid var(--background-modifier-border);
-}
-
-.stnd-account-stats-loading {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
-    width: 100%;
-    text-align: center;
-}
-
-.stnd-account-stat-col {
-    flex: 1;
-    text-align: center;
-}
-
-.stnd-account-stat-col.wide {
-    flex: 1.5;
-}
-
-.stnd-account-stat-value {
-    font-weight: 600;
-    font-size: var(--font-ui-large, 1.25rem);
-    color: var(--text-normal);
-}
-
-.stnd-account-stat-value.medium {
-    font-size: var(--font-ui-medium, 1.1rem);
-    line-height: 1.5;
-}
-
-.stnd-account-stat-label {
-    font-size: var(--font-smallest, 0.75rem);
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-top: 2px;
-}
 
 /* Reset CodeMirror widget buffers which are <img> tags */
 .stnd-adapter .cm-widgetBuffer,
