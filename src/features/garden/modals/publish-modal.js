@@ -34,6 +34,7 @@ class StndPublishModal extends Modal {
     this.username = options.username || "";
     this.slug = options.slug || "";
     this.selectedVisibility = options.initialVisibility || "public";
+    this.warnings = options.warnings || [];
     this.onConfirm = options.onConfirm;
     this.onCancel = options.onCancel || (() => {});
     this._settled = false;
@@ -45,6 +46,21 @@ class StndPublishModal extends Modal {
     contentEl.addClass("stnd-publish-modal");
 
     renderModalHeader(contentEl, `Standard Garden: Publish "${this.file.basename}"`);
+
+    // Warning callout banner if note was previously marked not to publish or draft
+    if (this.warnings && this.warnings.length > 0) {
+      const warnBox = contentEl.createDiv({ cls: "stnd-modal-warning-box" });
+      warnBox.style.cssText =
+        "margin-bottom: 12px; padding: 10px 14px; border-radius: 6px; background: var(--background-modifier-error-hover, rgba(235, 87, 87, 0.12)); border: 1px solid var(--text-error, #eb5757); font-size: var(--font-ui-smaller); color: var(--text-normal);";
+      const warnTitle = warnBox.createEl("div", {
+        text: "Note was marked not to publish:",
+      });
+      warnTitle.style.cssText =
+        "font-weight: 600; margin-bottom: 4px; color: var(--text-error, #eb5757);";
+      this.warnings.forEach((w) => {
+        warnBox.createEl("div", { text: w.replace(/^[•\s-]+/, "") });
+      });
+    }
 
     // Intro explanation
     contentEl.createEl("p", {

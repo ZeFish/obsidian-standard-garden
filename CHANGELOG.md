@@ -3,6 +3,12 @@
 All notable changes to the Standard Garden Obsidian plugin.
 Backfilled from git history; versions with no user-facing change are omitted. New entries are written by the release workflow.
 
+## 0.1.64 — 2026-10-05
+
+### Added
+
+- Display publish suggestions modal with warning box and remove redundant attention dot
+
 ## 0.1.62 — 2026-10-04
 
 ### Added

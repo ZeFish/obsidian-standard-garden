@@ -31,11 +31,27 @@ if (!fs.existsSync(themesDir)) {
   themesDir = path.join(__dirname, "node_modules", "@stnd", "themes");
 }
 
+const OFFICIAL_PROD_THEMES = new Set([
+  "macos",
+  "international",
+  "documentation",
+  "humanist",
+  "editorial",
+  "academic",
+  "gallery",
+  "mono",
+  "book",
+]);
+
 const themes = {};
 if (fs.existsSync(themesDir)) {
-  const dirs = fs.readdirSync(themesDir).filter(d => {
+  let dirs = fs.readdirSync(themesDir).filter(d => {
     return fs.existsSync(path.join(themesDir, d, "tokens.yaml"));
   }).sort();
+
+  if (process.env.NODE_ENV === "production") {
+    dirs = dirs.filter(d => OFFICIAL_PROD_THEMES.has(d));
+  }
 
   for (const dir of dirs) {
     const themeName = dir;

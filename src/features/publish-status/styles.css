@@ -74,28 +74,6 @@
   color: var(--stnd-status-local);
 }
 
-/* States that ask for something (modified, outdated, still online) carry a dot
-   too, so the signal does not rest on colour alone. */
-.stnd-publish-status,
-.stnd-publish-status-ribbon {
-  position: relative;
-}
-
-.stnd-publish-status[data-stnd-attn="true"]::after,
-.stnd-publish-status-ribbon[data-stnd-attn="true"]::after,
-.stnd-status-legend-icon.stnd-has-attention::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 0 2px var(--background-primary);
-  pointer-events: none;
-}
-
 /* ── Status menu: the state, and what it means, in grey ──────────────────── */
 .menu-item.stnd-menu-status {
   flex-wrap: wrap;

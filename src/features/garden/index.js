@@ -2547,7 +2547,7 @@ class GardenFeature {
     };
 
     // Guardrails — gather any reason this note might surprise you, then ask
-    // once before planting it anyway.
+    // with the full suggestions modal before planting it anyway.
     const warnings = [];
     if (fm.publish === false || fm.publish === "false" || fm.status === "draft") {
       warnings.push(`• publish: false — it was marked not to publish`);
@@ -2556,19 +2556,9 @@ class GardenFeature {
       warnings.push(`• visibility: private — visitors won't see it`);
     }
 
-    if (warnings.length > 0) {
-      return new Promise((resolve) => {
-        new StndConfirmModal(
-          this.app,
-          `Plant "${file.basename}" in the garden anyway?\n\n${warnings.join("\n")}`,
-          "Plant it",
-          async () => resolve(await run(fm.visibility || "public")),
-          () => resolve(null),
-        ).open();
-      });
-    }
+    const needsPublishModal = warnings.length > 0 || isFirst || !isPublishIntent(fm);
 
-    if (isFirst) {
+    if (needsPublishModal) {
       const fmSlug = fm.permalink ?? fm.slug;
       const basenameSlug = slugify(file.basename);
       const rawSlug = fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : basenameSlug;
@@ -2579,7 +2569,8 @@ class GardenFeature {
           file,
           username: settings.apiUsername,
           slug,
-          initialVisibility: fm.visibility || "public",
+          initialVisibility: (fm.visibility && fm.visibility !== "private") ? fm.visibility : "public",
+          warnings,
           onConfirm: async (visibility) => resolve(await run(visibility)),
           onCancel: () => resolve(null),
         }).open();
