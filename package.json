@@ -7,9 +7,9 @@
     "screenshot": "obsidian dev:screenshot"
   },
   "dependencies": {
-    "@stnd/styles": "0.15.1",
-    "@stnd/themes": "0.11.0",
-    "@stnd/utils": "0.7.3",
+    "@stnd/styles": "0.16.0",
+    "@stnd/themes": "0.13.0",
+    "@stnd/utils": "0.8.0",
     "prismjs": "1.30.0"
   },
   "devDependencies": {
