@@ -684,7 +684,7 @@ class MyceliumFeature {
     ghostLinksRevision++;
 
     // Notify CodeMirror views (editor/live preview) and Reading View to
-    // re-render their decorations/postprocessors with the fresh cache.
+    // re-render their decorations with the fresh cache.
     this.app.workspace.iterateAllLeaves((leaf) => {
       if (!(leaf.view instanceof MarkdownView)) return;
       if (leaf.view.editor?.cm) {
@@ -693,9 +693,97 @@ class MyceliumFeature {
         } catch (e) {}
       }
       if (leaf.view.previewMode) {
+        this.updateCompostFooter(leaf);
         leaf.view.previewMode.rerender(true);
       }
     });
+  }
+
+  updateAllCompostFooters() {
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof MarkdownView && leaf.view.previewMode) {
+        this.updateCompostFooter(leaf);
+      }
+    });
+  }
+
+  updateCompostFooter(leaf) {
+    if (!leaf?.view?.previewMode) return;
+    const renderer = leaf.view.previewMode.renderer;
+    if (!renderer) return;
+
+    // 1. Scrub any old/stale compost footers nested inside content sections by previous versions
+    if (renderer.sections) {
+      for (const sec of renderer.sections) {
+        if (sec !== renderer.footer && sec.el) {
+          const stale = sec.el.querySelectorAll(".mycelium-compost-footer");
+          stale.forEach((el) => el.remove());
+        }
+      }
+    }
+
+    const activeFile = this.app.workspace.getActiveFile();
+    const file = leaf.view.file;
+    const isEnabled = this.settings.enableCompostFooter;
+    const suggestions =
+      isEnabled && file && activeFile && file.path === activeFile.path
+        ? window.stndMyceliumCache || []
+        : [];
+
+    if (!isEnabled || suggestions.length === 0) {
+      if (renderer.footer?.el) {
+        const existing = renderer.footer.el.querySelector(".mycelium-compost-footer");
+        if (existing) {
+          existing.remove();
+          renderer.footer.resetCompute?.();
+          renderer.queueRender?.();
+        }
+      }
+      return;
+    }
+
+    // 2. Ensure renderer.footer exists
+    if (!renderer.footer) {
+      renderer.addFooter();
+    }
+
+    const footerEl = renderer.footer?.el;
+    if (!footerEl) return;
+
+    let container = footerEl.querySelector(".mycelium-compost-footer");
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "mycelium-compost-footer";
+      footerEl.appendChild(container);
+    } else {
+      container.empty();
+    }
+
+    container.createEl("hr", { cls: "mycelium-footer-hr" });
+    container.createEl("h4", {
+      text: "Mycelium finding",
+      cls: "mycelium-footer-title",
+    });
+    const grid = container.createEl("div", {
+      cls: "mycelium-footer-grid",
+    });
+
+    for (const sug of suggestions) {
+      const cell = grid.createEl("div", { cls: "mycelium-footer-item" });
+      cell.createEl("span", {
+        text: sug.file.basename,
+        cls: "mycelium-ghost-link",
+        attr: {
+          title: `🌱 Click to open ${sug.file.basename} · Alt+Click to link`,
+          "data-target": sug.file.path,
+          "data-term": sug.term,
+          "data-basename": sug.file.basename,
+        },
+      });
+    }
+
+    renderer.footer.resetCompute?.();
+    renderer.queueRender?.();
   }
 
   async load() {
@@ -710,6 +798,18 @@ class MyceliumFeature {
     this.plugin.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
         this.refreshSuggestions();
+      })
+    );
+
+    this.plugin.registerEvent(
+      this.app.workspace.on("layout-change", () => {
+        this.updateAllCompostFooters();
+      })
+    );
+
+    this.plugin.registerEvent(
+      this.app.workspace.on("file-open", () => {
+        this.updateAllCompostFooters();
       })
     );
 
@@ -751,98 +851,19 @@ class MyceliumFeature {
       });
     }
 
-    // Synchronous on purpose: it reuses the same suggestions cache the ghost
-    // links feature already maintains. An earlier async version re-scanned
-    // the vault itself and lost the race against Reading View's own re-render
-    // (triggered when the cache refreshes), leaving the footer detached from
-    // the live DOM.
-    this.plugin.registerMarkdownPostProcessor((el, ctx) => {
+    // ─── Reading View: clean up any stale compost footers in content sections ───
+    // A document footer belongs in the view's footer section (mod-footer), never
+    // nested inside an individual paragraph, code block, or heading. This post-processor
+    // purely acts as a defensive broom: if a section was previously cached with a nested
+    // footer, strip it immediately.
+    this.plugin.registerMarkdownPostProcessor((el) => {
       try {
-        // 1. If disabled, clean up any compost footers that might be in the DOM
-        if (!this.settings.enableCompostFooter) {
-          const footers = el.querySelectorAll(".mycelium-compost-footer");
-          footers.forEach((f) => f.remove());
-          return;
-        }
-
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile || activeFile.path !== ctx.sourcePath) return;
-
-        // 2. Only inject on the LAST block of the document containing text
-        const sectionInfo = ctx.getSectionInfo(el);
-        if (!sectionInfo) return;
-
-        const lines = sectionInfo.text.split("\n");
-        let lastNonEmptyIndex = lines.length - 1;
-        while (lastNonEmptyIndex >= 0 && !lines[lastNonEmptyIndex].trim()) {
-          lastNonEmptyIndex--;
-        }
-
-        if (sectionInfo.lineEnd < lastNonEmptyIndex) {
-          return;
-        }
-
-        const suggestions = window.stndMyceliumCache || [];
-
-        // 3. Remove every previous footer in this note's view. Don't look them up
-        // through `el`: Reading View often runs post-processors on a block that
-        // isn't attached to the DOM yet (closest()/parentElement are null), so a
-        // stale footer left on the former last block survived and they piled up
-        // under every paragraph as the note grew.
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const scopes = new Set(
-          [
-            view?.containerEl,
-            el.closest(".markdown-preview-section"),
-            el.closest(".markdown-rendered"),
-            el.parentElement,
-          ].filter(Boolean),
-        );
-        scopes.forEach((scope) =>
-          scope
-            .querySelectorAll(".mycelium-compost-footer")
-            .forEach((n) => n.remove()),
-        );
-
-        if (suggestions.length === 0) return;
-
-        // 4. Append the footer INSIDE the last block, not as its sibling.
-        // Reading View's renderer owns and reconciles the direct children of
-        // the preview sizer on every render pass, and prunes any sibling node
-        // it doesn't recognize as one of its own sections. A node nested
-        // inside a managed section survives that reconciliation.
-        const container = document.createElement("div");
-        container.className = "mycelium-compost-footer";
-        el.appendChild(container);
-
-        container.createEl("hr", { cls: "mycelium-footer-hr" });
-
-        container.createEl("h4", {
-          text: "Mycelium finding",
-          cls: "mycelium-footer-title",
-        });
-        const grid = container.createEl("div", {
-          cls: "mycelium-footer-grid",
-        });
-
-        // Reuse the exact same span/attributes as inline ghost links, so the
-        // single delegated click handler (click = open, Alt+Click = link)
-        // covers these too, with no per-item listener needed.
-        for (const sug of suggestions) {
-          const cell = grid.createEl("div", { cls: "mycelium-footer-item" });
-          cell.createEl("span", {
-            text: sug.file.basename,
-            cls: "mycelium-ghost-link",
-            attr: {
-              title: `🌱 Click to open ${sug.file.basename} · Alt+Click to link`,
-              "data-target": sug.file.path,
-              "data-term": sug.term,
-              "data-basename": sug.file.basename,
-            },
-          });
+        const stale = el.querySelectorAll(".mycelium-compost-footer");
+        if (stale.length > 0) {
+          stale.forEach((f) => f.remove());
         }
       } catch (e) {
-        console.error("[Standard] Mycelium compost footer failed to render", e);
+        console.error("[Standard] Mycelium section cleanup error", e);
       }
     });
 
@@ -957,9 +978,8 @@ class MyceliumSettingTab extends PluginSettingTab {
             this.settings.enableCompostFooter = value;
             window.stndMyceliumSettings = this.settings;
             await this.plugin.saveSettings();
-            const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-            if (view?.previewMode) {
-              view.previewMode.rerender(true);
+            if (typeof window.stndRefreshMycelium === "function") {
+              window.stndRefreshMycelium();
             }
           }),
       );
