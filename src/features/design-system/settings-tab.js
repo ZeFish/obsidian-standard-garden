@@ -77,6 +77,21 @@ class DesignSystemSettingTab extends PluginSettingTab {
             else if (this.plugin.syntaxPreview) new Notice("Restart Obsidian to turn off editor suggestions.");
           })
       );
+
+    new Setting(containerEl)
+      .setName("Presentations & Slides")
+      .setDesc(
+        descWithLinks(
+          "Notes with type: slide or type: presentation automatically format as responsive presentations with smart iA Presenter layouts in Obsidian and on the web. §",
+          [{ text: "Read the presentation guide →", href: DOCS_URLS.slides }]
+        )
+      )
+      .addButton((btn) =>
+        btn.setButtonText("View Guide").onClick(() => {
+          const { openDoc } = require("../../utils/docs.js");
+          openDoc(this.app, DOCS_URLS.slides);
+        })
+      );
   }
 
   displayAdvanced(containerEl) {

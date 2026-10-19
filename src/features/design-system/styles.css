@@ -12,6 +12,8 @@
 /* ============================================= */
 
 body.stnd-adapter {
+    --stroke-width: max(1px, 0.06rem);
+    --stroke-width-lg: calc(var(--stroke-width) * 2);
     --page-max-width: none;
 
     /* Typography bridge */
@@ -24,7 +26,8 @@ body.stnd-adapter {
     --font-variation: "";
     --font-size: var(--font-text-size);
     --bold-weight: var(--font-weight-bold, 600);
-    --font-weight-header: var(--font-weight-header, 400);
+    --font-header-weight: 700;
+    --font-weight-header: var(--font-header-weight, 700);
     --font-header-letter-spacing: -0.025em;
     --font-header-line-height: 1.3em;
     --font-header-feature: "";
@@ -292,13 +295,13 @@ body.stnd-note-published.stnd-note-private
     --code-size: inherit;
     --code-white-space: pre;
     --metadata-input-font-size: calc(var(--font-size) * pow(var(--font-ratio), 0));
-    --inline-title-weight: var(--font-weight-header);
-    --h1-weight: var(--font-weight-header);
-    --h2-weight: calc(var(--font-weight-header) * 1);
-    --h3-weight: calc(var(--font-weight-header) * 1);
-    --h4-weight: calc(var(--font-weight-header) * 1);
-    --h5-weight: calc(var(--font-weight-header) * 1);
-    --h6-weight: calc(var(--font-weight-header) * 1);
+    --inline-title-weight: var(--font-header-weight, var(--font-weight-header, 700));
+    --h1-weight: var(--font-header-weight, var(--font-weight-header, 700));
+    --h2-weight: calc(var(--font-header-weight, var(--font-weight-header, 700)) * 1);
+    --h3-weight: calc(var(--font-header-weight, var(--font-weight-header, 700)) * 1);
+    --h4-weight: calc(var(--font-header-weight, var(--font-weight-header, 700)) * 1);
+    --h5-weight: calc(var(--font-header-weight, var(--font-weight-header, 700)) * 1);
+    --h6-weight: calc(var(--font-header-weight, var(--font-weight-header, 700)) * 1);
     --h1-font: var(--font-header);
     --h2-font: var(--font-header);
     --h3-font: var(--font-header);
@@ -529,7 +532,7 @@ body.stnd-note-published.stnd-note-private
     line-height: var(--font-header-line-height, 1em); /*0.50em;*/
     text-wrap: balance;
     font-style: var(--font-header-style, normal);
-    font-weight: var(--font-weight-header);
+    font-weight: var(--font-header-weight, var(--font-weight-header, 700));
     font-family: var(--font-header);
     text-overflow: ellipsis;
     overflow-wrap: break-word;
@@ -1482,3 +1485,536 @@ body.stnd-adapter .markdown-preview-section > div:has(img) p:empty,
 body.stnd-adapter .markdown-preview-section > div:has(img) :is(img, .image-embed) ~ br {
   display: none;
 }
+
+/* ─── Standard Slides Presentation Adapter ────────────────────────────── */
+
+body.stnd-adapter .modal-container:has(.slides-view),
+body.stnd-adapter .modal.slides-view,
+body.stnd-adapter .reveal {
+  background-color: var(--color-background) !important;
+  color: var(--color-foreground) !important;
+  font-family: var(--font-text) !important;
+}
+
+body.stnd-adapter .modal.slides-view {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  padding: 0 !important;
+  background-color: var(--color-background) !important;
+}
+
+body.stnd-adapter .reveal .slides {
+  text-align: left;
+}
+
+body.stnd-adapter .reveal .slides {
+  overflow: hidden !important;
+}
+
+body.stnd-adapter .reveal .slides section {
+  overflow: hidden !important;
+}
+
+body.stnd-adapter .reveal .slides section:not(.present) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.stnd-adapter .reveal .slides section.present {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.stnd-adapter .reveal .slides > section {
+  font-family: var(--font-text) !important;
+  font-size: 22px !important;
+  color: var(--color-foreground) !important;
+  font-feature-settings: var(--font-feature, normal);
+  font-variation-settings: var(--font-variation, normal);
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 24px 36px !important;
+  text-align: left;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.stnd-adapter .reveal .slides > section > * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-inline: 0 !important;
+}
+
+body.stnd-adapter .reveal :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-header) !important;
+  font-weight: var(--font-header-weight, var(--font-weight-header, 700)) !important;
+  letter-spacing: var(--font-header-letter-spacing, normal);
+  font-variation-settings: var(--font-header-variation, normal);
+  font-feature-settings: var(--font-header-feature, normal);
+  line-height: var(--font-header-line-height, 1.2);
+  color: var(--color-foreground);
+  text-align: left;
+}
+
+body.stnd-adapter .reveal h1 {
+  font-size: 1.8em;
+  margin-bottom: 0.4em;
+}
+
+body.stnd-adapter .reveal h2 {
+  font-size: 1.35em;
+  margin-bottom: 0.35em;
+}
+
+body.stnd-adapter .reveal h3 {
+  font-size: 1.15em;
+  margin-bottom: 0.3em;
+}
+
+body.stnd-adapter .reveal p {
+  margin-bottom: 0.6em;
+  line-height: var(--line-height, 1.45);
+  font-size: 0.95em;
+}
+
+body.stnd-adapter .reveal pre.frontmatter {
+  display: none !important;
+}
+
+body.stnd-adapter .reveal strong,
+body.stnd-adapter .reveal b {
+  color: inherit !important;
+  font-weight: var(--bold-weight, 600);
+}
+
+body.stnd-adapter .reveal em,
+body.stnd-adapter .reveal i {
+  color: inherit !important;
+}
+
+body.stnd-adapter .reveal a {
+  color: var(--color-accent) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+body.stnd-adapter .reveal ul,
+body.stnd-adapter .reveal ol {
+  text-align: left;
+  margin-inline-start: 1.25em !important;
+  margin-bottom: 0.4em;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.stnd-adapter .reveal li {
+  margin-block: 0.18em;
+  line-height: var(--line-height, 1.4);
+  font-size: 0.9em;
+}
+
+body.stnd-adapter .reveal blockquote {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-left: var(--stroke-width-lg, 3px) solid var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-foreground) 3%, transparent) !important;
+  color: var(--color-foreground) !important;
+  font-family: var(--font-serif, var(--font-text));
+  padding: 0.4em 0.85em !important;
+  margin-block: 0.45em !important;
+  margin-inline: 0 !important;
+  border-radius: var(--radius-s, 4px);
+  text-align: left;
+  box-shadow: none !important;
+  font-size: 0.92em;
+  line-height: 1.4;
+}
+
+body.stnd-adapter .reveal blockquote p {
+  margin: 0 !important;
+}
+
+body.stnd-adapter .reveal .callout {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-left: 4px solid var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-background)) !important;
+  color: var(--color-foreground) !important;
+  border-radius: var(--radius-m, 6px);
+  padding: 0.6em 1em !important;
+  text-align: left;
+  margin-block: 0.7em !important;
+  margin-inline: 0 !important;
+  box-shadow: none !important;
+  font-size: 0.88em;
+}
+
+body.stnd-adapter .reveal .callout-title {
+  font-family: var(--font-header);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+body.stnd-adapter .reveal pre {
+  background: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background)) !important;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  border-radius: var(--radius-m, 6px);
+  padding: 0.8em 1.2em;
+  max-height: none !important;
+  max-width: 100% !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+body.stnd-adapter .reveal code {
+  font-family: var(--font-monospace) !important;
+  font-feature-settings: var(--font-monospace-feature, normal);
+  font-variation-settings: var(--font-monospace-variation, normal);
+}
+
+body.stnd-adapter .reveal hr {
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
+  margin-block: 1.5em;
+}
+
+body.stnd-adapter .reveal .progress {
+  height: var(--stroke-width) !important;
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent) !important;
+}
+
+body.stnd-adapter .reveal .progress span {
+  background-color: var(--color-foreground) !important;
+}
+
+body.stnd-adapter .reveal .controls {
+  color: var(--color-accent) !important;
+}
+
+body.stnd-adapter .slides-close-btn {
+  color: var(--color-foreground) !important;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+body.stnd-adapter .slides-close-btn:hover {
+  opacity: 1;
+  color: var(--color-accent) !important;
+}
+
+/* ─── iA Presenter-style Auto-Layouts for Standard Slides ─────────────── */
+
+/* 1. Cover / Title Slide */
+body.stnd-adapter .reveal .slides section.stnd-layout-cover.present {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  padding: 40px 60px !important;
+  height: 100%;
+}
+
+body.stnd-adapter .reveal .slides section.stnd-layout-cover h1 {
+  font-size: 2.5em;
+  line-height: 1.1;
+  margin-bottom: 0.25em;
+  color: var(--color-foreground);
+  border-bottom: 3px solid var(--color-accent);
+  padding-bottom: 0.25em;
+  width: 100%;
+}
+
+body.stnd-adapter .reveal .slides section.stnd-layout-cover h2 {
+  font-size: 1.4em;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+body.stnd-adapter .reveal .slides section.stnd-layout-cover p {
+  font-size: 1.05em;
+  opacity: 0.85;
+  margin-bottom: 0.35em;
+}
+
+/* 2. Split Layout (Text + Media Side-by-Side) */
+body.stnd-adapter .reveal .stnd-slide-split {
+  display: grid !important;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--space-4, clamp(1.5rem, 3.5vw, 3rem)) !important;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+body.stnd-adapter .reveal .stnd-slide-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  width: 100%;
+  padding-right: var(--space-2, 1rem);
+  box-sizing: border-box;
+}
+
+body.stnd-adapter .reveal .stnd-slide-text > * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body.stnd-adapter .reveal .stnd-slide-media {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  padding-left: var(--space-1, 0.5rem);
+  box-sizing: border-box;
+}
+
+body.stnd-adapter .reveal .stnd-slide-media :is(img, .image-embed, .internal-embed) {
+  max-width: 100% !important;
+  max-height: 520px !important;
+  object-fit: contain !important;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px), (orientation: portrait) and (max-width: 900px) {
+  body.stnd-adapter .reveal .slides > section {
+    padding: 16px 20px !important;
+  }
+
+  body.stnd-adapter .reveal .stnd-slide-split {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-3, 1.25rem) !important;
+  }
+
+  body.stnd-adapter .reveal .stnd-slide-text {
+    padding-right: 0 !important;
+  }
+
+  body.stnd-adapter .reveal .stnd-slide-media {
+    padding-left: 0 !important;
+    margin-top: var(--space-2, 0.75rem);
+  }
+
+  body.stnd-adapter .reveal .stnd-slide-media :is(img, .image-embed, .internal-embed) {
+    max-height: 240px !important;
+    max-width: 95% !important;
+  }
+}
+
+/* 3. Hero Slide (Single prominent image) */
+body.stnd-adapter .reveal .slides section.stnd-layout-hero.present {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px !important;
+  height: 100%;
+}
+
+body.stnd-adapter .reveal .slides section.stnd-layout-hero :is(img, .image-embed, .internal-embed) {
+  max-height: 580px !important;
+  max-width: 90% !important;
+  object-fit: contain !important;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: var(--shadow-lg);
+  margin: 0 auto;
+}
+
+/* 4. Multi-Image Galleries (2, 3, 4 images) */
+body.stnd-adapter .reveal .stnd-images-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+body.stnd-adapter .reveal .stnd-images-grid-2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+body.stnd-adapter .reveal .stnd-images-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+body.stnd-adapter .reveal .stnd-images-grid-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+}
+
+body.stnd-adapter .reveal .stnd-images-grid :is(img, .image-embed, .internal-embed) {
+  max-width: 100% !important;
+  max-height: 480px !important;
+  object-fit: contain !important;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Standard Design System: Mermaid Diagrams (Obsidian Adapter) ────────── */
+
+/* 1. Neutralize Obsidian's destructive dark-mode inversion filter */
+.theme-dark .mermaid > svg,
+.theme-dark .block-language-mermaid > svg,
+body.stnd-adapter .mermaid > svg,
+body.stnd-adapter .block-language-mermaid > svg {
+  filter: none !important;
+}
+
+/* 2. Container display & alignment */
+body.stnd-adapter .mermaid,
+body.stnd-adapter .block-language-mermaid {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-block: 1.5rem !important;
+  background: transparent !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* 3. Scalable SVG */
+body.stnd-adapter .mermaid svg,
+body.stnd-adapter .block-language-mermaid svg {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 0 auto !important;
+  font-family: var(--font-text) !important;
+}
+
+/* 4. Slides-specific constraint: prevent diagram from pushing slide content off */
+body.stnd-adapter .reveal .mermaid,
+body.stnd-adapter .reveal .block-language-mermaid {
+  margin-block: 0.8rem !important;
+}
+
+body.stnd-adapter .reveal .mermaid svg,
+body.stnd-adapter .reveal .block-language-mermaid svg {
+  max-height: 52vh !important;
+}
+
+/* 5. Subgraphs / Clusters */
+body.stnd-adapter .mermaid .cluster rect,
+body.stnd-adapter .block-language-mermaid .cluster rect {
+  fill: color-mix(in srgb, var(--color-foreground) 4%, transparent) !important;
+  stroke: color-mix(in srgb, var(--color-foreground) 20%, transparent) !important;
+  stroke-width: var(--stroke-width, 1px) !important;
+  rx: 8px !important;
+}
+
+body.stnd-adapter .mermaid .cluster text,
+body.stnd-adapter .mermaid .cluster-label span,
+body.stnd-adapter .mermaid .cluster-label p,
+body.stnd-adapter .block-language-mermaid .cluster text,
+body.stnd-adapter .block-language-mermaid .cluster-label span,
+body.stnd-adapter .block-language-mermaid .cluster-label p {
+  font-family: var(--font-header) !important;
+  font-weight: 600 !important;
+  font-size: 0.95em !important;
+  letter-spacing: -0.01em !important;
+  fill: var(--color-foreground) !important;
+  color: var(--color-foreground) !important;
+}
+
+/* 6. Nodes (Cards) */
+body.stnd-adapter .mermaid .node rect,
+body.stnd-adapter .mermaid .node circle,
+body.stnd-adapter .mermaid .node ellipse,
+body.stnd-adapter .mermaid .node polygon,
+body.stnd-adapter .mermaid .node path,
+body.stnd-adapter .mermaid .node .label-container,
+body.stnd-adapter .block-language-mermaid .node rect,
+body.stnd-adapter .block-language-mermaid .node circle,
+body.stnd-adapter .block-language-mermaid .node ellipse,
+body.stnd-adapter .block-language-mermaid .node polygon,
+body.stnd-adapter .block-language-mermaid .node path,
+body.stnd-adapter .block-language-mermaid .node .label-container {
+  fill: var(--color-surface, var(--background-secondary)) !important;
+  stroke: color-mix(in srgb, var(--color-foreground) 22%, transparent) !important;
+  stroke-width: var(--stroke-width, 1px) !important;
+  rx: 6px !important;
+}
+
+/* 7. Node Text */
+body.stnd-adapter .mermaid .node .label,
+body.stnd-adapter .mermaid .node text,
+body.stnd-adapter .mermaid .node span,
+body.stnd-adapter .mermaid .node p,
+body.stnd-adapter .mermaid .node div,
+body.stnd-adapter .block-language-mermaid .node .label,
+body.stnd-adapter .block-language-mermaid .node text,
+body.stnd-adapter .block-language-mermaid .node span,
+body.stnd-adapter .block-language-mermaid .node p,
+body.stnd-adapter .block-language-mermaid .node div {
+  font-family: var(--font-text) !important;
+  font-size: 0.88em !important;
+  line-height: 1.35 !important;
+  color: var(--color-foreground) !important;
+  fill: var(--color-foreground) !important;
+}
+
+/* 8. Connectors & Edges */
+body.stnd-adapter .mermaid .edgePath .path,
+body.stnd-adapter .mermaid .flowchart-link,
+body.stnd-adapter .block-language-mermaid .edgePath .path,
+body.stnd-adapter .block-language-mermaid .flowchart-link {
+  stroke: color-mix(in srgb, var(--color-foreground) 35%, transparent) !important;
+  stroke-width: 1.5px !important;
+}
+
+/* 9. Arrowheads & Markers */
+body.stnd-adapter .mermaid marker path,
+body.stnd-adapter .mermaid marker polygon,
+body.stnd-adapter .mermaid .arrowMarkerPath,
+body.stnd-adapter .block-language-mermaid marker path,
+body.stnd-adapter .block-language-mermaid marker polygon,
+body.stnd-adapter .block-language-mermaid .arrowMarkerPath {
+  fill: color-mix(in srgb, var(--color-foreground) 35%, transparent) !important;
+  stroke: color-mix(in srgb, var(--color-foreground) 35%, transparent) !important;
+}
+
+/* 10. Edge Labels */
+body.stnd-adapter .mermaid .edgeLabel,
+body.stnd-adapter .mermaid .edgeLabel span,
+body.stnd-adapter .mermaid .edgeLabel p,
+body.stnd-adapter .block-language-mermaid .edgeLabel,
+body.stnd-adapter .block-language-mermaid .edgeLabel span,
+body.stnd-adapter .block-language-mermaid .edgeLabel p {
+  background-color: var(--color-background, var(--background-primary)) !important;
+  color: var(--color-muted, var(--text-muted)) !important;
+  fill: var(--color-muted, var(--text-muted)) !important;
+  font-family: var(--font-monospace) !important;
+  font-size: 0.8em !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+

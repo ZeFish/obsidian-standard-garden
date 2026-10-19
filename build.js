@@ -66,12 +66,16 @@ if (fs.existsSync(themesDir)) {
         .join("\n");
 
       let scssContent = "";
+      const useStatements = [];
       if (fs.existsSync(scssPath)) {
         scssContent = fs.readFileSync(scssPath, "utf8");
         // Strip anything inside TOKENS.YAML ADAPTER comments
         scssContent = scssContent.replace(/\/\* TOKENS\.YAML ADAPTER BEGIN \*\/[\s\S]*?\/\* TOKENS\.YAML ADAPTER END \*\//g, "").trim();
-        // Strip any @use statements
-        scssContent = scssContent.replace(/@use\s+['"][^'"]+['"]\s*;?/g, "");
+        // Extract any @use statements so they sit at the root
+        scssContent = scssContent.replace(/@use\s+['"][^'"]+['"]\s*;?/g, (match) => {
+          useStatements.push(match);
+          return "";
+        });
         // Normalize theme selector to parent selector &
         scssContent = scssContent.replace(new RegExp(`:root\\[data-theme=["']?${themeName}["']?\\],?\\s*`, "g"), "");
         scssContent = scssContent.replace(new RegExp(`\\[data-theme=["']?${themeName}["']?\\]`, "g"), "&");
@@ -79,9 +83,13 @@ if (fs.existsSync(themesDir)) {
         scssContent = mapWebSelectorsToObsidian(scssContent);
       }
 
-      const wrappedThemeScss = `body.stnd-adapter[data-stnd-theme="${themeName}"] {\n${decls}\n\n${scssContent}\n}`;
+      const uses = useStatements.join("\n");
+      const wrappedThemeScss = `${uses}\nbody.stnd-adapter[data-stnd-theme="${themeName}"] {\n${decls}\n\n${scssContent}\n}`;
       
-      const compiled = sass.compileString(wrappedThemeScss, { style: "expanded" });
+      const compiled = sass.compileString(wrappedThemeScss, {
+        style: "expanded",
+        loadPaths: [path.dirname(scssPath)],
+      });
       themes[themeName] = compiled.css;
     } catch (e) {
       console.error(`Failed to compile theme "${themeName}":`, e);

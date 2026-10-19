@@ -61,6 +61,7 @@ const DOCS_URLS = {
   typography: "https://standard.garden/guide/style/themes#typography",
   frontmatter: "https://standard.garden/guide/style/frontmatter#frontmatter",
   syntax: "https://standard.garden/guide/style/frontmatter#syntax",
+  slides: "https://standard.garden/guide/style/slides",
 };
 
 // ─── Settings UI Helpers ─────────────────────────────────────────────────────
