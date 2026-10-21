@@ -169,7 +169,12 @@ async function findOutgoingUnlinkedMentions(app, activeFile, plugin = null) {
   // instead of compiling a RegExp per note title (thousands per scan).
   const contentLower = content.toLowerCase();
 
+  let count = 0;
   for (const file of files) {
+    if (++count % 80 === 0) {
+      // Yield to the event loop periodically so mobile gesture / UI animations stay smooth
+      await new Promise((r) => setTimeout(r, 0));
+    }
     if (file.path === activeFile.path) continue;
 
     const baseNameLower = file.basename.toLowerCase();
@@ -797,13 +802,25 @@ class MyceliumFeature {
 
     this.plugin.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
-        this.refreshSuggestions();
+        const activeFile = this.app.workspace.getActiveFile();
+        const currentPath = activeFile?.path || null;
+        if (currentPath && currentPath === this._lastScannedFilePath) {
+          return;
+        }
+        this._lastScannedFilePath = currentPath;
+        if (this._leafChangeTimeout) clearTimeout(this._leafChangeTimeout);
+        this._leafChangeTimeout = setTimeout(() => {
+          this.refreshSuggestions();
+        }, 500);
       })
     );
 
     this.plugin.registerEvent(
       this.app.workspace.on("layout-change", () => {
-        this.updateAllCompostFooters();
+        if (this._layoutCompostTimeout) clearTimeout(this._layoutCompostTimeout);
+        this._layoutCompostTimeout = setTimeout(() => {
+          this.updateAllCompostFooters();
+        }, 400);
       })
     );
 
@@ -916,6 +933,12 @@ class MyceliumFeature {
 
       this.app.workspace.getLeaf(evt.ctrlKey || evt.metaKey).openFile(file);
     });
+  }
+
+  async unload() {
+    if (this._leafChangeTimeout) clearTimeout(this._leafChangeTimeout);
+    if (this._layoutCompostTimeout) clearTimeout(this._layoutCompostTimeout);
+    if (this.cacheTimeout) clearTimeout(this.cacheTimeout);
   }
 }
 

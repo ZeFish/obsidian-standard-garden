@@ -37,10 +37,27 @@ class PublishStatusFeature {
   }
 
   async load() {
-    const refresh = () => this.refreshAll();
-    this.plugin.registerEvent(this.app.workspace.on("file-open", refresh));
-    this.plugin.registerEvent(this.app.workspace.on("active-leaf-change", refresh));
-    this.plugin.registerEvent(this.app.workspace.on("layout-change", refresh));
+    const onLeafOrFileChange = () => {
+      const activeFile = this.app.workspace.getActiveFile();
+      const currentPath = activeFile?.path || null;
+      if (currentPath === this._lastActiveFilePath) {
+        return;
+      }
+      this._lastActiveFilePath = currentPath;
+      this.refreshAll();
+    };
+
+    this.plugin.registerEvent(this.app.workspace.on("file-open", onLeafOrFileChange));
+    this.plugin.registerEvent(this.app.workspace.on("active-leaf-change", onLeafOrFileChange));
+
+    // Debounce layout-change so sliding drawers or resizing on mobile never freeze UI
+    const debouncedLayoutRefresh = () => {
+      if (this._layoutRefreshTimeout) clearTimeout(this._layoutRefreshTimeout);
+      this._layoutRefreshTimeout = setTimeout(() => {
+        this.renderCurrentWidgets();
+      }, 400);
+    };
+    this.plugin.registerEvent(this.app.workspace.on("layout-change", debouncedLayoutRefresh));
     this.plugin.registerEvent(
       this.app.metadataCache.on("changed", (file) => {
         invalidateFrontmatterCache(file.path);
@@ -65,10 +82,12 @@ class PublishStatusFeature {
         this.noteStatuses.delete(file.path);
       }),
     );
-    this.app.workspace.onLayoutReady(refresh);
+    this.app.workspace.onLayoutReady(() => this.refreshAll());
   }
 
   async unload() {
+    if (this._layoutRefreshTimeout) clearTimeout(this._layoutRefreshTimeout);
+    if (this._statusCheckTimeout) clearTimeout(this._statusCheckTimeout);
     this.cleanupAll();
   }
 
@@ -244,7 +263,7 @@ class PublishStatusFeature {
       });
       this.renderCurrentWidgets();
       if (this.plugin.panel && typeof this.plugin.panel.updateTopIndicator === "function") {
-        this.plugin.panel.updateTopIndicator(true);
+        this.plugin.panel.updateTopIndicator(!obsidian_1.Platform.isMobile);
       }
     } catch (err) {
       console.error("Standard : Erreur lors de la vérification asynchrone du statut :", err);
@@ -259,7 +278,10 @@ class PublishStatusFeature {
 
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && hasKey) {
-      this.triggerStatusCheck(activeFile);
+      if (this._statusCheckTimeout) clearTimeout(this._statusCheckTimeout);
+      this._statusCheckTimeout = setTimeout(() => {
+        this.triggerStatusCheck(activeFile);
+      }, 500);
     }
 
     this.renderCurrentWidgets();

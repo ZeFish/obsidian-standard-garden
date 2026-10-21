@@ -145,7 +145,10 @@ class DesignSystemFeature {
     );
     this.plugin.registerEvent(
       this.app.workspace.on("layout-change", () => {
-        this.updateModeClasses();
+        if (this._modeClassesTimeout) clearTimeout(this._modeClassesTimeout);
+        this._modeClassesTimeout = setTimeout(() => {
+          this.updateModeClasses();
+        }, 200);
       }),
     );
     this.updateModeClasses();
@@ -162,6 +165,7 @@ class DesignSystemFeature {
   }
 
   async unload() {
+    if (this._modeClassesTimeout) clearTimeout(this._modeClassesTimeout);
     if (this.frontmatterUpdateTimeout)
       clearTimeout(this.frontmatterUpdateTimeout);
     if (this.workspaceReadyTimeout) clearTimeout(this.workspaceReadyTimeout);
@@ -321,6 +325,13 @@ class DesignSystemFeature {
 
   async updateBodyClasses() {
     const activeFile = this.app.workspace.getActiveFile();
+    const activeKey = activeFile
+      ? `${activeFile.path}:${activeFile.stat?.mtime || 0}`
+      : "__none__";
+    if (activeKey === this._lastBodyClassesKey) {
+      return;
+    }
+    this._lastBodyClassesKey = activeKey;
 
     const newClasses = new Set();
     let frontmatter = null;

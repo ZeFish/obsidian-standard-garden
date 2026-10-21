@@ -113,6 +113,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
   async onOpen() {
     this._onFileChange = () => {
+      const active = this.plugin.app.workspace.getActiveFile();
+      if (active && this._lastRenderedFile && active.path === this._lastRenderedFile.path) {
+        return;
+      }
       this.render();
     };
     this._onMetaChange = (file) => {
@@ -147,6 +151,8 @@ class StandardGardenView extends obsidian_1.ItemView {
     }
     for (const t of Object.values(this._debounceTimers)) clearTimeout(t);
     clearTimeout(this._linksResetTimer);
+    if (this._linksDataTimeout) clearTimeout(this._linksDataTimeout);
+    if (this._statsTimeout) clearTimeout(this._statsTimeout);
   }
 
   // ── Frontmatter write helper ────────────────────────────────────────────
@@ -199,7 +205,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     indEl.className = `stnd-panel-top-indicator stnd-style-${indicatorStyle} stnd-state-${key}`;
     this.topIndicatorEl.setAttribute("title", `Garden: ${stateLabel}`);
 
-    if (triggerAnimation && indicatorStyle === "garden") {
+    if (triggerAnimation && indicatorStyle === "garden" && !obsidian_1.Platform.isMobile) {
       indEl.classList.remove("stnd-growing");
       void indEl.offsetWidth; // Force reflow
       indEl.classList.add("stnd-growing");
@@ -400,7 +406,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     // ── 2. Roots: Local Vault Connections (Collapsible) ──
     if ((!this.linksData || this.linksData.file !== file) && !this.isLoadingLinks) {
-      this.refreshLinksData();
+      if (this._linksDataTimeout) clearTimeout(this._linksDataTimeout);
+      this._linksDataTimeout = setTimeout(() => {
+        this.refreshLinksData();
+      }, 400);
     }
     this._renderRootsSection(container, file);
 
@@ -1687,7 +1696,10 @@ class StandardGardenView extends obsidian_1.ItemView {
 
     const cachedStats = this.noteStatsCache.get(activeFile.path);
     if (!cachedStats && !this.isLoadingStats) {
-      this.loadNoteStats(activeFile);
+      if (this._statsTimeout) clearTimeout(this._statsTimeout);
+      this._statsTimeout = setTimeout(() => {
+        this.loadNoteStats(activeFile);
+      }, 500);
     }
 
     // Stats row

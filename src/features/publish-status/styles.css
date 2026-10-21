@@ -314,3 +314,9 @@
 .stnd-bottom-indicator.stnd-style-garden.stnd-growing {
   animation: stnd-panel-bloom 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+body.is-mobile .stnd-panel-top-indicator.stnd-style-garden.stnd-growing,
+body.is-mobile .stnd-bottom-indicator.stnd-style-garden.stnd-growing {
+  animation: none;
+  filter: none;
+}
