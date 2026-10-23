@@ -7,7 +7,12 @@ const { descWithLinks } = require("../../constants.js");
 
 // ─── Engine: Find Outgoing Unlinked Mentions ─────────────────────────────────
 
+const aliasCache = new Map();
+
 function getFileAliases(app, file) {
+  if (aliasCache.has(file.path)) {
+    return aliasCache.get(file.path);
+  }
   const cache = app.metadataCache.getFileCache(file);
   const aliases = [];
   if (cache?.frontmatter?.aliases) {
@@ -20,7 +25,9 @@ function getFileAliases(app, file) {
     if (Array.isArray(a)) aliases.push(...a);
     else if (typeof a === "string") aliases.push(...a.split(",").map(s => s.trim()));
   }
-  return aliases.filter(Boolean);
+  const res = aliases.filter(Boolean);
+  aliasCache.set(file.path, res);
+  return res;
 }
 
 function escapeRegex(string) {
@@ -110,7 +117,7 @@ const COMMON_STOPWORDS = new Set([
   "null",
 ]);
 
-function isFileIgnoredForMycelium(file, plugin) {
+function isFileIgnoredForMycelium(file, plugin, parsedExcluded = null) {
   if (!file?.path) return true;
   const p = file.path.toLowerCase();
   if (p.startsWith(".trash/") || p.includes("/.trash/")) return true;
@@ -120,7 +127,8 @@ function isFileIgnoredForMycelium(file, plugin) {
   if (RESERVED_FILENAMES.has(file.basename.toLowerCase())) return true;
 
   // The Garden-wide ignore list (Settings → Garden, or right-click a folder).
-  if (isInFolderList(file.path, parseFolderList(plugin?.settings?.excludedFolders))) {
+  const excluded = parsedExcluded || parseFolderList(plugin?.settings?.excludedFolders);
+  if (isInFolderList(file.path, excluded)) {
     return true;
   }
 
@@ -147,7 +155,8 @@ const COMMON_FRENCH_IDIOMS = [
 ];
 
 async function findOutgoingUnlinkedMentions(app, activeFile, plugin = null) {
-  if (isFileIgnoredForMycelium(activeFile, plugin)) return [];
+  const parsedExcluded = parseFolderList(plugin?.settings?.excludedFolders);
+  if (isFileIgnoredForMycelium(activeFile, plugin, parsedExcluded)) return [];
   const rawContent = await app.vault.cachedRead(activeFile);
   const content = getSearchableContent(rawContent);
   const files = app.vault.getMarkdownFiles();
@@ -180,13 +189,17 @@ async function findOutgoingUnlinkedMentions(app, activeFile, plugin = null) {
     const baseNameLower = file.basename.toLowerCase();
     if (seenBasenames.has(baseNameLower)) continue;
 
-    // A term can only match if its text appears in the note at all.
-    const termsToCheck = [file.basename, ...getFileAliases(app, file)].filter(
-      (t) => contentLower.includes(String(t).toLowerCase()),
-    );
-    if (termsToCheck.length === 0) continue;
+    // Fast rejection: check basename in text first; only query alias cache if necessary
+    const baseMatches = contentLower.includes(baseNameLower);
+    const aliases = getFileAliases(app, file);
+    if (!baseMatches && aliases.length === 0) continue;
 
-    if (isFileIgnoredForMycelium(file, plugin)) continue;
+    const matchedAliases = aliases.filter((a) => contentLower.includes(String(a).toLowerCase()));
+    if (!baseMatches && matchedAliases.length === 0) continue;
+
+    const termsToCheck = baseMatches ? [file.basename, ...matchedAliases] : matchedAliases;
+
+    if (isFileIgnoredForMycelium(file, plugin, parsedExcluded)) continue;
 
     // Check if it's already explicitly linked in outgoing OR incoming links
     const outgoing = app.metadataCache.resolvedLinks[activeFile.path] || {};
@@ -666,30 +679,48 @@ class MyceliumFeature {
 
   // `precomputed` lets a caller that just ran the scan (the panel) hand over its
   // result instead of making us repeat a full-vault scan.
-  async refreshSuggestions(precomputed = null) {
+  // `force = true` forces re-rendering all views even if the cache didn't change (e.g. on toggle).
+  async refreshSuggestions(precomputed = null, force = false) {
     // The cache only feeds ghost links and the compost footer. When both are off
     // (the default) a vault-wide scan + re-render of every preview is pure waste.
     const wanted =
       this.settings.enableGhostLinks || this.settings.enableCompostFooter;
-    if (!wanted && !(window.stndMyceliumCache || []).length) return;
+    if (!force && !wanted && !(window.stndMyceliumCache || []).length) return;
 
     const activeFile = this.app.workspace.getActiveFile();
+    let nextCache = [];
     if (!wanted || !activeFile || activeFile.extension !== "md") {
-      window.stndMyceliumCache = [];
+      nextCache = [];
     } else if (precomputed) {
-      window.stndMyceliumCache = precomputed;
+      nextCache = precomputed;
     } else {
-      window.stndMyceliumCache = await findOutgoingUnlinkedMentions(
+      nextCache = await findOutgoingUnlinkedMentions(
         this.app,
         activeFile,
         this.plugin
       );
     }
 
+    const prevCache = window.stndMyceliumCache || [];
+    const isSame =
+      prevCache.length === nextCache.length &&
+      prevCache.every(
+        (item, i) =>
+          item.term === nextCache[i]?.term &&
+          item.file?.path === nextCache[i]?.file?.path
+      );
+
+    window.stndMyceliumCache = nextCache;
+
+    // If suggestions haven't changed and refresh isn't forced, avoid touching the editor or DOM at all
+    // to prevent cursor/scroll jitter and unnecessary reflows.
+    if (!force && isSame) return;
+
     ghostLinksRevision++;
 
-    // Notify CodeMirror views (editor/live preview) and Reading View to
-    // re-render their decorations with the fresh cache.
+    // Notify CodeMirror views (editor/live preview) to re-render their decorations
+    // with the fresh cache. Never call rerender(true) on previewMode: rerender(true)
+    // blows away virtual scroll and resets the note scroll position.
     this.app.workspace.iterateAllLeaves((leaf) => {
       if (!(leaf.view instanceof MarkdownView)) return;
       if (leaf.view.editor?.cm) {
@@ -697,16 +728,68 @@ class MyceliumFeature {
           leaf.view.editor.cm.dispatch({});
         } catch (e) {}
       }
-      if (leaf.view.previewMode) {
+      if (leaf.view.getMode?.() === "preview" && leaf.view.previewMode) {
+        this.updateReadingGhostLinks(leaf);
         this.updateCompostFooter(leaf);
-        leaf.view.previewMode.rerender(true);
       }
     });
   }
 
+  updateAllReadingGhostLinks() {
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (
+        leaf.view instanceof MarkdownView &&
+        leaf.view.getMode?.() === "preview" &&
+        leaf.view.previewMode
+      ) {
+        this.updateReadingGhostLinks(leaf);
+      }
+    });
+  }
+
+  updateReadingGhostLinks(leaf) {
+    if (!leaf?.view?.previewMode) return;
+    const isEnabled = this.settings.enableGhostLinks;
+    const container = leaf.view.previewMode.containerEl;
+    if (!container) return;
+
+    if (!isEnabled) {
+      const spans = container.querySelectorAll(
+        ".mycelium-ghost-link:not(.mycelium-compost-footer *)"
+      );
+      spans.forEach((span) => {
+        const parent = span.parentNode;
+        if (!parent) return;
+        parent.replaceChild(document.createTextNode(span.textContent || ""), span);
+        parent.normalize();
+      });
+      return;
+    }
+
+    const activeFile = this.app.workspace.getActiveFile();
+    const file = leaf.view.file;
+    if (!file || !activeFile || file.path !== activeFile.path) return;
+
+    const suggestions = window.stndMyceliumCache || [];
+    if (!suggestions.length) return;
+
+    const renderer = leaf.view.previewMode.renderer;
+    if (renderer?.sections) {
+      for (const sec of renderer.sections) {
+        if (sec !== renderer.footer && sec.el) {
+          applyReadingGhostLinks(sec.el, suggestions);
+        }
+      }
+    }
+  }
+
   updateAllCompostFooters() {
     this.app.workspace.iterateAllLeaves((leaf) => {
-      if (leaf.view instanceof MarkdownView && leaf.view.previewMode) {
+      if (
+        leaf.view instanceof MarkdownView &&
+        leaf.view.getMode?.() === "preview" &&
+        leaf.view.previewMode
+      ) {
         this.updateCompostFooter(leaf);
       }
     });
@@ -744,6 +827,9 @@ class MyceliumFeature {
           renderer.queueRender?.();
         }
       }
+      // Also scrub any rogue/orphaned compost footers in preview container
+      const stray = leaf.view.containerEl?.querySelectorAll(".mycelium-compost-footer");
+      if (stray) stray.forEach((el) => el.remove());
       return;
     }
 
@@ -795,7 +881,8 @@ class MyceliumFeature {
     window.stndMyceliumCache = [];
     window.stndMyceliumSettings = this.settings;
     window.stndMyceliumFeature = this;
-    window.stndRefreshMycelium = (precomputed) => this.refreshSuggestions(precomputed);
+    window.stndRefreshMycelium = (precomputed, force = false) =>
+      this.refreshSuggestions(precomputed, force);
 
     // Initial cache population for current active file
     this.refreshSuggestions();
@@ -832,11 +919,25 @@ class MyceliumFeature {
 
     this.plugin.registerEvent(
       this.app.metadataCache.on("changed", (file) => {
+        aliasCache.delete(file.path);
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && file.path === activeFile.path) {
           if (this.cacheTimeout) clearTimeout(this.cacheTimeout);
           this.cacheTimeout = setTimeout(() => this.refreshSuggestions(), 1500);
         }
+      })
+    );
+
+    this.plugin.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        aliasCache.delete(file.path);
+      })
+    );
+
+    this.plugin.registerEvent(
+      this.app.vault.on("rename", (file, oldPath) => {
+        aliasCache.delete(oldPath);
+        aliasCache.delete(file.path);
       })
     );
 
@@ -939,6 +1040,7 @@ class MyceliumFeature {
     if (this._leafChangeTimeout) clearTimeout(this._leafChangeTimeout);
     if (this._layoutCompostTimeout) clearTimeout(this._layoutCompostTimeout);
     if (this.cacheTimeout) clearTimeout(this.cacheTimeout);
+    aliasCache.clear();
   }
 }
 
@@ -972,8 +1074,9 @@ class MyceliumSettingTab extends PluginSettingTab {
             this.settings.enableGhostLinks = value;
             window.stndMyceliumSettings = this.settings;
             await this.plugin.saveSettings();
+            this.plugin.mycelium?.updateAllReadingGhostLinks();
             if (typeof window.stndRefreshMycelium === "function") {
-              window.stndRefreshMycelium();
+              window.stndRefreshMycelium(null, true);
             }
           }),
       );
@@ -1001,8 +1104,9 @@ class MyceliumSettingTab extends PluginSettingTab {
             this.settings.enableCompostFooter = value;
             window.stndMyceliumSettings = this.settings;
             await this.plugin.saveSettings();
+            this.plugin.mycelium?.updateAllCompostFooters();
             if (typeof window.stndRefreshMycelium === "function") {
-              window.stndRefreshMycelium();
+              window.stndRefreshMycelium(null, true);
             }
           }),
       );

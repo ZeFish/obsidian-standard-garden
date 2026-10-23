@@ -38,7 +38,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     this.noteStatsCache = plugin?.garden?.noteStatsCache || new Map();
     this.isLoadingStats = false;
     this.inquiryCache = new Map();
-    this._collapsedSections = new Set(["design"]);
+    this._collapsedSections = new Set(["roots", "mycelium", "design"]);
   }
 
   async triggerHypheInquiry(file) {
@@ -123,14 +123,16 @@ class StandardGardenView extends obsidian_1.ItemView {
       if (this._writing) return;
       const active = this.plugin.app.workspace.getActiveFile();
       if (active && file && (file === active || (file.path && active.path && file.path === active.path))) {
-        // Re-render now, but recompute links (a full-vault scan) only once the
-        // user pauses: "changed" fires repeatedly while typing.
-        this.render();
+        // Debounce render so typing pauses before rebuilding the panel DOM
+        clearTimeout(this._panelRenderTimer);
+        this._panelRenderTimer = setTimeout(() => {
+          this.render();
+        }, 400);
         clearTimeout(this._linksResetTimer);
         this._linksResetTimer = setTimeout(() => {
           this.linksData = null;
           this.render();
-        }, 2000);
+        }, 3000);
       }
     };
     this.plugin.app.workspace.on("file-open", this._onFileChange);
@@ -150,6 +152,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       this.plugin.app.metadataCache.off("resolve", this._onMetaChange);
     }
     for (const t of Object.values(this._debounceTimers)) clearTimeout(t);
+    clearTimeout(this._panelRenderTimer);
     clearTimeout(this._linksResetTimer);
     if (this._linksDataTimeout) clearTimeout(this._linksDataTimeout);
     if (this._statsTimeout) clearTimeout(this._statsTimeout);
@@ -217,7 +220,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       cls: `stnd-panel-group stnd-panel-${key}-group`,
     });
     if (!this._collapsedSections) {
-      this._collapsedSections = new Set(["design"]);
+      this._collapsedSections = new Set(["roots", "mycelium", "design"]);
     }
     const isCollapsed = this._collapsedSections.has(key);
     if (!isCollapsed) {
@@ -263,6 +266,7 @@ class StandardGardenView extends obsidian_1.ItemView {
   // ── Render ──────────────────────────────────────────────────────────────
 
   render() {
+    if (!this.containerEl?.children?.[1]) return;
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("stnd-panel");
@@ -1476,7 +1480,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       "image",
       (el) => this._renderBrokenEmbeds(el, brokenEmbeds),
       null,
-      brokenEmbeds.length <= 50
+      false
     );
 
     // Section 2 : Liens internes brisés
@@ -1487,7 +1491,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       "link",
       (el) => this._renderBrokenLinks(el, brokenLinks),
       null,
-      brokenLinks.length <= 50
+      false
     );
 
     // Section 3 : Médias orphelins
@@ -1575,8 +1579,8 @@ class StandardGardenView extends obsidian_1.ItemView {
       // 1. Incoming linked mentions (Backlinks)
       const incoming = [];
       const resolvedLinks = this.plugin.app.metadataCache.resolvedLinks || {};
-      for (const [sourcePath, targets] of Object.entries(resolvedLinks)) {
-        if (sourcePath !== activeFile.path && targets.hasOwnProperty(activeFile.path)) {
+      for (const sourcePath in resolvedLinks) {
+        if (sourcePath !== activeFile.path && resolvedLinks[sourcePath]?.[activeFile.path]) {
           const file = this.plugin.app.vault.getAbstractFileByPath(sourcePath);
           if (file) incoming.push(file);
         }
@@ -1871,7 +1875,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       this.plugin.settings.mycelium = {
         enableGhostLinks: false,
         enableLinkingCommand: true,
-        enableCompostFooter: true,
+        enableCompostFooter: false,
       };
     }
     const mySettings = this.plugin.settings.mycelium;
@@ -1884,8 +1888,11 @@ class StandardGardenView extends obsidian_1.ItemView {
         mySettings.enableGhostLinks = enabled;
         window.stndMyceliumSettings = mySettings;
         await this.plugin.saveSettings();
+        if (window.stndMyceliumFeature) {
+          window.stndMyceliumFeature.updateAllReadingGhostLinks();
+        }
         if (typeof window.stndRefreshMycelium === "function") {
-          window.stndRefreshMycelium();
+          window.stndRefreshMycelium(null, true);
         }
         new obsidian_1.Notice(
           enabled ? "Ghost links enabled in editor." : "Ghost links disabled.",
@@ -1901,8 +1908,11 @@ class StandardGardenView extends obsidian_1.ItemView {
         mySettings.enableCompostFooter = enabled;
         window.stndMyceliumSettings = mySettings;
         await this.plugin.saveSettings();
+        if (window.stndMyceliumFeature) {
+          window.stndMyceliumFeature.updateAllCompostFooters();
+        }
         if (typeof window.stndRefreshMycelium === "function") {
-          window.stndRefreshMycelium();
+          window.stndRefreshMycelium(null, true);
         }
         new obsidian_1.Notice(
           enabled ? "Compost footer enabled." : "Compost footer hidden.",
@@ -1960,7 +1970,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       "link-2",
       (el) => this._renderUnlinkedMentionsList(el, unlinkedMentions, activeFile, blockedTag),
       null,
-      unlinkedMentions.length > 0,
+      false,
     );
 
     // Section 2 : Mentions liées (Backlinks)
@@ -1971,7 +1981,7 @@ class StandardGardenView extends obsidian_1.ItemView {
       "link",
       (el) => this._renderLinkedMentionsList(el, linkedMentions, blockedTag),
       null,
-      linkedMentions.length > 0,
+      false,
     );
 
     // Section 3 : Exclusions actives
@@ -2111,7 +2121,7 @@ class StandardGardenView extends obsidian_1.ItemView {
     });
   }
 
-  _renderAuditSection(parent, title, items, iconName, renderContentFn, bulkActionFn = null, autoOpen = true) {
+  _renderAuditSection(parent, title, items, iconName, renderContentFn, bulkActionFn = null, autoOpen = false) {
     const details = parent.createEl("details", {
       cls: "stnd-panel-group stnd-audit-section",
     });

@@ -715,16 +715,24 @@ class GardenFeature {
     this.lastRemoteOnlyCheck = 0;
   }
 
-  isPathExcluded(filePath) {
-    return isInFolderList(
-      filePath,
-      parseFolderList(this.plugin.settings.excludedFolders),
-    );
+  getExcludedFolders() {
+    const raw = this.plugin.settings?.excludedFolders;
+    if (this._lastExcludedRaw !== raw || !this._cachedExcludedList) {
+      this._lastExcludedRaw = raw;
+      this._cachedExcludedList = parseFolderList(raw);
+    }
+    return this._cachedExcludedList;
+  }
+
+  isPathExcluded(filePath, parsedExcluded = null) {
+    const list = parsedExcluded || this.getExcludedFolders();
+    return isInFolderList(filePath, list);
   }
 
   getPublishableFiles() {
     const all = this.app.vault.getMarkdownFiles();
-    return all.filter((file) => !this.isPathExcluded(file.path));
+    const excluded = this.getExcludedFolders();
+    return all.filter((file) => !isInFolderList(file.path, excluded));
   }
 
   // One sentence a person can act on, built from whatever the last request said,

@@ -300,8 +300,21 @@ class DesignSystemFeature {
           ? String(frontmatter.theme).trim()
           : "";
 
+      const nextClasses = Array.from(classes).map((c) => c.replace("cssclass-", ""));
+      const prev = this.plugin.settings?.startupSnapshot;
+      if (
+        prev &&
+        prev.theme === theme &&
+        prev.customCss === (this.lastAppliedCustomCss || "") &&
+        Array.isArray(prev.cssClasses) &&
+        prev.cssClasses.length === nextClasses.length &&
+        prev.cssClasses.every((c, i) => c === nextClasses[i])
+      ) {
+        return;
+      }
+
       this.plugin.settings.startupSnapshot = {
-        cssClasses: Array.from(classes).map((c) => c.replace("cssclass-", "")),
+        cssClasses: nextClasses,
         theme: theme,
         customCss: this.lastAppliedCustomCss,
       };
@@ -457,8 +470,9 @@ class DesignSystemFeature {
 
     // Zero-latency cache injection
     const rawCachedCss = this.themeCache[theme];
+    let cachedCss = "";
     if (rawCachedCss) {
-      const cachedCss = rawCachedCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${theme}"]`);
+      cachedCss = rawCachedCss.replace(/body\.stnd-color\b/g, `body.stnd-adapter[data-stnd-theme="${theme}"]`);
       this.lastAppliedThemeSnippetCss = cachedCss;
       this.applyThemeCss(theme, cachedCss);
     } else {
@@ -712,7 +726,7 @@ class DesignSystemFeature {
   }
 
   clearFrontmatterProperties() {
-    if (this.stndFrontmatterElement) {
+    if (this.stndFrontmatterElement && (this.stndFrontmatterElement.textContent !== "" || this.lastAppliedCustomCss !== "")) {
       this.stndFrontmatterElement.textContent = "";
       this.lastAppliedCustomCss = "";
     }

@@ -238,8 +238,9 @@ class PublishStatusFeature {
         }
       }
 
-      // Skip check if verified recently and the file mtime hasn't changed since then
-      if (cached && (now - cached.timestamp < 10000) && (file.stat?.mtime <= cached.timestamp)) {
+      // Skip check if verified recently (3 minutes) and the file mtime hasn't changed since then
+      const STATUS_CHECK_TTL_MS = 180000;
+      if (cached && (now - cached.timestamp < STATUS_CHECK_TTL_MS) && (file.stat?.mtime <= cached.timestamp)) {
         return;
       }
 
@@ -256,6 +257,11 @@ class PublishStatusFeature {
       if (!garden) return;
 
       const res = await garden.checkNoteStatus(file);
+      // Bound the cache to 200 notes to prevent unbounded memory growth over long sessions
+      if (this.noteStatuses.size > 200) {
+        const oldestKey = this.noteStatuses.keys().next().value;
+        if (oldestKey) this.noteStatuses.delete(oldestKey);
+      }
       this.noteStatuses.set(file.path, {
         status: res.status,
         remoteContent: res.remoteContent,

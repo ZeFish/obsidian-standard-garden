@@ -161,6 +161,26 @@ class OnlineFollowUpFeature {
   // Notes seen online that have left the vault while the plugin was not looking.
   startupCheck() {
     if (!this.enabled) return;
+
+    // Fast-path: When the ledger is already populated, we only need to verify
+    // whether the tracked notes still exist in the vault. Scanning thousands of
+    // vault markdown files is completely unnecessary.
+    const ledgerEntries = Object.entries(this.ledger);
+    if (ledgerEntries.length > 0) {
+      for (const [key, entry] of ledgerEntries) {
+        const there = this.app.vault.getFileByPath(entry.path);
+        const reason = there && this.isExcluded(entry.path)
+          ? "was moved to a folder the garden ignores"
+          : !there
+            ? "is no longer in your vault"
+            : null;
+        if (reason) {
+          this.queue(key, entry, reason, true);
+        }
+      }
+      return;
+    }
+
     const present = new Set();
     for (const file of this.app.vault.getMarkdownFiles()) {
       if (this.isExcluded(file.path)) continue;
