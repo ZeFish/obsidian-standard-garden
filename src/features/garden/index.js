@@ -113,6 +113,29 @@ function slugify(name) {
     .replace(/^-|-$/g, "");
 }
 
+// A note that is online always carries `publish`, `created`, `modified` and
+// `visibility`: the garden sorts and filters on them, and a note that gains them
+// only after its first push never equals its online copy again. Dates use the
+// vault's own "YYYY-MM-DD HH:mm". Returns true when something was added.
+function vaultDate(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  const t = new Date(d);
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}`;
+}
+
+function stampOnlineMeta(fm, { created, modified, visibility } = {}) {
+  let changed = false;
+  const set = (k, v) => {
+    fm[k] = v;
+    changed = true;
+  };
+  if (!isPublishIntent(fm)) set("publish", true);
+  if (fm.created == null || fm.created === "") set("created", vaultDate(created ?? Date.now()));
+  if (fm.modified == null || fm.modified === "") set("modified", vaultDate(modified ?? Date.now()));
+  if (fm.visibility == null || fm.visibility === "") set("visibility", visibility || "public");
+  return changed;
+}
+
 // How long a started connection stays valid (sign-in by e-mail code can take a moment).
 const CONNECT_WINDOW_MS = 15 * 60 * 1000;
 const CONNECT_STORAGE_KEY = "standard-garden-connect";
@@ -121,7 +144,7 @@ const CONNECT_STORAGE_KEY = "standard-garden-connect";
 // Multi-tier index to robustly reconcile local vault notes with remote garden notes.
 // Prevents duplicate note creation across renames, title changes, and subfolders.
 class LocalNoteIndex {
-  constructor(app, files) {
+  constructor(app, files, pendingMoves = {}) {
     this.app = app;
     this.files = files;
     this.byNanoId = new Map();
@@ -132,6 +155,11 @@ class LocalNoteIndex {
 
     for (const file of files) {
       const fm = getNoteFrontmatter(app, file);
+
+      // 0. A renamed note still online at its old address: that address is
+      // this file's, not a new note to download.
+      const movedFrom = pendingMoves[file.path];
+      if (movedFrom && !this.bySlug.has(movedFrom)) this.bySlug.set(movedFrom, file);
 
       // 1. nano_id from garden-short: e.g. "https://stnd.gd/abc123" -> "abc123"
       if (fm["garden-short"]) {
@@ -478,6 +506,116 @@ class SyncProgressModal extends obsidian_1.Modal {
   }
 }
 
+// ─── Sync Preview Modal ──────────────────────────────────────────────────────
+// "Sync all published" changes a lot at once: notes online, notes in the vault.
+// This shows what it WOULD do, note by note, before anything is touched. Rows
+// are checkboxes; removals from the garden start unchecked so they only happen
+// when asked for. `onDone` receives the Set of approved tasks, or null.
+class SyncPreviewModal extends obsidian_1.Modal {
+  constructor(app, rows, upToDate, onDone) {
+    super(app);
+    this.rows = rows; // { task, group, detail, danger, checked }
+    this.upToDate = upToDate;
+    this.onDone = onDone;
+    this.answered = false;
+  }
+
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    contentEl.addClass("stnd-modal");
+    titleEl.empty();
+    renderModalHeader(contentEl, "Standard Garden: Sync preview");
+
+    contentEl.createEl("p", {
+      text: "Nothing has been changed yet. Untick what you do not want, then apply.",
+      cls: "stnd-modal-message",
+    });
+    if (this.upToDate) {
+      const u = contentEl.createEl("p", { text: `○ ${this.upToDate} note(s) already up to date — not listed.` });
+      u.style.cssText = "color:var(--text-muted);font-size:var(--font-ui-small);";
+    }
+
+    const GROUPS = [
+      ["publish", "↑ Send to the garden (new)", "var(--text-success)"],
+      ["update", "↑ Update online copy", "var(--text-success)"],
+      ["pull", "↓ Overwrite the note in your vault with the online copy", "var(--text-warning)"],
+      ["create", "+ Download as new notes in your vault", "var(--text-success)"],
+      ["local", "✎ Change your vault note only (set back to draft)", "var(--text-warning)"],
+      ["remove", "✗ Remove from the garden (deletes the online page)", "var(--text-error)"],
+    ];
+
+    this.countEl = null;
+    const scroll = contentEl.createDiv();
+    scroll.style.cssText = "max-height:50vh;overflow:auto;margin:0.5em 0;";
+
+    for (const [key, label, color] of GROUPS) {
+      const rows = this.rows.filter((r) => r.group === key);
+      if (!rows.length) continue;
+      const head = scroll.createDiv();
+      head.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin:0.9em 0 0.25em;color:${color};font-weight:600;`;
+      head.createSpan({ text: `${label} (${rows.length})` });
+      const toggle = head.createEl("a", { text: "all / none" });
+      toggle.style.cssText = "font-weight:400;font-size:var(--font-ui-smaller);cursor:pointer;";
+      const boxes = [];
+      for (const r of rows) {
+        const line = scroll.createEl("label");
+        line.style.cssText = "display:flex;gap:8px;align-items:baseline;padding:2px 0;cursor:pointer;";
+        const cb = line.createEl("input", { type: "checkbox" });
+        cb.checked = r.checked;
+        cb.addEventListener("change", () => {
+          r.checked = cb.checked;
+          this.refreshCount();
+        });
+        boxes.push({ cb, r });
+        const text = line.createSpan({ text: r.task.name });
+        if (r.detail) {
+          const d = line.createSpan({ text: ` — ${r.detail}` });
+          d.style.cssText = "color:var(--text-muted);font-size:var(--font-ui-smaller);";
+        }
+      }
+      toggle.addEventListener("click", () => {
+        const allOn = boxes.every((b) => b.cb.checked);
+        for (const b of boxes) {
+          b.cb.checked = !allOn;
+          b.r.checked = !allOn;
+        }
+        this.refreshCount();
+      });
+    }
+
+    const footer = contentEl.createDiv();
+    footer.style.cssText = "display:flex;justify-content:flex-end;gap:8px;margin-top:0.75em;";
+    const cancel = footer.createEl("button", { text: "Cancel" });
+    cancel.addEventListener("click", () => this.finish(null));
+    this.applyBtn = footer.createEl("button", { cls: "mod-cta" });
+    this.applyBtn.addEventListener("click", () => {
+      this.finish(new Set(this.rows.filter((r) => r.checked).map((r) => r.task)));
+    });
+    this.refreshCount();
+  }
+
+  refreshCount() {
+    const n = this.rows.filter((r) => r.checked).length;
+    this.applyBtn.setText(n ? `Apply ${n} action${n > 1 ? "s" : ""}` : "Nothing selected");
+    this.applyBtn.disabled = n === 0;
+  }
+
+  finish(result) {
+    if (this.answered) return;
+    this.answered = true;
+    this.onDone(result);
+    this.close();
+  }
+
+  onClose() {
+    if (!this.answered) {
+      this.answered = true;
+      this.onDone(null);
+    }
+    this.contentEl.empty();
+  }
+}
+
 // ─── Prune Unpublished Notes Modal ──────────────────────────────────────────
 class PruneUnpublishedModal extends obsidian_1.Modal {
   constructor(app, gardenFeature, itemsToPrune) {
@@ -785,6 +923,43 @@ class GardenFeature {
       }, 5000);
     }
     this.setupAutoSyncInterval();
+    this.plugin.registerEvent(
+      this.app.vault.on("rename", (file, oldPath) => this.onNoteRenamed(file, oldPath)),
+    );
+  }
+
+  // The address of a published note follows its filename, unless the user
+  // chose a permalink of their own. publishNote() locks `permalink` after the
+  // first push, so a rename could never change the address: here we tell a
+  // locked-from-the-filename permalink (equals the old name's slug) from a
+  // deliberate one, release the former, and remember the old address so it is
+  // removed online once the new one exists.
+  async onNoteRenamed(file, oldPath) {
+    if (!file?.path?.endsWith(".md")) return;
+    const moves = (this.plugin.settings.pendingSlugMoves ||= {});
+    const carried = moves[oldPath];
+    if (carried) {
+      // Renamed again before being published: keep the original address to clean up.
+      delete moves[oldPath];
+      moves[file.path] = carried;
+      await this.plugin.saveSettings();
+      return;
+    }
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+    if (!fm["garden-url"]) return; // never published
+    const oldBase = oldPath.split("/").pop().replace(/\.md$/, "");
+    const fmSlug = fm.permalink ?? fm.slug;
+    const oldSlug = fmSlug != null ? String(fmSlug).replace(/^\/+|\/+$/g, "") : slugify(oldBase);
+    if (!oldSlug || oldSlug !== slugify(oldBase)) return; // deliberate permalink: keep it
+    if (slugify(file.basename) === oldSlug) return; // moved folders only
+    moves[file.path] = oldSlug;
+    await this.plugin.saveSettings();
+    await this.app.fileManager.processFrontMatter(file, (f) => {
+      delete f.permalink;
+      delete f.slug;
+      delete f["garden-url"];
+      delete f["garden-short"];
+    });
   }
 
   unload() {
@@ -831,7 +1006,7 @@ class GardenFeature {
       });
       if (!res.ok) return;
       const data = await res.json();
-      const localIndex = new LocalNoteIndex(this.app, this.getPublishableFiles());
+      const localIndex = new LocalNoteIndex(this.app, this.getPublishableFiles(), this.plugin.settings.pendingSlugMoves);
       const remoteOnly = (data.notes || []).filter(
         (n) => !localIndex.findMatchForRemote(n),
       );
@@ -1078,6 +1253,62 @@ class GardenFeature {
     return true;
   }
 
+  // Read-only forecast of what runSyncAllPublished() will do with each task.
+  // Mirrors the decisions in the loop below, but never writes and never calls
+  // the network: a note counts as "up to date" only when it is identical to its
+  // online copy AND nothing it embeds changed (isUnchangedSinceSync).
+  async buildSyncPreview(syncTasks) {
+    const direction = this.plugin.settings.syncDirection;
+    const rows = [];
+    let upToDate = 0;
+    const add = (task, group, detail = "", checked = true) =>
+      rows.push({ task, group, detail, checked });
+    for (const task of syncTasks) {
+      const { file, remoteNote } = task;
+      if (task.type === "remote_only") {
+        add(task, "create", task.slug);
+      } else if (task.type === "local_draft_remote_exists") {
+        const remoteMtime = new Date(remoteNote.updated_at).getTime() || 0;
+        if (direction === "2way" && remoteMtime > (file.stat?.mtime || 0) + 5000) {
+          add(task, "pull", "online edit is newer; note is set to publish");
+        } else {
+          add(task, "remove", `/${remoteNote?.slug || task.slug} — this note is a draft here`, false);
+        }
+      } else if (task.type === "local_published") {
+        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+        if (!remoteNote) {
+          if (fm["garden-url"] == null) add(task, "publish", `/${task.slug}`);
+          else if (direction === "1way") add(task, "publish", `/${task.slug} — deleted online, sent again`);
+          else add(task, "local", "its online page was deleted");
+        } else {
+          const raw = await this.app.vault.read(file);
+          if (this.isUnchangedSinceSync(file, raw, remoteNote)) {
+            upToDate++;
+          } else if (direction === "2way" && (new Date(remoteNote.updated_at).getTime() || 0) > (file.stat?.mtime || 0) + 5000) {
+            add(task, "pull", "online copy is newer");
+          } else {
+            add(task, "update", `/${remoteNote.slug}`);
+          }
+        }
+      }
+    }
+    return { rows, upToDate };
+  }
+
+  // Fill in what an online note must carry before its content is read for
+  // comparison or upload, so what we send is what the file will keep.
+  async readStamped(file) {
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+    const missing =
+      !isPublishIntent(fm) || fm.created == null || fm.modified == null || fm.visibility == null;
+    if (missing) {
+      await this.app.fileManager.processFrontMatter(file, (f) =>
+        stampOnlineMeta(f, { created: file.stat?.ctime, modified: file.stat?.mtime }),
+      );
+    }
+    return await this.app.vault.read(file);
+  }
+
   markSynced(file) {
     const settings = this.plugin.settings;
     if (!settings.syncedAt) settings.syncedAt = {};
@@ -1135,7 +1366,7 @@ class GardenFeature {
         }
       }
 
-      const localIndex = new LocalNoteIndex(this.app, files);
+      const localIndex = new LocalNoteIndex(this.app, files, this.plugin.settings.pendingSlugMoves);
 
       const findRemoteForLocal = (file, fm) => {
         if (fm["garden-short"]) {
@@ -1161,7 +1392,7 @@ class GardenFeature {
       };
 
       const matchedRemoteNotes = new Set();
-      const syncTasks = [];
+      let syncTasks = [];
 
       for (const file of files) {
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
@@ -1232,6 +1463,25 @@ class GardenFeature {
         return;
       }
 
+      // Show what is about to happen, and let the user trim it. Anything the
+      // preview did not list (identical notes) stays: it changes nothing.
+      const preview = await this.buildSyncPreview(syncTasks);
+      if (preview.rows.length) {
+        const approved = await new Promise((resolve) =>
+          new SyncPreviewModal(this.app, preview.rows, preview.upToDate, resolve).open(),
+        );
+        if (!approved) {
+          new obsidian_1.Notice("Standard: sync cancelled, nothing was changed.");
+          return;
+        }
+        const listed = new Set(preview.rows.map((r) => r.task));
+        syncTasks = syncTasks.filter((t) => !listed.has(t) || approved.has(t));
+      }
+      if (syncTasks.length === 0) {
+        new obsidian_1.Notice("Standard: nothing selected, nothing was changed.");
+        return;
+      }
+
       const breakdown = {
         toPublish:   syncTasks.filter(t => t.type === "local_published").length,
         toUnpublish: syncTasks.filter(t => t.type === "local_draft_remote_exists").length,
@@ -1273,7 +1523,7 @@ class GardenFeature {
               if (hasGardenUrl) {
                 if (this.plugin.settings.syncDirection === "1way") {
                   // In 1-way mode, local wins: republish to remote
-                  const raw = await this.app.vault.read(file);
+                  const raw = await this.readStamped(file);
                   const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
                   // Throttle : espacement minimum de 1100ms entre requêtes d'écriture (60/min)
                   const elapsed = Date.now() - this.lastPublishTime;
@@ -1303,7 +1553,7 @@ class GardenFeature {
                 }
               } else {
                 // New local note, push it!
-                const raw = await this.app.vault.read(file);
+                const raw = await this.readStamped(file);
                 const finalContent = await this.uploadContentImages(raw, file, true, syncStats, modal, sessionVerifiedAttachments);
                 const elapsed = Date.now() - this.lastPublishTime;
                 if (elapsed < 1100) await sleep(1100 - elapsed, modal);
@@ -1320,7 +1570,7 @@ class GardenFeature {
               }
             } else {
               // Exists on both sides, compare content
-              const raw = await this.app.vault.read(file);
+              const raw = await this.readStamped(file);
 
               // Cheap check first: identical to the online copy (ignoring what
               // the plugin itself writes) → nothing to upload, nothing to verify.
@@ -1552,7 +1802,7 @@ class GardenFeature {
         return;
       }
 
-      const localIndex = new LocalNoteIndex(this.app, files);
+      const localIndex = new LocalNoteIndex(this.app, files, this.plugin.settings.pendingSlugMoves);
 
       const remoteOnly = [];
       const remoteMatchedLocal = [];
@@ -1569,7 +1819,6 @@ class GardenFeature {
       // on synchronise simplement les métadonnées (garden-url, garden-short, permalink) sans créer de doublon.
       for (const { remoteNote, file } of remoteMatchedLocal) {
         await this.app.fileManager.processFrontMatter(file, (fm) => {
-          if (!isPublishIntent(fm)) fm.publish = true;
           if ("status" in fm) delete fm.status;
           if (!fm["garden-url"]) fm["garden-url"] = this.getLiveUrl(file);
           if (!fm.permalink && remoteNote.slug && remoteNote.slug !== slugify(file.basename)) {
@@ -1625,13 +1874,13 @@ class GardenFeature {
           if (remoteNote.nano_id) {
             fm["garden-short"] = `https://stnd.gd/${remoteNote.nano_id}`;
           }
-          if (fm.created != null && remoteNote.created_at) {
-            fm.created = remoteNote.created_at;
-          }
-          if (fm.modified != null && remoteNote.updated_at) {
-            fm.modified = remoteNote.updated_at;
-          }
+          stampOnlineMeta(fm, {
+            created: remoteNote.created_at,
+            modified: remoteNote.updated_at,
+            visibility: remoteNote.visibility,
+          });
         });
+        this.markSynced(file);
         created++;
       }
       progress.hide();
@@ -1715,7 +1964,7 @@ class GardenFeature {
       }
 
       const files = this.getPublishableFiles();
-      const localIndex = new LocalNoteIndex(this.app, files);
+      const localIndex = new LocalNoteIndex(this.app, files, this.plugin.settings.pendingSlugMoves);
       const publishKey =
         (this.plugin.settings.keyPrefix || "") + this.plugin.settings.publishKey;
 
@@ -2323,7 +2572,7 @@ class GardenFeature {
       return false;
     }
     try {
-      const content = preCalculatedContent !== null ? preCalculatedContent : await this.uploadContentImages(await this.app.vault.read(file), file, isBulk);
+      const content = preCalculatedContent !== null ? preCalculatedContent : await this.uploadContentImages(await this.readStamped(file), file, isBulk);
       // Résoudre le slug de la même façon que unpublishNote()/checkNoteStatus() :
       // permalink > slug > basename. Sans cette priorité, publishNote() dérivait
       // toujours du nom de fichier — renommer une note publiée créait une
@@ -2393,10 +2642,26 @@ class GardenFeature {
           fm["garden-short"] = `https://stnd.gd/${data.nano_id}`;
         }
         // T29: Ne plus injecter de clés temporelles de force si l'utilisateur ne les utilise pas
-        if (fm.modified != null) {
-          fm.modified = new Date().toISOString();
-        }
+        stampOnlineMeta(fm); // no-op once readStamped() has run; covers the precalculated-content path
+        fm.modified = vaultDate(Date.now());
       });
+
+      // The note was renamed since it went online: remove the old address.
+      const oldSlug = this.plugin.settings.pendingSlugMoves?.[file.path];
+      if (oldSlug) {
+        if (oldSlug !== slug) {
+          try {
+            await fetchWithRetry(`${this.plugin.settings.apiUrl}/publish/${slugPath(oldSlug)}`, {
+              method: "DELETE",
+              headers: { "x-api-key": this.plugin.settings.apiKey },
+            });
+          } catch (e) {
+            console.error(`Standard: could not remove old address ${oldSlug}:`, e);
+          }
+        }
+        delete this.plugin.settings.pendingSlugMoves[file.path];
+        await this.plugin.saveSettings();
+      }
 
       this.markSynced(file);
       return true;
@@ -2408,6 +2673,7 @@ class GardenFeature {
   }
 
   async unpublishNote(file, targetSlug = null) {
+    this.lastError = null; // a message about THIS attempt, never a leftover
     try {
       // Résoudre le slug : targetSlug > permalink > slug > basename
       let slug = targetSlug;
@@ -2464,6 +2730,7 @@ class GardenFeature {
 
       return true;
     } catch (error) {
+      this.lastError = error.message || String(error);
       console.error(`Standard: Unpublish error for ${file ? file.basename : targetSlug}:`, error);
       return false;
     }
